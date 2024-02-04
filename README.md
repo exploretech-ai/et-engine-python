@@ -1,5 +1,7 @@
 # ET-Engine
 
+The main API for developing and running probabilistic computing algorithms
+
 ## Installation:
 
 ```
