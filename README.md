@@ -1,6 +1,6 @@
 # ET-Engine
 
-# Installation:
+## Installation:
 
 ```
 conda create -n et-engine python=3.8
@@ -14,7 +14,7 @@ Run the dev script with:
 python et-engine/dev.py
 ```
 
-# Deploying infra
+## Deploying infra
 
 Make sure you have the aws cdk installed
 ```
