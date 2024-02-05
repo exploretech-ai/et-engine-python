@@ -1,7 +1,8 @@
 from aws_cdk import (
     Stack,
     aws_dynamodb as dynamodb,
-    RemovalPolicy
+    RemovalPolicy,
+    aws_iam as iam
 )
 from constructs import Construct
 import aws_cdk.aws_apigateway as apigateway
@@ -29,22 +30,21 @@ class EtEngineApiStack(Stack):
 
         # Create an API Gateway
         rest_api = apigateway.RestApi(
-            self, 'SimpleRestApi',
-            rest_api_name='SimpleRestApi',
-            description='A simple REST API'
+            self, 'ETEngineAPI',
+            rest_api_name='ETEngineAPI',
+            description='Core API for provisioning resources and running algorithms'
         )
 
-
-        new_resource = rest_api.root.add_resource('new')
-        new_lambda = _lambda.Function(
-            self, 'NewResourceLambda',
+        provision = rest_api.root.add_resource('provision')
+        provision_lambda = _lambda.Function(
+            self, 'ProvisionLambda',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler='create_resource.handler',
+            handler='provision.handler',
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
         )
-        new_resource.add_method(
+        provision.add_method(
             'POST',
-            integration=apigateway.LambdaIntegration(new_lambda),
+            integration=apigateway.LambdaIntegration(provision_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -55,9 +55,18 @@ class EtEngineApiStack(Stack):
                 },
             }],
         )
-
+        provision_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:CreateStack', 
+                    's3:CreateBucket', 
+                    'ecr:CreateRepository'
+                ],
+                resources=['*'],
+            )
+        )
         # Give table access to the lambda
-        my_table.grant_write_data(new_lambda)
+        my_table.grant_write_data(provision_lambda)
 
         
 
@@ -65,15 +74,12 @@ class EtEngineApiStack(Stack):
 
         # Create a resource
         hello_resource = rest_api.root.add_resource('hello')
-
         hello_lambda = _lambda.Function(
             self, 'HelloLambda',
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler='hello.handler',
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
         )
-
-        # Add a method to the resource
         hello_resource.add_method(
             'GET',
             integration=apigateway.LambdaIntegration(hello_lambda),
