@@ -59,6 +59,19 @@ class EtEngineApiStack(Stack):
                 actions=[
                     'cloudformation:CreateStack', 
                     's3:CreateBucket', 
+                    's3:DeleteBucket',
+                    'ec2:CreateVpc',
+                    'ec2:DeleteVpc',
+                    'ec2:CreateTags',
+                    'ec2:DeleteTags',
+                    'ec2:DescribeVpcs',
+                    'ec2:ModifyVpcAttribute',
+                    'ec2:CreateSubnet',
+                    'ec2:DeleteSubnet',
+                    'ec2:DescribeSubnets',
+                    'ec2:CreateSecurityGroup',
+                    'ec2:DeleteSecurityGroup',
+                    'ec2:DescribeSecurityGroups',
                     'ecr:CreateRepository',
                     'ecr:DeleteRepository',
                     'ecs:DescribeClusters',
@@ -105,7 +118,8 @@ class EtEngineApiStack(Stack):
             iam.PolicyStatement(
                 actions=[
                     'ecs:RunTask',
-                    'iam:PassRole'
+                    'iam:PassRole',
+                    'cloudformation:DescribeStacks'
                 ],
                 resources=['*'],
             )
@@ -114,3 +128,4 @@ class EtEngineApiStack(Stack):
 
         # Give table access to the lambda
         my_table.grant_write_data(provision_lambda)
+        my_table.grant_read_data(execute_lambda)

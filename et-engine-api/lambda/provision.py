@@ -32,7 +32,48 @@ def ConfigCompute(compute_config, algo_ID):
     # PROVISIONING GOES HERE
     # 1. New ECR Repository
     RepositoryName = f"engine-ecr-0-{algo_ID}"
+    VPCName = f"AlgoVPC-{algo_ID}"
+    SubnetName = f"AlgoSubnet-{algo_ID}"
     compute_stack = {}
+    compute_stack['VPC'] = {
+        "Type": "AWS::EC2::VPC",
+        "Properties": {
+            "CidrBlock": "10.0.0.0/16",
+            "EnableDnsSupport": True,
+            "EnableDnsHostnames": True
+            # "Tags": [
+            #     {
+            #         "Key": "Name",
+            #         "Value": VPCName
+            #     }
+            # ]
+        }
+    }
+    compute_stack['Subnet'] = {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+            "VpcId": {
+                "Ref": "VPC"
+            },
+            "CidrBlock": "10.0.0.0/24",
+            "AvailabilityZone": "us-east-2a"
+            # "Tags": [
+            #     {
+            #         "Key": "Name"
+            #     }
+            # ]
+            # "Value": SubnetName
+        }
+    }
+    compute_stack["SecurityGroup"] = {
+        "Type" : "AWS::EC2::SecurityGroup",
+        "Properties" : {
+            "GroupDescription" : f"Security group for algorithm {algo_ID}",
+            "VpcId" : {
+                "Ref" : "VPC"
+            }
+        }
+    }
     compute_stack['ContainerRepo'] = {
         "Type": "AWS::ECR::Repository",
         "Properties": {
@@ -145,6 +186,32 @@ def ProvisionResources(config):
         'Resources': compute_stack
     }
     template['Resources']['FileSystem'] = storage_stack
+    template['Outputs'] = {
+        "ClusterName" : {
+            "Description" : "Name of ECS Cluster for running tasks",
+            "Value" : {
+                "Ref": "ECSCluster"
+            }
+        },
+        "TaskName" : {
+            "Description" : "Name of the ECS task to be run",
+            "Value" : {
+                "Ref" :  "ECSTaskDefinition"
+            }
+        },
+        "SubnetID" : {
+            "Description" : "Subnet ID containing resources",
+            "Value" : {
+                "Ref" : "Subnet"
+            }
+        },
+        "SecurityGroupID" : {
+            "Description" : "Security group for custom VPC",
+            "Value" : {
+                "Ref" : "SecurityGroup"
+            }
+        }
+    }
 
 
     cf = boto3.client('cloudformation')

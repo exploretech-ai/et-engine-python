@@ -20,6 +20,8 @@ class TestAlgorithm(BaseAlgorithm):
 
 
 if __name__ == "__main__":
+    import time
+
     fs = FileSystem()
     compute_backend = ComputeBackend()
 
@@ -27,6 +29,8 @@ if __name__ == "__main__":
     # algo.provision(fs, compute_backend)
     
     input_data = VectorDataset([0,0,0])
+
+    # time.sleep(45)
     output_data = algo(input_data)
 
     # print(input_data)

@@ -1,18 +1,45 @@
 import boto3
-import json
+import json    
+
+def get_output_value(outputs, key):
+    value = None
+    for elem in outputs:
+        if elem["OutputKey"] == key:
+            value = elem["OutputValue"]
+
+    if value is None:
+        raise Exception("Key {key} not found")
+    
+    return value
 
 def handler(event, context):
-    cluster_name = 'engine-cfn-3246a962a4994e08a17c49df26d5fb6e-ECSCluster-YLS1aBWEtTmH'
-    task_definition = 'engine-cfn-3246a962a4994e08a17c49df26d5fb6e-ECSTaskDefinition-c92sqD91heAT'
-    subnet_ids = ['subnet-041bc9485dcf5d81b']  # Replace with your subnet IDs
-    security_group_ids = ['sg-03f00b00130f3e38b']  # Replace with your security group IDs
 
+    try:
+        dynamodb = boto3.resource('dynamodb')
+        table_name = 'UserResourceLog'
+        table = dynamodb.Table(table_name)
 
+        tbl_response = table.get_item(Key = {'UserID': '0'})
+        item = tbl_response.get('Item')
 
+        cf_client = boto3.client('cloudformation')
+        stackname = f'engine-cfn-{item["algo_ID"]}'
+
+        cf_response = cf_client.describe_stacks(StackName=stackname)
+        cf_outputs = cf_response["Stacks"][0]["Outputs"]
+
+        cluster_name = get_output_value(cf_outputs, "ClusterName")
+        task_definition = get_output_value(cf_outputs, "TaskName").split('/')[-1]
+        subnet_ids = get_output_value(cf_outputs, "SubnetID")
+        security_group_ids = get_output_value(cf_outputs, "SecurityGroupID")
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps(f"Error fetching algorithm infrastructure: {e}")
+        }
 
     # Executes an ECS task
-    
-
     try:
         ecs_client = boto3.client('ecs')
         ecs_response = ecs_client.run_task(
@@ -21,8 +48,8 @@ def handler(event, context):
             launchType='FARGATE',
             networkConfiguration={
                 'awsvpcConfiguration': {
-                    'subnets': subnet_ids,
-                    'securityGroups': security_group_ids,
+                    'subnets': [subnet_ids],
+                    'securityGroups': [security_group_ids],
                     'assignPublicIp': 'ENABLED'
                 }
             }
