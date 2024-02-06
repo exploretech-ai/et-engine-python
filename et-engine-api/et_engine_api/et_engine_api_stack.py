@@ -15,8 +15,6 @@ class EtEngineApiStack(Stack):
 
         # The code that defines your stack goes here
         tbl_name = 'UserResourceLog'
-
-        # Define the DynamoDB table
         my_table = dynamodb.Table(
             self, tbl_name,
             table_name=tbl_name,
@@ -34,6 +32,7 @@ class EtEngineApiStack(Stack):
             rest_api_name='ETEngineAPI',
             description='Core API for provisioning resources and running algorithms'
         )
+
 
         provision = rest_api.root.add_resource('provision')
         provision_lambda = _lambda.Function(
@@ -79,24 +78,19 @@ class EtEngineApiStack(Stack):
                 resources=['*'],
             )
         )
-        # Give table access to the lambda
-        my_table.grant_write_data(provision_lambda)
-
         
 
-        
 
-        # Create a resource
-        hello_resource = rest_api.root.add_resource('hello')
-        hello_lambda = _lambda.Function(
-            self, 'HelloLambda',
+        execute = rest_api.root.add_resource('execute')
+        execute_lambda = _lambda.Function(
+            self, 'ExecuteLambda',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler='hello.handler',
+            handler='execute.handler',
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
         )
-        hello_resource.add_method(
-            'GET',
-            integration=apigateway.LambdaIntegration(hello_lambda),
+        execute.add_method(
+            'POST',
+            integration=apigateway.LambdaIntegration(execute_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -107,4 +101,16 @@ class EtEngineApiStack(Stack):
                 },
             }],
         )
+        execute_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'ecs:RunTask',
+                    'iam:PassRole'
+                ],
+                resources=['*'],
+            )
+        )
 
+
+        # Give table access to the lambda
+        my_table.grant_write_data(provision_lambda)

@@ -1,5 +1,7 @@
 import requests
 
+API_URL = 'https://y0x4jkatv9.execute-api.us-east-2.amazonaws.com/prod/'
+
 class BaseAlgorithm:
     def __init__(self, Storage, InputDataset, OutputDataset):
         """
@@ -22,13 +24,19 @@ class BaseAlgorithm:
     def __call__(self, InputDataset):
         """Wraps around self.run but with checks"""
         
-        print("Writes InputDataset to backend, via API")
+        # print("Writes InputDataset to backend, via API")
         # API call for pushing data here...
 
-        print("Executing self.run on the backend, via API ")
+        # print("Executing self.run on the backend, via API ")
         # API call for executing here here
 
-        print("Returns the API execution message")
+        resources = {
+            'file': '/path/to/dummy/file'
+        }
+        x = requests.post(API_URL + 'execute', json = resources)
+        print(x.text)
+
+        # print("Returns the API execution message")
 
     def provision(self, storage, compute):
         """
@@ -45,9 +53,9 @@ class BaseAlgorithm:
             'compute': 'SingleNode'
         }
         print(resources)
-        url = 'https://y0x4jkatv9.execute-api.us-east-2.amazonaws.com/prod/provision'
+        
 
-        x = requests.post(url, json = resources)
+        x = requests.post(API_URL + 'provision', json = resources)
         print(x.text)
         
 
