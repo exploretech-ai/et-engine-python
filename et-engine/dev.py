@@ -26,12 +26,16 @@ if __name__ == "__main__":
     compute_backend = ComputeBackend()
 
     algo = TestAlgorithm()
-    # algo.provision(fs, compute_backend)
+    algo.provision(fs, compute_backend)
     
     input_data = VectorDataset([0,0,0])
 
-    # time.sleep(45)
-    output_data = algo(input_data)
+    # time.sleep(60)
+    # output_data = algo(input_data)
+
+
+    time.sleep(60)
+    algo.destroy()
 
     # print(input_data)
     # print(output_data)

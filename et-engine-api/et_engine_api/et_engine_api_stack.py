@@ -126,6 +126,51 @@ class EtEngineApiStack(Stack):
         )
 
 
+        destroy = rest_api.root.add_resource('destroy')
+        destroy_lambda = _lambda.Function(
+            self, 'DestroyLambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler='destroy.handler',
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+        )
+        destroy.add_method(
+            'POST',
+            integration=apigateway.LambdaIntegration(destroy_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        destroy_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:DeleteBucket',
+                    'cloudformation:DeleteStack',
+                    'ec2:DeleteSecurityGroup',
+                    'ecr:DeleteRepository',
+                    'ec2:DeleteSubnet',
+                    'ec2:DeleteVpc',
+                    'ec2:DescribeSubnets',
+                    'ec2:DescribeVpcs',
+                    'ecs:DeregisterTaskDefinition',
+                    'ecs:DescribeClusters',
+                    'ecs:DeleteCluster',
+                    'iam:DeleteRolePolicy',
+                    'iam:DeleteRole',
+                    'logs:DeleteLogGroup',
+
+                ],
+                resources=['*'],
+            )
+        )
+
+
         # Give table access to the lambda
         my_table.grant_write_data(provision_lambda)
         my_table.grant_read_data(execute_lambda)
+        my_table.grant_read_data(destroy_lambda)

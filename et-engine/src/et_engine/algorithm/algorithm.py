@@ -57,6 +57,17 @@ class BaseAlgorithm:
 
         x = requests.post(API_URL + 'provision', json = resources)
         print(x.text)
+
+    def destroy(self):
+
+        resources = {
+            'message' : 'destroy'
+        }
+        print(resources)
+        
+
+        x = requests.post(API_URL + 'destroy', json = resources)
+        print(x.text)
         
 
 
