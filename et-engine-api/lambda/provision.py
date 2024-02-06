@@ -31,22 +31,104 @@ def ConfigCompute(compute_config, algo_ID):
     
     # PROVISIONING GOES HERE
     # 1. New ECR Repository
+    RepositoryName = f"engine-ecr-0-{algo_ID}"
     compute_stack = {}
     compute_stack['ContainerRepo'] = {
         "Type": "AWS::ECR::Repository",
         "Properties": {
-            "RepositoryName": f"engine-ecr-0-{algo_ID}"
+            "RepositoryName": RepositoryName
         }
     }
-
-
-    # 2. ECS Fargate Task Definition
-    task_stack = {
+    compute_stack['ECSCluster'] = {
+        "Type": "AWS::ECS::Cluster"
+    }
+    compute_stack['ECSTaskDefinition'] = {
         "Type": "AWS::ECS::TaskDefinition",
         "Properties": {
-            ""
+            "Cpu": 256,
+            "Memory": 512,
+            "NetworkMode": "awsvpc",
+            "RequiresCompatibilities": [
+                "FARGATE"
+            ],
+            "ExecutionRoleArn": {
+                "Fn::GetAtt": [
+                    "ECSTaskExecutionRole",
+                    "Arn"
+                ]
+            },
+            "ContainerDefinitions": [
+                {
+                    "Name": "hello-world-container",
+                    "Image": {
+                        "Fn::Sub": "ubuntu"
+                    },
+                    "Essential": True,
+                    "LogConfiguration": {
+                        "LogDriver": "awslogs",
+                        "Options": {
+                            "awslogs-group": {
+                                "Ref": "ECSLogGroup"
+                            },
+                            "awslogs-region": {
+                                "Ref": "AWS::Region"
+                            },
+                            "awslogs-stream-prefix": f"{algo_ID}"
+                        }
+                    }
+                }
+            ]
         }
     }
+    compute_stack['ECSTaskExecutionRole'] = {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ecs-tasks.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            "Policies": [
+                {
+                    "PolicyName": "ECSTaskExecutionPolicy",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "logs:CreateLogStream",
+                                    "logs:PutLogEvents"
+                                ],
+                                "Resource": "*"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }   
+    compute_stack['ECSLogGroup'] = {
+        "Type": "AWS::Logs::LogGroup",
+        "Properties": {
+            "LogGroupName": f"/ecs/hello-world-task-{algo_ID}"
+        }
+    }
+    # compute_stack['ServiceLinkedRole'] = {
+    #     "Type" : "AWS::IAM::ServiceLinkedRole",
+    #     "Properties" : {
+    #         "AWSServiceName" : "ecs.amazonaws.com",
+    #         "Description" : "Link role to ECS"
+    #     }
+    # }
+
     # 3. Container Image
     # 4. 
 
@@ -69,7 +151,8 @@ def ProvisionResources(config):
     cf.create_stack(
         StackName = f"engine-cfn-{algo_ID}", 
         TemplateBody = json.dumps(template),
-        OnFailure = 'DELETE'
+        OnFailure = 'DELETE',
+        Capabilities = ["CAPABILITY_IAM"]
     )
 
     return algo_ID

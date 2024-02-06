@@ -60,7 +60,21 @@ class EtEngineApiStack(Stack):
                 actions=[
                     'cloudformation:CreateStack', 
                     's3:CreateBucket', 
-                    'ecr:CreateRepository'
+                    'ecr:CreateRepository',
+                    'ecr:DeleteRepository',
+                    'ecs:DescribeClusters',
+                    'ecs:CreateCluster',
+                    'ecs:DeleteCluster',
+                    'ecs:RegisterTaskDefinition',
+                    'iam:CreateRole',
+                    'iam:PutRolePolicy',
+                    'iam:GetRole',
+                    'iam:DeleteRole',
+                    'iam:PassRole',
+                    'iam:DeleteRolePolicy',
+                    'iam:CreateServiceLinkedRole',
+                    'iam:DeleteServiceLinkedRole',
+                    'logs:DeleteLogGroup'
                 ],
                 resources=['*'],
             )
