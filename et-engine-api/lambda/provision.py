@@ -32,8 +32,6 @@ def ConfigCompute(compute_config, algo_ID):
     # PROVISIONING GOES HERE
     # 1. New ECR Repository
     RepositoryName = f"engine-ecr-0-{algo_ID}"
-    VPCName = f"AlgoVPC-{algo_ID}"
-    SubnetName = f"AlgoSubnet-{algo_ID}"
     compute_stack = {}
     compute_stack['VPC'] = {
         "Type": "AWS::EC2::VPC",
@@ -210,6 +208,12 @@ def ProvisionResources(config):
             "Value" : {
                 "Ref" : "SecurityGroup"
             }
+        },
+        "FileSystemName" : {
+            "Description" : "S3 Bucket Name",
+            "Value" : {
+                "Ref" : "FileSystem"
+            }
         }
     }
 
@@ -244,6 +248,9 @@ def handler(event, context):
     # Attempt to Provision Resources
     try:
         algo_ID = ProvisionResources(request_body)
+        # s3.put_object(Body=request_body['dockerfile'], Bucket=bucket_name, Key=object_key)
+
+
     except Exception as e:
         response = {
             'statusCode': 500,
@@ -263,7 +270,7 @@ def handler(event, context):
 
         response = {
             'statusCode': 200,
-            'body': json.dumps(f'Item added to DynamoDB table successfully: {item_data}')
+            'body': json.dumps(f'Algo ID {algo_ID}: {request_body}')
         }       
     except Exception as e:
         print(f"Error: {e}")

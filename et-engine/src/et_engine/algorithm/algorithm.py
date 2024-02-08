@@ -1,4 +1,6 @@
 import requests
+from time import sleep
+import json
 
 API_URL = 'https://y0x4jkatv9.execute-api.us-east-2.amazonaws.com/prod/'
 
@@ -48,22 +50,39 @@ class BaseAlgorithm:
 
         # API call to provision resources (start with ONLY single node + storage)
 
-        resources = {
-            'storage': 'new',
-            'compute': 'SingleNode'
-        }
-        print(resources)
+        resources = compute.provision()
+        # print(resources)
         
 
+        print('Provisioning resources')
         x = requests.post(API_URL + 'provision', json = resources)
-        print(x.text)
+
+        # Loop that checks status
+        for i in range(100):
+            y = requests.get(API_URL + 'status')
+            y = json.loads(y.text)
+
+            if y['message'] == "ready":
+                z = requests.post(API_URL + 'configure', json = resources)
+                print(z.text)
+                break
+
+            if y['message'] in ["destroying", "error", "destroyed"]:
+                print('error provisioning resources')
+                break
+
+            sleep(1)
+
+        if i == 100:
+            print(f'Timed out after 100 seconds: {y["message"]}')
+
 
     def destroy(self):
 
         resources = {
             'message' : 'destroy'
         }
-        print(resources)
+        # print(resources)
         
 
         x = requests.post(API_URL + 'destroy', json = resources)

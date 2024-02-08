@@ -23,7 +23,7 @@ if __name__ == "__main__":
     import time
 
     fs = FileSystem()
-    compute_backend = ComputeBackend()
+    compute_backend = ComputeBackend('dev-dockerfile', 'dev-helloworld.py')
 
     algo = TestAlgorithm()
     algo.provision(fs, compute_backend)
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # output_data = algo(input_data)
 
 
-    time.sleep(60)
+    # time.sleep(60)
     algo.destroy()
 
     # print(input_data)
