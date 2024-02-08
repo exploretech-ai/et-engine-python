@@ -14,10 +14,7 @@ def ConfigStorage(storage_config, algo_ID):
         
     # Create Bucket
     bucket_stack = {
-        "Type": "AWS::S3::Bucket",
-        "Properties": {
-            "BucketName": bucket_name
-        }
+        "Type": "AWS::S3::Bucket"
     }
     
     return bucket_stack
@@ -160,16 +157,92 @@ def ConfigCompute(compute_config, algo_ID):
             "LogGroupName": f"/ecs/hello-world-task-{algo_ID}"
         }
     }
-    # compute_stack['ServiceLinkedRole'] = {
-    #     "Type" : "AWS::IAM::ServiceLinkedRole",
-    #     "Properties" : {
-    #         "AWSServiceName" : "ecs.amazonaws.com",
-    #         "Description" : "Link role to ECS"
-    #     }
-    # }
+    compute_stack["CodeBuildRole"] = {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+            "RoleName": {
+                "Fn::Sub": "CodeBuildRole-${AWS::StackName}"
+            },
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "codebuild.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            "Policies": [
+                {
+                    "PolicyName": "CodeBuildPolicy",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "ecr:BatchCheckLayerAvailability",
+                                    "ecr:CompleteLayerUpload",
+                                    "ecr:GetAuthorizationToken",
+                                    "ecr:InitiateLayerUpload",
+                                    "ecr:PutImage",
+                                    "ecr:UploadLayerPart"
+                                ],
+                                "Resource": {
+                                    "Fn::GetAtt": [
+                                        "ContainerRepo",
+                                        "Arn"
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }  
+    repo_location = {
+        "Fn::Sub": ["${CurrentFileSystemName}/.engine/", {
+            "CurrentFileSystemName": {
+                "Ref" : "CodeBuildBucket"
+            }
+        }]
+    }
+    compute_stack["CodeBuildBucket"] = {
+        "Type": "AWS::S3::Bucket"
+    }
+    compute_stack["DockerBuilder"] = {
+        "Type": "AWS::CodeBuild::Project",
+        "Properties": {
+            "Source": {
+                "Type": "S3",
+                "Location": repo_location,
+                "BuildSpec": "buildspec.yml"
+            },
+            "Artifacts" : {
+                "Type": "S3",
+                "Location": {
+                    "Ref" : "CodeBuildBucket"
+                }
+            },
+            "Environment": {
+                "Type": "LINUX_CONTAINER",
+                "ComputeType": "BUILD_GENERAL1_SMALL",
+                "Image": "aws/codebuild/standard:4.0",
+                "PrivilegedMode": True
+            },
+            "ServiceRole": {
+                "Fn::GetAtt": [
+                    "CodeBuildRole",
+                    "Arn"
+                ]
+            }
+        }
+    }
 
-    # 3. Container Image
-    # 4. 
 
     return compute_stack
 
@@ -210,9 +283,15 @@ def ProvisionResources(config):
             }
         },
         "FileSystemName" : {
-            "Description" : "S3 Bucket Name",
+            "Description" : "User File System s3 Bucket Name",
             "Value" : {
                 "Ref" : "FileSystem"
+            }
+        },
+        "CodeBuildBucketName": {
+            "Description" : "s3 bucket for holding code build info",
+            "Value": {
+                "Ref": "CodeBuildBucket"
             }
         }
     }
@@ -223,7 +302,7 @@ def ProvisionResources(config):
         StackName = f"engine-cfn-{algo_ID}", 
         TemplateBody = json.dumps(template),
         OnFailure = 'DELETE',
-        Capabilities = ["CAPABILITY_IAM"]
+        Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
     )
 
     return algo_ID

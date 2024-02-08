@@ -22,12 +22,16 @@ def handler(event, context):
         
         ### ----- FETCH THIS SHIT HERE ----
         cf_outputs = get_stack_outputs(algo_ID)
-        bucket_name = get_output_value(cf_outputs, "FileSystemName")
+        bucket_name = get_output_value(cf_outputs, "CodeBuildBucketName")
 
         s3 = boto3.client('s3')
         s3.put_object(Body=file_content["dockerfile"], Bucket=bucket_name, Key='.engine/dockerfile')
         s3.put_object(Body=file_content["app"], Bucket=bucket_name, Key='.engine/app.py')
         
+        # COPY BUILDSPEC HERE
+
+        # TRIGGER CODEBUILD HERE
+
         response = {
             'statusCode': 200,
             'body': json.dumps({"message": f"Configuration complete"})

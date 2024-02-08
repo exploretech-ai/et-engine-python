@@ -56,6 +56,7 @@ class BaseAlgorithm:
 
         print('Provisioning resources')
         x = requests.post(API_URL + 'provision', json = resources)
+        # print(x.text)
 
         # Loop that checks status
         for i in range(100):
@@ -63,6 +64,7 @@ class BaseAlgorithm:
             y = json.loads(y.text)
 
             if y['message'] == "ready":
+                print(f"Provisioning complete ({i}s)")
                 z = requests.post(API_URL + 'configure', json = resources)
                 print(z.text)
                 break

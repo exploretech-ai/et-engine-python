@@ -33,6 +33,8 @@ class EtEngineApiStack(Stack):
             iam.PolicyStatement(
                 actions=[
                     'cloudformation:CreateStack', 
+                    'codebuild:CreateProject',
+                    'codebuild:DeleteProject',
                     's3:CreateBucket', 
                     's3:DeleteBucket',
                     'ec2:CreateVpc',
@@ -49,9 +51,11 @@ class EtEngineApiStack(Stack):
                     'ec2:DescribeSecurityGroups',
                     'ecr:CreateRepository',
                     'ecr:DeleteRepository',
+                    'ecr:DescribeRepositories',
                     'ecs:DescribeClusters',
                     'ecs:CreateCluster',
                     'ecs:DeleteCluster',
+                    'ecs:DeregisterTaskDefinition',
                     'ecs:RegisterTaskDefinition',
                     'iam:CreateRole',
                     'iam:PutRolePolicy',
@@ -80,7 +84,11 @@ class EtEngineApiStack(Stack):
             iam.PolicyStatement(
                 actions=[
                     's3:DeleteBucket',
+                    's3:ListBucket',
+                    's3:DeleteObject',
                     'cloudformation:DeleteStack',
+                    'cloudformation:DescribeStacks',
+                    'codebuild:DeleteProject',
                     'ec2:DeleteSecurityGroup',
                     'ecr:DeleteRepository',
                     'ec2:DeleteSubnet',
