@@ -1,12 +1,16 @@
 from aws_cdk import (
     Stack,
+    CfnOutput,
+    Duration,
     aws_dynamodb as dynamodb,
     RemovalPolicy,
-    aws_iam as iam
+    aws_iam as iam,
+    aws_s3 as s3,
+    aws_apigateway as apigateway,
+    aws_s3_deployment as s3_deploy,
+    aws_lambda as _lambda
 )
 from constructs import Construct
-import aws_cdk.aws_apigateway as apigateway
-from aws_cdk import aws_lambda as _lambda
 
 class EtEngineApiStack(Stack):
 
@@ -14,6 +18,21 @@ class EtEngineApiStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.table = self.add_table('UserResourceLog')
+        
+        self.dockerbuild_template = s3.Bucket(self, 'et-engine-dockerbuild-template')
+        self.dockerbuild_template_contents = s3_deploy.BucketDeployment(
+            self, 
+            'et-engine-dockerbuild-template-deploy', 
+            sources=[s3_deploy.Source.asset('./engine-dockerbuild-template')],
+            destination_bucket=self.dockerbuild_template,
+            retain_on_delete=False
+        )
+        self.dockerbuild_template_output = CfnOutput(
+            self,
+            'DockerBuildTemplate',
+            value = self.dockerbuild_template.bucket_name
+        )
+        
 
         # Create an API Gateway
         self.api = apigateway.RestApi(
@@ -24,9 +43,9 @@ class EtEngineApiStack(Stack):
 
         provision_lambda = self.add_method('provision', 'POST', table_access = "write")
         execute_lambda = self.add_method('execute', 'POST', table_access = "read")
-        destroy_lambda = self.add_method('destroy', 'POST', table_access = "read")
+        destroy_lambda = self.add_method('destroy', 'POST', table_access = "read", duration=30)
         status_lambda = self.add_method('status', 'GET', table_access = "read")
-        configure_lambda = self.add_method('configure', 'POST', table_access = "read")
+        configure_lambda = self.add_method('configure', 'POST', table_access = "read", duration=30)
 
 
         provision_lambda.add_to_role_policy(
@@ -101,6 +120,10 @@ class EtEngineApiStack(Stack):
                     'iam:DeleteRolePolicy',
                     'iam:DeleteRole',
                     'logs:DeleteLogGroup',
+                    'ecr:DescribeImages',
+                    'ecr:BatchGetImage',
+                    'ecr:ListImages',
+                    'ecr:BatchDeleteImage'
 
                 ],
                 resources=['*'],
@@ -118,14 +141,17 @@ class EtEngineApiStack(Stack):
             iam.PolicyStatement(
                 actions = [
                     'cloudformation:DescribeStacks',
-                    's3:PutObject'
+                    's3:PutObject',
+                    's3:ListBucket',
+                    's3:GetObject',
+                    'codebuild:StartBuild'
                 ],
                 resources = ['*']
             )
         )
 
 
-    def add_method(self, name, request_type, table_access = None):
+    def add_method(self, name, request_type, table_access = None, duration = 3):
         """
         name: base name of the method, needs to be in folder named 'lambda' with a handler method
         type: 'POST', 'GET', etc.
@@ -137,6 +163,7 @@ class EtEngineApiStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= name + '.handler',
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(duration)
         )
         method.add_method(
             request_type,
@@ -169,3 +196,6 @@ class EtEngineApiStack(Stack):
             ),
             removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
         )
+    
+    def add_bucket(self, name):
+        return s3.Bucket(self, name)

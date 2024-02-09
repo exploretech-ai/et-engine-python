@@ -32,7 +32,10 @@ STATUS_MAP = {
 def handler(event, context):
 
     try:
-        algo_ID = fetch_algo_ID()
+        # params = json.loads(event['body'])
+        algo_ID = event['queryStringParameters']['id'] if 'id' in event['queryStringParameters'] else None
+
+        # algo_ID = params['id']
         
     except Exception as e:
         response = {

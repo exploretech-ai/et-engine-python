@@ -265,8 +265,8 @@ def ConfigCompute(compute_config, algo_ID):
                 "PrivilegedMode": True,
                 "EnvironmentVariables": [
                     {
-                        "Name": "IMAGE_NAME",
-                        "Value": "hello"
+                        "Name": "IMAGE_TAG",
+                        "Value": "latest"
                     },
                     {
                         "Name": "AWS_DEFAULT_REGION",
@@ -281,6 +281,18 @@ def ConfigCompute(compute_config, algo_ID):
                                 "ContainerRepo",
                                 "RepositoryUri"
                             ]
+                        }
+                    },
+                    {
+                        "Name": "IMAGE_REPO_NAME",
+                        "Value": {
+                            "Ref": "ContainerRepo"
+                        }
+                    },
+                    {
+                        "Name": "AWS_ACCOUNT_ID",
+                        "Value": {
+                            "Ref": "AWS::AccountId"
                         }
                     }
                 ]
@@ -344,6 +356,18 @@ def ProvisionResources(config):
             "Value": {
                 "Ref": "CodeBuildBucket"
             }
+        },
+        "DockerBuilderName" : {
+            "Description": "name of the CodeBuild project that builds the dockerfile",
+            "Value" : {
+                "Ref" : "DockerBuilder"
+            }
+        },
+        "ContainerRepoName" : {
+            "Description" : "name of the ECR repo",
+            "Value" : {
+                "Ref" : "ContainerRepo"
+            }
         }
     }
 
@@ -400,7 +424,7 @@ def handler(event, context):
 
         response = {
             'statusCode': 200,
-            'body': json.dumps(f'Algo ID {algo_ID}: {request_body}')
+            'body': json.dumps(f'ID: {algo_ID}')
         }       
     except Exception as e:
         print(f"Error: {e}")

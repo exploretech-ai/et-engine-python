@@ -40,7 +40,7 @@ class BaseAlgorithm:
 
         # print("Returns the API execution message")
 
-    def provision(self, storage, compute):
+    def provision(self, storage, compute, monitor = True):
         """
         Wraps storage and computing backend into JSON format
         Sends JSON config to backend via API
@@ -56,40 +56,43 @@ class BaseAlgorithm:
 
         print('Provisioning resources')
         x = requests.post(API_URL + 'provision', json = resources)
-        # print(x.text)
+        self.id = x.text[5:-1]
+        
 
         # Loop that checks status
-        for i in range(100):
-            y = requests.get(API_URL + 'status')
-            y = json.loads(y.text)
+        if monitor:
+            for i in range(20):
+                y = requests.get(API_URL + f'status?id={self.id}')
+                y = json.loads(y.text)
 
-            if y['message'] == "ready":
-                print(f"Provisioning complete ({i}s)")
+                if y['message'] == "ready":
+                    print(f"Provisioning complete ({i}s)")
+                    break
+
+                if y['message'] in ["destroying", "error", "destroyed"]:
+                    print(f'error provisioning resources: {y}')
+                    break
+
                 sleep(5)
-                z = requests.post(API_URL + 'configure', json = resources)
-                print(z.text)
-                break
 
-            if y['message'] in ["destroying", "error", "destroyed"]:
-                print('error provisioning resources')
-                break
-
-            sleep(1)
-
-        if i == 100:
-            print(f'Timed out after 100 seconds: {y["message"]}')
-
+            if i == 20:
+                print(f'Timed out after 100 pings: {y["message"]}')
+        
+        return self.id
 
     def destroy(self):
 
         resources = {
-            'message' : 'destroy'
+            'id' : self.id
         }
         # print(resources)
         
 
         x = requests.post(API_URL + 'destroy', json = resources)
-        print(x.text)
+        return x.text
 
-
-
+    def configure(self, storage, compute):
+        resources = compute.provision()
+        resources["id"] = self.id
+        z = requests.post(API_URL + 'configure', json = resources)
+        return z.text

@@ -24,18 +24,24 @@ if __name__ == "__main__":
 
     fs = FileSystem()
     compute_backend = ComputeBackend('dev-dockerfile', 'dev-helloworld.py')
-
-    algo = TestAlgorithm()
-    algo.provision(fs, compute_backend)
-    
     input_data = VectorDataset([0,0,0])
 
+    algo = TestAlgorithm()
+    id = algo.provision(fs, compute_backend)
+    print(id)
+
+    # algo.id = "03a8353365df44a3a4e7b27aae5eabae"
+    output = algo.configure(fs, compute_backend)
+    print(output)
+    
+    
     # time.sleep(60)
     # output_data = algo(input_data)
 
 
-    # time.sleep(60)
-    # algo.destroy()
+    time.sleep(300)
+    output = algo.destroy()
+    print(output)
 
     # print(input_data)
     # print(output_data)
