@@ -7,7 +7,7 @@ def handler(event, context):
     try:
         algo_ID = fetch_algo_ID()
     except Exception as e:
-        response = {
+        return {
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
@@ -32,14 +32,14 @@ def handler(event, context):
 
         # TRIGGER CODEBUILD HERE
 
-        response = {
+        return {
             'statusCode': 200,
             'body': json.dumps({"message": f"Configuration complete"})
         }
 
 
     except Exception as e:
-        response = {
+        return {
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
@@ -49,5 +49,5 @@ def handler(event, context):
     
     # Push dockerfile and app here
         
-    return response
+    # return response
     

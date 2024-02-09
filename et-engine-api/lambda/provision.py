@@ -197,6 +197,41 @@ def ConfigCompute(compute_config, algo_ID):
                                         "Arn"
                                     ]
                                 }
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "logs:CreateLogStream",
+                                    "logs:CreateLogGroup",
+                                    "logs:PutLogEvents",
+                                    "ecr:GetAuthorizationToken"
+                                ],
+                                "Resource": "*"
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:Get*",
+                                    "s3:List*"
+                                ],
+                                "Resource": [
+                                    {
+                                        "Fn::GetAtt": [
+                                            "CodeBuildBucket",
+                                            "Arn"
+                                        ]
+                                    },
+                                    {
+                                        "Fn::Sub": ["${CBBucket}/*", {
+                                            "CBBucket": {
+                                                "Fn::GetAtt" : [
+                                                    "CodeBuildBucket",
+                                                    "Arn"
+                                                ]
+                                            }
+                                        }]
+                                    }
+                                ]
                             }
                         ]
                     }
@@ -232,7 +267,28 @@ def ConfigCompute(compute_config, algo_ID):
                 "Type": "LINUX_CONTAINER",
                 "ComputeType": "BUILD_GENERAL1_SMALL",
                 "Image": "aws/codebuild/standard:4.0",
-                "PrivilegedMode": True
+                "PrivilegedMode": True,
+                "EnvironmentVariables": [
+                    {
+                        "Name": "IMAGE_NAME",
+                        "Value": "hello"
+                    },
+                    {
+                        "Name": "AWS_DEFAULT_REGION",
+                        "Value": {
+                            "Ref": "AWS::Region"
+                        }
+                    },
+                    {
+                        "Name": "ECR_REPO_URI",
+                        "Value": {
+                            "Fn::GetAtt": [
+                                "ContainerRepo",
+                                "RepositoryUri"
+                            ]
+                        }
+                    }
+                ]
             },
             "ServiceRole": {
                 "Fn::GetAtt": [

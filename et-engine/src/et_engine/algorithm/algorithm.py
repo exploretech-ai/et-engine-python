@@ -65,6 +65,7 @@ class BaseAlgorithm:
 
             if y['message'] == "ready":
                 print(f"Provisioning complete ({i}s)")
+                sleep(5)
                 z = requests.post(API_URL + 'configure', json = resources)
                 print(z.text)
                 break
@@ -89,6 +90,6 @@ class BaseAlgorithm:
 
         x = requests.post(API_URL + 'destroy', json = resources)
         print(x.text)
-        
+
 
 

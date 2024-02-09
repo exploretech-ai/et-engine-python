@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
 
     # time.sleep(60)
-    algo.destroy()
+    # algo.destroy()
 
     # print(input_data)
     # print(output_data)
