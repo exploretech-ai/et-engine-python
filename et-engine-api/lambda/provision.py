@@ -184,12 +184,7 @@ def ConfigCompute(compute_config, algo_ID):
                             {
                                 "Effect": "Allow",
                                 "Action": [
-                                    "ecr:BatchCheckLayerAvailability",
-                                    "ecr:CompleteLayerUpload",
-                                    "ecr:GetAuthorizationToken",
-                                    "ecr:InitiateLayerUpload",
-                                    "ecr:PutImage",
-                                    "ecr:UploadLayerPart"
+                                    "ecr:*"
                                 ],
                                 "Resource": {
                                     "Fn::GetAtt": [
