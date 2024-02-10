@@ -2,10 +2,12 @@ import requests
 from time import sleep
 import json
 
-API_URL = 'https://y0x4jkatv9.execute-api.us-east-2.amazonaws.com/prod/'
+API_URL = 'https://xmnogdgtx4.execute-api.us-east-2.amazonaws.com/prod/'
+
+
 
 class BaseAlgorithm:
-    def __init__(self, Storage, InputDataset, OutputDataset):
+    def __init__(self, Storage, InputDataset, OutputDataset, id = None):
         """
         
         """
@@ -17,11 +19,24 @@ class BaseAlgorithm:
         self.storage = Storage
         self.InputType = InputDataset
         self.OutputType = OutputDataset
+        
+        if id is None:
+            response = requests.post(API_URL + "algorithms")
+            self.id = response.text[1:-1]
+
+        else:
+            self.id = id
+            # self.connect(self.id)
+
+        
+        
+
+    def connect(self):
+        return self
 
     def run(self):
         """MUST BE WRITTEN BY USER"""
         pass
-
 
     def __call__(self, InputDataset):
         """Wraps around self.run but with checks"""

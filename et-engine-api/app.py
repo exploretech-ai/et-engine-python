@@ -3,11 +3,11 @@ import os
 
 import aws_cdk as cdk
 
-from et_engine_api.et_engine_api_stack import EtEngineApiStack
+from et_engine_api.et_engine_api_stack import ETEngine
 
 
 app = cdk.App()
-EtEngineApiStack(app, "EtEngineApiStack",
+ETEngine(app, "ETEngine",
     # If you don't specify 'env', this stack will be environment-agnostic.
     # Account/Region-dependent features and context lookups will not work,
     # but a single synthesized template can be deployed anywhere.

@@ -1,7 +1,8 @@
 import requests
 
 class FileSystem:
-    def __init__(self):
+    def __init__(self, id = None):
+        self.id = id
         pass
         # print('hello')
 
@@ -12,5 +13,14 @@ class FileSystem:
 
     #     x = requests.post(url, json = myobj)
     #     print(x.text)
+
+    def write(self):
+
+        # PUSH http://api/write&ID={self.id} file
+        # Sends back a pre-signed url
+        # Execute that url
+        pass
+
+
 
 
