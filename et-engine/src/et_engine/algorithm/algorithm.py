@@ -33,7 +33,8 @@ class BaseAlgorithm:
         # API call for executing here here
 
         resources = {
-            'file': '/path/to/dummy/file'
+            'file': '/path/to/dummy/file',
+            'id': self.id
         }
         x = requests.post(API_URL + 'execute', json = resources)
         print(x.text)

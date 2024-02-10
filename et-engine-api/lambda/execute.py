@@ -2,38 +2,24 @@ import boto3
 import json    
 from databases import get_stack_outputs, get_output_value
 
-# def get_output_value(outputs, key):
-#     value = None
-#     for elem in outputs:
-#         if elem["OutputKey"] == key:
-#             value = elem["OutputValue"]
 
-#     if value is None:
-#         raise Exception("Key {key} not found")
-    
-#     return value
 
 def handler(event, context):
 
     try:
-        dynamodb = boto3.resource('dynamodb')
-        table_name = 'UserResourceLog'
-        table = dynamodb.Table(table_name)
 
-        tbl_response = table.get_item(Key = {'UserID': '0'})
-        item = tbl_response.get('Item')
+        params = json.loads(event['body'])
+        algo_ID = params['id']
 
-        # cf_client = boto3.client('cloudformation')
-        # stackname = f'engine-cfn-{item["algo_ID"]}'
-
-        # cf_response = cf_client.describe_stacks(StackName=stackname)
-        # cf_outputs = cf_response["Stacks"][0]["Outputs"]
-        cf_outputs = get_stack_outputs(item["algo_ID"])
+        cf_outputs = get_stack_outputs(algo_ID)
 
         cluster_name = get_output_value(cf_outputs, "ClusterName")
         task_definition = get_output_value(cf_outputs, "TaskName").split('/')[-1]
-        subnet_ids = get_output_value(cf_outputs, "SubnetID")
-        security_group_ids = get_output_value(cf_outputs, "SecurityGroupID")
+        # subnet_ids = get_output_value(cf_outputs, "SubnetID")
+        # security_group_ids = get_output_value(cf_outputs, "SecurityGroupID")
+        
+        subnet_ids = "subnet-06f7655a729b6c494"
+        security_group_ids = "sg-07dfca753315715a2" 
 
     except Exception as e:
         return {

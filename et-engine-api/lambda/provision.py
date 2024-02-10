@@ -60,6 +60,8 @@ def ConfigCompute(compute_config, algo_ID):
             # "Value": SubnetName
         }
     }
+
+    
     compute_stack["SecurityGroup"] = {
         "Type" : "AWS::EC2::SecurityGroup",
         "Properties" : {
@@ -97,7 +99,14 @@ def ConfigCompute(compute_config, algo_ID):
                 {
                     "Name": "hello-world-container",
                     "Image": {
-                        "Fn::Sub": "ubuntu"
+                        "Fn::Sub": ["${repo}:latest", {
+                            "repo": {
+                                "Fn::GetAtt" : [
+                                    "ContainerRepo",
+                                    "RepositoryUri"
+                                ]
+                            }
+                        }]
                     },
                     "Essential": True,
                     "LogConfiguration": {
@@ -141,7 +150,8 @@ def ConfigCompute(compute_config, algo_ID):
                                 "Effect": "Allow",
                                 "Action": [
                                     "logs:CreateLogStream",
-                                    "logs:PutLogEvents"
+                                    "logs:PutLogEvents",
+                                    "ecr:*"
                                 ],
                                 "Resource": "*"
                             }
