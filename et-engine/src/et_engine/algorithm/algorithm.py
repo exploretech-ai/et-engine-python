@@ -49,11 +49,11 @@ class Algorithm:
         # print("Executing self.run on the backend, via API ")
         # API call for executing here here
 
-        resources = {
-            'file': '/path/to/dummy/file',
-            'id': self.id
-        }
-        x = requests.post(API_URL + 'execute', json = resources)
+        # resources = {
+        #     'file': '/path/to/dummy/file',
+        #     'id': self.id
+        # }
+        x = requests.post(API_URL + f'algorithms/{self.id}/execute')
         print(x.text)
 
         # print("Returns the API execution message")
@@ -72,7 +72,7 @@ class Algorithm:
         
 
         print('Provisioning resources')
-        x = requests.post(API_URL + f'algorithms/{self.id}/provision')
+        response = requests.post(API_URL + f'algorithms/{self.id}/provision')
         
 
         # Loop that checks status
@@ -94,7 +94,7 @@ class Algorithm:
             if i == 20:
                 print(f'Timed out after 100 pings: {status}')
         
-        return 
+        return response.text
 
     def destroy(self):
 
@@ -107,8 +107,32 @@ class Algorithm:
         x = requests.post(API_URL + 'destroy', json = resources)
         return x.text
 
-    def configure(self, storage, compute):
-        resources = compute.provision()
-        resources["id"] = self.id
-        z = requests.post(API_URL + 'configure', json = resources)
-        return z.text
+    def build(self, dockerfile, app):
+
+        # presigned url for copying dockerfile & app
+
+        # with open(dockerfile) as f:
+        #     dockerfile_contents = f.read()
+        # with open(app) as f:
+        #     app_contents = f.read()
+
+        resources = {
+            'dockerfile': dockerfile,
+            'app': app
+        }
+
+        response = requests.post(API_URL + f'algorithms/{self.id}/build', json=resources)
+        # print(response.text)
+        
+        dockerile_url = json.loads(response.text)["presignedUrl1"]
+        app_url = json.loads(response.text)["presignedUrl2"]
+        
+        with open(resources["dockerfile"], 'rb') as f:
+            files = {'file': (resources["dockerfile"], f)}
+            http_response = requests.post(dockerile_url['url'], data=dockerile_url['fields'], files=files)
+
+        with open(resources["app"], 'rb') as f:
+            files = {'file': (resources["app"], f)}
+            http_response = requests.post(app_url['url'], data=app_url['fields'], files=files)
+
+        return response.text

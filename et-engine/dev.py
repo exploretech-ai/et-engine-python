@@ -11,8 +11,8 @@ class VectorDataset(Dataset):
         return "[" + ", ".join([str(i) for i in self.arr]) + "]"
 
 class TestAlgorithm(Algorithm):
-    def __init__(self):
-        super().__init__(VectorDataset, VectorDataset)
+    def __init__(self, **kwargs):
+        super().__init__(VectorDataset, VectorDataset, **kwargs)
 
     def run(self, InputDataset):
         new_arr = [elem + 3 for elem in InputDataset.arr]            
@@ -23,24 +23,24 @@ if __name__ == "__main__":
     import time
 
     # fs = FileSystem()
-    # compute_backend = ComputeBackend('dev-dockerfile', 'dev-helloworld.py')
-    # input_data = VectorDataset([0,0,0])
+    compute_backend = ComputeBackend('dev-dockerfile', 'dev-helloworld.py')
+    input_data = VectorDataset([0,0,0])
 
     
-    algo = TestAlgorithm()
-    print(algo.id)
+    algo = TestAlgorithm(id = "3b30a12da3514d49a89e0267d7574cf4")
     # print(algo.id)
-    algo.provision()
+    # print(algo.id)
+    # algo.provision()
     # print(id)
     # algo.id = "68cdad4af35945329ed719b19072b71a"
     
     
-    # output = algo.configure(fs, compute_backend)
+    # output = algo.build('dev-dockerfile', 'dev-helloworld.py')
     # print(output)
     
     
     # time.sleep(200)
-    # output_data = algo(input_data)
+    output_data = algo(input_data)
 
 
     # time.sleep(300)

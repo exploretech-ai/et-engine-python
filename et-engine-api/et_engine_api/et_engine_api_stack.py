@@ -65,7 +65,7 @@ class API(Stack):
         # self.add_lambda(algorithms, "GET", "algorithms", "algorithms.list.handler")
 
         algorithms_id = algorithms.add_resource("{id}")
-        algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.get.handler")        
+        algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.info.handler")        
         database.algorithms.grant_read_data(algorithms_id_lambda)
         algorithms_id_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -109,13 +109,34 @@ class API(Stack):
 
 
         algorithms_build = algorithms_id.add_resource("build")
-        algorithms_build.add_method('POST')
-
+        algorithms_build_lambda = self.add_lambda(algorithms_build, 'POST', 'build', "algorithms.build.build.handler", duration=30)
+        algorithms_build_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions = [
+                    'cloudformation:DescribeStacks',
+                    's3:PutObject',
+                    's3:ListBucket',
+                    's3:GetObject',
+                    'codebuild:StartBuild'
+                ],
+                resources = ['*']
+            )
+        )
         algorithms_build_status = algorithms_build.add_resource("status")
         algorithms_build_status.add_method('GET')
 
         algorithms_execute = algorithms_id.add_resource("execute")
-        algorithms_execute.add_method('POST')
+        algorithms_execute_lambda = self.add_lambda(algorithms_execute, "POST", "execute", "algorithms.execute.execute.handler")
+        algorithms_execute_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:DescribeStacks',
+                    'ecs:RunTask',
+                    'iam:PassRole'
+                ],
+                resources=["*"]
+            )
+        )
 
         algorithms_execute_status = algorithms_execute.add_resource("status")
         algorithms_execute_status.add_method('GET')
@@ -193,6 +214,11 @@ class ETEngine(Stack):
             self, 
             'AlgorithmDB',
             value = self.database.algorithms.table_name
+        )
+        CfnOutput(
+            self,
+            "TemplateBucket",
+            value = self.templates.dockerbuild_template.bucket_name
         )
 
 
