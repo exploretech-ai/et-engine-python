@@ -98,13 +98,7 @@ class Algorithm:
 
     def destroy(self):
 
-        resources = {
-            'id' : self.id
-        }
-        # print(resources)
-        
-
-        x = requests.post(API_URL + 'destroy', json = resources)
+        x = requests.post(API_URL + f'algorithms/{self.id}/destroy')
         return x.text
 
     def build(self, dockerfile, app):

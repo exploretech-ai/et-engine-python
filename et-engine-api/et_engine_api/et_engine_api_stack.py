@@ -97,7 +97,7 @@ class API(Stack):
 
 
         # algorithms_provision_status = algorithms_provision.add_resource("status")
-        algorithms_provision_status_lambda = self.add_lambda(algorithms_provision, "GET", "status", "algorithms.provision.status.handler")
+        algorithms_provision_status_lambda = self.add_lambda(algorithms_provision, "GET", "provision-status", "algorithms.provision.status.handler")
         algorithms_provision_status_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions = [
@@ -122,8 +122,7 @@ class API(Stack):
                 resources = ['*']
             )
         )
-        algorithms_build_status = algorithms_build.add_resource("status")
-        algorithms_build_status.add_method('GET')
+        algorithms_build_status_lambda = self.add_lambda(algorithms_build, "GET", "build-status", "algorithms.destroy.status.handler")
 
         algorithms_execute = algorithms_id.add_resource("execute")
         algorithms_execute_lambda = self.add_lambda(algorithms_execute, "POST", "execute", "algorithms.execute.execute.handler")
@@ -137,15 +136,35 @@ class API(Stack):
                 resources=["*"]
             )
         )
-
-        algorithms_execute_status = algorithms_execute.add_resource("status")
-        algorithms_execute_status.add_method('GET')
+        algorithms_execute_status_lambda = self.add_lambda(algorithms_execute, "GET", "execute-status", "algorithms.execute.status.handler")
 
         algorithms_destroy = algorithms_id.add_resource("destroy")
-        algorithms_destroy.add_method('POST')
+        algorithms_destroy_lambda = self.add_lambda(algorithms_destroy, "POST", "destroy", "algorithms.destroy.destroy.handler", duration = 30)
+        algorithms_destroy_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:Delete*',
+                    's3:ListBucket',
+                    'cloudformation:DeleteStack',
+                    'cloudformation:DescribeStacks',
+                    'codebuild:DeleteProject',
+                    'ec2:*',
+                    'ecr:Delete*',
+                    'ecs:DeregisterTaskDefinition',
+                    'ecs:DescribeClusters',
+                    'iam:Delete*',
+                    'ecs:Delete*',
+                    'logs:DeleteLogGroup',
+                    'ecr:DescribeImages',
+                    'ecr:BatchGetImage',
+                    'ecr:ListImages',
+                    'ecr:BatchDeleteImage'
 
-        algorithms_destroy_status = algorithms_destroy.add_resource("status")
-        algorithms_destroy_status.add_method('GET')
+                ],
+                resources=['*'],
+            )
+        )
+        algorithms_destroy_status_lambda = self.add_lambda(algorithms_destroy, "GET", "destroy-status", "algorithms.destroy.status.handler")
 
         algorithms_filesystem = algorithms_id.add_resource("filesystem")
         algorithms_filesystem.add_method('GET')
