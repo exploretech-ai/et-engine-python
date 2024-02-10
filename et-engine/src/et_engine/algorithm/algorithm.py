@@ -1,13 +1,14 @@
 import requests
 from time import sleep
 import json
+from ..storage.filesystem import FileSystem
 
 API_URL = 'https://xmnogdgtx4.execute-api.us-east-2.amazonaws.com/prod/'
 
 
 
-class BaseAlgorithm:
-    def __init__(self, Storage, InputDataset, OutputDataset, id = None):
+class Algorithm:
+    def __init__(self, InputDataset, OutputDataset, id = None):
         """
         
         """
@@ -16,7 +17,7 @@ class BaseAlgorithm:
 
         # Checks if InputDataset and OutputDataset are type "Dataset"
 
-        self.storage = Storage
+        # self.storage = FileSystem()
         self.InputType = InputDataset
         self.OutputType = OutputDataset
         
@@ -27,6 +28,7 @@ class BaseAlgorithm:
         else:
             self.id = id
             # self.connect(self.id)
+
 
         
         
@@ -56,7 +58,7 @@ class BaseAlgorithm:
 
         # print("Returns the API execution message")
 
-    def provision(self, storage, compute, monitor = True):
+    def provision(self, monitor = True):
         """
         Wraps storage and computing backend into JSON format
         Sends JSON config to backend via API
@@ -66,35 +68,33 @@ class BaseAlgorithm:
 
         # API call to provision resources (start with ONLY single node + storage)
 
-        resources = compute.provision()
         # print(resources)
         
 
         print('Provisioning resources')
-        x = requests.post(API_URL + 'provision', json = resources)
-        self.id = x.text[5:-1]
+        x = requests.post(API_URL + f'algorithms/{self.id}/provision')
         
 
         # Loop that checks status
         if monitor:
             for i in range(20):
-                y = requests.get(API_URL + f'status?id={self.id}')
-                y = json.loads(y.text)
+                status = requests.get(API_URL + f'algorithms/{self.id}/provision')
+                status = status.text[1:-1]
 
-                if y['message'] == "ready":
-                    print(f"Provisioning complete ({i}s)")
+                if status == "ready":
+                    print(f"Provisioning complete")
                     break
 
-                if y['message'] in ["destroying", "error", "destroyed"]:
-                    print(f'error provisioning resources: {y}')
+                if status in ["destroying", "error", "destroyed"]:
+                    print(f'error provisioning resources: {status}')
                     break
 
                 sleep(5)
 
             if i == 20:
-                print(f'Timed out after 100 pings: {y["message"]}')
+                print(f'Timed out after 100 pings: {status}')
         
-        return self.id
+        return 
 
     def destroy(self):
 

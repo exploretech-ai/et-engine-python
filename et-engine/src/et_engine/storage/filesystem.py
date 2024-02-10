@@ -2,7 +2,7 @@ import requests
 
 class FileSystem:
     def __init__(self, id = None):
-        self.id = id
+        # self.id = id
         pass
         # print('hello')
 

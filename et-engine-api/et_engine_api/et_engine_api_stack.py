@@ -37,7 +37,6 @@ class MasterDB(Stack):
             removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
         )
 
-
 class API(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -50,6 +49,7 @@ class API(Stack):
         )
         
         algorithms = self.api.root.add_resource("algorithms")
+        
         algorithms_lambda = self.add_lambda(algorithms, "POST", "algorithms", "algorithms.new.handler")        
         database.algorithms.grant_write_data(algorithms_lambda)
         algorithms_lambda.add_to_role_policy(
@@ -61,17 +61,52 @@ class API(Stack):
                 resources=['*']
             )
         )
-
+        
         # self.add_lambda(algorithms, "GET", "algorithms", "algorithms.list.handler")
 
         algorithms_id = algorithms.add_resource("{id}")
-        # self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.handler")        
+        algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.get.handler")        
+        database.algorithms.grant_read_data(algorithms_id_lambda)
+        algorithms_id_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'dynamodb:GetItem',
+                    'cloudformation:DescribeStacks'
+                ],
+                resources=['*']
+            )
+        )
 
         algorithms_provision = algorithms_id.add_resource("provision")
-        self.add_lambda(algorithms_provision, "POST", "provision", "algorithms.provision.provision.handler")
+        algorithms_provision_lambda = self.add_lambda(algorithms_provision, "POST", "provision", "algorithms.provision.provision.handler")
+        algorithms_provision_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:*',
+                    'iam:*',
+                    'log-group:*',
+                    'ec2:*',
+                    'ecr:*',
+                    'ecs:*',
+                    's3:*',
+                    'codebuild:*'
+                ],
+                resources=['*']
+            )
+        )
 
-        algorithms_provision_status = algorithms_provision.add_resource("status")
-        algorithms_provision_status.add_method('GET')
+
+        # algorithms_provision_status = algorithms_provision.add_resource("status")
+        algorithms_provision_status_lambda = self.add_lambda(algorithms_provision, "GET", "status", "algorithms.provision.status.handler")
+        algorithms_provision_status_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions = [
+                    'cloudformation:DescribeStacks'
+                ],
+                resources=["*"]
+            )
+        )
+
 
         algorithms_build = algorithms_id.add_resource("build")
         algorithms_build.add_method('POST')
