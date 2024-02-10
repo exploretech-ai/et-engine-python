@@ -30,14 +30,14 @@ if __name__ == "__main__":
     algo = TestAlgorithm()
     # id = algo.provision(fs, compute_backend)
     # print(id)
-    algo.id = "e4b378b9118e495496c1a1d8234af117"
+    algo.id = "68cdad4af35945329ed719b19072b71a"
     
     
     # output = algo.configure(fs, compute_backend)
     # print(output)
     
     
-    # time.sleep(300)
+    # time.sleep(200)
     # output_data = algo(input_data)
 
 

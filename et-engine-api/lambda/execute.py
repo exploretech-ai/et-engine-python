@@ -15,11 +15,15 @@ def handler(event, context):
 
         cluster_name = get_output_value(cf_outputs, "ClusterName")
         task_definition = get_output_value(cf_outputs, "TaskName").split('/')[-1]
-        # subnet_ids = get_output_value(cf_outputs, "SubnetID")
-        # security_group_ids = get_output_value(cf_outputs, "SecurityGroupID")
+        subnet_ids = get_output_value(cf_outputs, "PublicSubnetId")
+        security_group_ids = get_output_value(cf_outputs, "SecurityGroupID")
         
-        subnet_ids = "subnet-06f7655a729b6c494"
-        security_group_ids = "sg-07dfca753315715a2" 
+        # subnet_ids = "subnet-0578476bb41d3ac47"
+        # security_group_ids = "sg-01bb6b247853cd9e5"
+
+        # THESE WORK
+        # subnet_ids = "subnet-06f7655a729b6c494"
+        # security_group_ids = "sg-07dfca753315715a2" 
 
     except Exception as e:
         return {

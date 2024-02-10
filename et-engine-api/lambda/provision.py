@@ -20,6 +20,10 @@ def ConfigStorage(storage_config, algo_ID):
     return bucket_stack
 
 def ConfigCompute(compute_config, algo_ID):
+    """
+    ECS VPC configuration from here: https://containersonaws.com/pattern/low-cost-vpc-amazon-ecs-cluster
+    
+    """
     if compute_config == 'SingleNode':
         instance_name = f"engine-cpu-0-{algo_ID}"
     
@@ -30,42 +34,99 @@ def ConfigCompute(compute_config, algo_ID):
     # 1. New ECR Repository
     RepositoryName = f"engine-ecr-0-{algo_ID}"
     compute_stack = {}
+    
     compute_stack['VPC'] = {
         "Type": "AWS::EC2::VPC",
         "Properties": {
-            "CidrBlock": "10.0.0.0/16",
             "EnableDnsSupport": True,
-            "EnableDnsHostnames": True
-            # "Tags": [
-            #     {
-            #         "Key": "Name",
-            #         "Value": VPCName
-            #     }
-            # ]
+            "EnableDnsHostnames": True,
+            "CidrBlock": {
+                "Fn::FindInMap": [
+                    "SubnetConfig",
+                    "VPC",
+                    "CIDR"
+                ]
+            }
         }
     }
-    compute_stack['Subnet'] = {
+    compute_stack['PublicSubnetOne'] = {
         "Type": "AWS::EC2::Subnet",
+        "Properties": {
+            "AvailabilityZone": {
+                "Fn::Select": [
+                    0,
+                    {
+                        "Fn::GetAZs": {
+                            "Ref": "AWS::Region"
+                        }
+                    }
+                ]
+            },
+            "VpcId": {
+                "Ref": "VPC"
+            },
+            "CidrBlock": {
+                "Fn::FindInMap": [
+                    "SubnetConfig",
+                    "PublicOne",
+                    "CIDR"
+                ]
+            },
+            "MapPublicIpOnLaunch": True
+        }
+    }
+    compute_stack["InternetGateway"] = {
+        "Type": "AWS::EC2::InternetGateway"
+    }
+    compute_stack["GatewayAttachement"] = {
+        "Type": "AWS::EC2::VPCGatewayAttachment",
         "Properties": {
             "VpcId": {
                 "Ref": "VPC"
             },
-            "CidrBlock": "10.0.0.0/24",
-            "AvailabilityZone": "us-east-2a"
-            # "Tags": [
-            #     {
-            #         "Key": "Name"
-            #     }
-            # ]
-            # "Value": SubnetName
+            "InternetGatewayId": {
+                "Ref": "InternetGateway"
+            }
+        }
+    }
+    compute_stack["PublicRouteTable"] = {
+        "Type": "AWS::EC2::RouteTable",
+        "Properties": {
+            "VpcId": {
+                "Ref": "VPC"
+            }
+        }
+    }
+    compute_stack["PublicRoute"] = {
+        "Type": "AWS::EC2::Route",
+        "DependsOn": "GatewayAttachement",
+        "Properties": {
+            "RouteTableId": {
+                "Ref": "PublicRouteTable"
+            },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": {
+                "Ref": "InternetGateway"
+            }
+        }
+    }
+    compute_stack["PublicSubnetOneRouteTableAssociation"] = {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+            "SubnetId": {
+                "Ref": "PublicSubnetOne"
+            },
+            "RouteTableId": {
+                "Ref": "PublicRouteTable"
+            }
         }
     }
 
-    
+
     compute_stack["SecurityGroup"] = {
         "Type" : "AWS::EC2::SecurityGroup",
         "Properties" : {
-            "GroupDescription" : f"Security group for algorithm {algo_ID}",
+            "GroupDescription" : f"Security group for ECS Cluster",
             "VpcId" : {
                 "Ref" : "VPC"
             }
@@ -329,6 +390,16 @@ def ProvisionResources(config):
     template = {
         'Resources': compute_stack
     }
+    template['Mappings'] = {
+        "SubnetConfig": {
+            "VPC": {
+                "CIDR": "10.0.0.0/16"
+            },
+            "PublicOne": {
+                "CIDR": "10.0.0.0/18"
+            }
+        }
+    }
     template['Resources']['FileSystem'] = storage_stack
     template['Outputs'] = {
         "ClusterName" : {
@@ -341,12 +412,6 @@ def ProvisionResources(config):
             "Description" : "Name of the ECS task to be run",
             "Value" : {
                 "Ref" :  "ECSTaskDefinition"
-            }
-        },
-        "SubnetID" : {
-            "Description" : "Subnet ID containing resources",
-            "Value" : {
-                "Ref" : "Subnet"
             }
         },
         "SecurityGroupID" : {
@@ -377,6 +442,18 @@ def ProvisionResources(config):
             "Description" : "name of the ECR repo",
             "Value" : {
                 "Ref" : "ContainerRepo"
+            }
+        },
+        "VpcId": {
+            "Description": "The ID of the VPC that this stack is deployed in",
+            "Value": {
+                "Ref": "VPC"
+            }
+        },
+        "PublicSubnetId": {
+            "Description": "public facing subnets that have a direct internet connection as long as you assign a public IP (for ECS)",
+            "Value": {
+                "Fn::Sub": "${PublicSubnetOne}"
             }
         }
     }
