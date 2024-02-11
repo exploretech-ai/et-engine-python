@@ -8,34 +8,152 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_apigateway as apigateway,
     aws_s3_deployment as s3_deploy,
-    aws_lambda as _lambda
+    aws_lambda as _lambda,
+    aws_cloudfront as cloudfront,
+    aws_cloudfront_origins as origins,
+    aws_certificatemanager as certificatemanager,
+    aws_route53 as route53,
+    aws_route53_targets as targets,
+    aws_rds as rds,
+    aws_ec2 as ec2,
+    aws_secretsmanager as asm
 )
+import aws_cdk as cdk
+from aws_cdk import RemovalPolicy
+
 from constructs import Construct
+import os
 
 class MasterDB(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
 
-        self.algorithms = dynamodb.Table(
+        vpc = ec2.Vpc(
             self, 
-            "Algorithms",
-            partition_key=dynamodb.Attribute(
-                name='algoID',
-                type=dynamodb.AttributeType.STRING
-            ),
-            removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
+            "RDSVPC",
+            max_azs=2,
+            subnet_configuration=[
+                ec2.SubnetConfiguration(
+                    name="privatelambda",
+                    cidr_mask=24,
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ), 
+                ec2.SubnetConfiguration(
+                    name="public",
+                    cidr_mask=24,
+                    subnet_type=ec2.SubnetType.PUBLIC
+                )
+            ]
+        ) 
+        db_security_group = ec2.SecurityGroup(
+            self,
+            'DBSecurityGroup',
+            vpc=vpc
+        )
+        lambda_security_group = ec2.SecurityGroup(
+            self,
+            'RDSLambdaSecurityGroup',
+            vpc=vpc
+        )
+        db_security_group.add_ingress_rule(
+            lambda_security_group,
+            ec2.Port.tcp(5432),
+            'Lambda to Postgres database'
+        )
+        
+
+        db_secret = rds.DatabaseSecret(
+            self,
+            "RDSSecret",
+            username="postgres"
         )
 
-        self.users = dynamodb.Table(
-            self,
-            "Users",
-            partition_key=dynamodb.Attribute(
-                name='userID',
-                type=dynamodb.AttributeType.STRING
-            ),
-            removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
+        
+        database = rds.DatabaseInstance(self, "PostgresInstance",
+            engine=rds.DatabaseInstanceEngine.POSTGRES,
+            database_name="EngineMasterDB",
+            credentials=rds.Credentials.from_secret(db_secret),
+            vpc=vpc,
+            security_groups=[db_security_group],
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            )
         )
+
+        
+        lambda_function = _lambda.Function(
+            self, "DatabaseInitFunction",
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler="rds_init.handler",
+            code=_lambda.Code.from_asset("lambda"),
+            environment={
+                "DB_HOST": database.db_instance_endpoint_address,
+                "DB_PORT": database.db_instance_endpoint_port,
+                "DB_NAME": database.instance_resource_id,
+                "SECRET_ARN": db_secret.secret_arn
+            },
+            timeout=cdk.Duration.minutes(5),
+            vpc=vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[lambda_security_group]
+        )
+
+        
+        database.grant_connect(lambda_function)
+        db_secret.grant_read(lambda_function)
+
+        # connection_props = database.secret.secret_value_from_json("postgres")
+
+        # database.add_sql_statement(
+        #     "CREATE DATABASE IF NOT EXISTS users;",
+        #     database_name="postgres",
+        #     username=connection_props["username"],
+        #     password=cdk.SecretValue(connection_props["password"]),
+        # )
+
+        # # Create a table in the database
+        # database.add_sql_statement(
+        #     """
+        #     CREATE TABLE IF NOT EXISTS users (
+        #         id SERIAL PRIMARY KEY,
+        #         name VARCHAR(255) NOT NULL
+        #     );
+        #     """,
+        #     database_name="users",
+        #     username=connection_props["username"],
+        #     password=cdk.SecretValue(connection_props["password"]),
+        # )
+
+        # self.algorithms = dynamodb.Table(
+        #     self, 
+        #     "Algorithms",
+        #     partition_key=dynamodb.Attribute(
+        #         name='algoID',
+        #         type=dynamodb.AttributeType.STRING
+        #     ),
+        #     removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
+        # )
+
+        # self.users = dynamodb.Table(
+        #     self,
+        #     "Users",
+        #     partition_key=dynamodb.Attribute(
+        #         name='userID',
+        #         type=dynamodb.AttributeType.STRING
+        #     ),
+        #     sort_key=dynamodb.Attribute(
+        #         name="algoID",
+        #         type=dynamodb.AttributeType.STRING
+        #     ),
+        #     removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
+        # )
 
 class API(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
@@ -45,12 +163,42 @@ class API(Stack):
         self.api = apigateway.RestApi(
             self, 'API',
             rest_api_name='ETEngineAPI',
-            description='Core API for provisioning resources and running algorithms'
+            description='Core API for provisioning resources and running algorithms',
+            default_cors_preflight_options=apigateway.CorsOptions(
+                allow_origins=apigateway.Cors.ALL_ORIGINS,
+                allow_methods=apigateway.Cors.ALL_METHODS
+            )
+        )
+
+        users = self.api.root.add_resource("users")
+        users_create_lambda = self.add_lambda(users, "POST", "users", "users.create.handler")
+        database.users.grant_write_data(users_create_lambda)
+        users_create_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:DescribeStacks'
+                ],
+                resources=["*"]
+            )
+        )
+
+        users_id = users.add_resource("{userID}")               
+        users_describe_lambda = self.add_lambda(users_id, "GET", "users-describe", "users.user.describe.handler")
+        database.users.grant_read_data(users_describe_lambda)
+        users_describe_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:DescribeStacks'
+                ],
+                resources=["*"]
+            )
         )
         
-        algorithms = self.api.root.add_resource("algorithms")
+        users_delete = users_id.add_method('POST')
         
-        algorithms_lambda = self.add_lambda(algorithms, "POST", "algorithms", "algorithms.new.handler")        
+        algorithms = users_id.add_resource("algorithms")
+        
+        algorithms_lambda = self.add_lambda(algorithms, "POST", "algorithms", "algorithms.create.handler")        
         database.algorithms.grant_write_data(algorithms_lambda)
         algorithms_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -63,9 +211,8 @@ class API(Stack):
         )
         
         # self.add_lambda(algorithms, "GET", "algorithms", "algorithms.list.handler")
-
-        algorithms_id = algorithms.add_resource("{id}")
-        algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.info.handler")        
+        algorithms_id = algorithms.add_resource("{algoID}")
+        algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.describe.handler")        
         database.algorithms.grant_read_data(algorithms_id_lambda)
         algorithms_id_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -170,6 +317,9 @@ class API(Stack):
         algorithms_filesystem.add_method('GET')
         algorithms_filesystem.add_method('POST')
 
+        
+        
+
     def add_lambda(self, resource, request_type, method_prefix, handler, duration = 3):
         """
         name: base name of the method, needs to be in folder named 'lambda' with a handler method
@@ -219,6 +369,87 @@ class Templates(Stack):
             'DockerBuildTemplate',
             value = self.dockerbuild_template.bucket_name
         )
+
+class WebApp(Stack):
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+        bucket = s3.Bucket(
+            self, 
+            'webapp-bucket',
+            website_index_document='index.html',
+            # website_error_document="error.html",
+            auto_delete_objects=True,
+            removal_policy=cdk.RemovalPolicy.DESTROY,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS,
+            access_control = s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL
+        )
+        # iam_role = iam.Role(
+        #     self, 
+        #     'engine-webapp-role',
+        #     assumed_by=iam.ServicePrincipal('lambda.amazonaws.com')
+        # )
+        bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                effect = iam.Effect.ALLOW,
+                actions = ['s3:GetObject'],
+                resources = [f"{bucket.bucket_arn}/*"],
+                principals = [iam.AnyPrincipal()]
+            )
+        )
+
+        # source_code = s3_deploy.Source.asset(path='./webapp')
+        # self.bucket_deploy = s3_deploy.BucketDeployment(
+        #     self, 
+        #     'webapp-bucket-deploy', 
+        #     sources=[source_code],
+        #     destination_bucket=bucket
+        # )
+        
+        # self.handler = _lambda.Function(
+        #     self,
+        #     "WebAppHandler",
+        #     runtime=_lambda.Runtime.NODEJS_14_X,
+        #     handler= "app",
+        #     code=_lambda.Code.from_bucket(
+        #         self.bucket, 
+        #         "app.app.handler"
+        #     ), 
+        #     timeout = Duration.seconds(10))
+
+        hosted_zone = route53.HostedZone.from_lookup(
+            self, 
+            'exploretech-ai', 
+            domain_name='exploretech.ai'
+        )
+        
+        # certificate = certificatemanager.Certificate(self, "webapp-certificate",
+        #     domain_name="engine.exploretech.ai",
+        #     certificate_name="Hello World Service",  # Optionally provide an certificate name
+        #     validation=certificatemanager.CertificateValidation.from_dns(hosted_zone)
+        # )
+
+        cloudfront_distribution = cloudfront.Distribution(self, 'WebsiteDistribution',
+            default_behavior=cloudfront.BehaviorOptions(origin=origins.S3Origin(bucket)),
+            domain_names=['engine.exploretech.ai'],
+            certificate=certificatemanager.Certificate.from_certificate_arn(
+                self,
+                id="54682f3a-faa2-4b82-a79b-0c598baa6724",
+                certificate_arn='arn:aws:acm:us-east-1:734818840861:certificate/54682f3a-faa2-4b82-a79b-0c598baa6724'
+            )
+        )
+        route53.ARecord(self, 'WebsiteAliasRecord',
+            zone=hosted_zone,
+            target=route53.RecordTarget.from_alias(targets.CloudFrontTarget(cloudfront_distribution)),
+            record_name='engine',  # Replace with your subdomain
+        )
+
+        CfnOutput(
+            self,
+            'WebAppBucket',
+            value = bucket.bucket_name
+        )
+
+
         
 class ETEngine(Stack):
 
@@ -226,131 +457,23 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.database = MasterDB(self, "MasterDB")
-        self.api = API(self, "API", self.database)
-        self.templates = Templates(self, "Templates")
+        # self.api = API(self, "API", self.database)
+        # self.templates = Templates(self, "Templates")
+        # self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
-        CfnOutput(
-            self, 
-            'AlgorithmDB',
-            value = self.database.algorithms.table_name
-        )
-        CfnOutput(
-            self,
-            "TemplateBucket",
-            value = self.templates.dockerbuild_template.bucket_name
-        )
-
-
-
-        # algorithm_id_lambda = self.add_method("{algo_id}", "")
-
-        # provision_lambda = self.add_method('provision', 'POST', table_access = "write")
-        # execute_lambda = self.add_method('execute', 'POST', table_access = "read")
-        # destroy_lambda = self.add_method('destroy', 'POST', table_access = "read", duration=30)
-        # status_lambda = self.add_method('status', 'GET', table_access = "read")
-        # configure_lambda = self.add_method('configure', 'POST', table_access = "read", duration=30)
-
-
-        # provision_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'cloudformation:CreateStack', 
-        #             'codebuild:CreateProject',
-        #             'codebuild:DeleteProject',
-        #             's3:CreateBucket', 
-        #             's3:DeleteBucket',
-        #             'ec2:*',
-        #             'ecr:CreateRepository',
-        #             'ecr:DeleteRepository',
-        #             'ecr:DescribeRepositories',
-        #             'ecs:DescribeClusters',
-        #             'ecs:CreateCluster',
-        #             'ecs:DeleteCluster',
-        #             'ecs:DeregisterTaskDefinition',
-        #             'ecs:RegisterTaskDefinition',
-        #             'iam:CreateRole',
-        #             'iam:PutRolePolicy',
-        #             'iam:GetRole',
-        #             'iam:DeleteRole',
-        #             'iam:PassRole',
-        #             'iam:DeleteRolePolicy',
-        #             'iam:CreateServiceLinkedRole',
-        #             'iam:DeleteServiceLinkedRole',
-        #             'logs:DeleteLogGroup'
-        #         ],
-        #         resources=['*'],
-        #     )
+        # CfnOutput(
+        #     self, 
+        #     'AlgorithmDB',
+        #     value = self.database.algorithms.table_name
         # )
-        # execute_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'ecs:RunTask',
-        #             'iam:PassRole',
-        #             'cloudformation:DescribeStacks'
-        #         ],
-        #         resources=['*'],
-        #     )
+        # CfnOutput(
+        #     self, 
+        #     'UserDB',
+        #     value = self.database.users.table_name
         # )
-        # destroy_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             's3:DeleteBucket',
-        #             's3:ListBucket',
-        #             's3:DeleteObject',
-        #             'cloudformation:DeleteStack',
-        #             'cloudformation:DescribeStacks',
-        #             'codebuild:DeleteProject',
-        #             'ec2:*',
-        #             'ecr:DeleteRepository',
-        #             'ecs:DeregisterTaskDefinition',
-        #             'ecs:DescribeClusters',
-        #             'ecs:DeleteCluster',
-        #             'iam:DeleteRolePolicy',
-        #             'iam:DeleteRole',
-        #             'logs:DeleteLogGroup',
-        #             'ecr:DescribeImages',
-        #             'ecr:BatchGetImage',
-        #             'ecr:ListImages',
-        #             'ecr:BatchDeleteImage'
-
-        #         ],
-        #         resources=['*'],
-        #     )
-        # )
-        # status_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions = [
-        #             'cloudformation:DescribeStacks'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-        # configure_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions = [
-        #             'cloudformation:DescribeStacks',
-        #             's3:PutObject',
-        #             's3:ListBucket',
-        #             's3:GetObject',
-        #             'codebuild:StartBuild'
-        #         ],
-        #         resources = ['*']
-        #     )
+        # CfnOutput(
+        #     self,
+        #     "TemplateBucket",
+        #     value = self.templates.dockerbuild_template.bucket_name
         # )
 
-
-    
-    
-    def add_table(self, tbl_name):
-        return dynamodb.Table(
-            self, tbl_name,
-            table_name=tbl_name,
-            partition_key=dynamodb.Attribute(
-                name='AlgoID',
-                type=dynamodb.AttributeType.STRING
-            ),
-            removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
-        )
-    
-    def add_bucket(self, name):
-        return s3.Bucket(self, name)
