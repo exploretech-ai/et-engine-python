@@ -84,6 +84,7 @@ class MasterDB(Stack):
         )
 
         
+
         lambda_function = _lambda.Function(
             self, "DatabaseInitFunction",
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -109,51 +110,16 @@ class MasterDB(Stack):
         database.grant_connect(lambda_function)
         db_secret.grant_read(lambda_function)
 
-        # connection_props = database.secret.secret_value_from_json("postgres")
+        self.database = database
+        self.db_secret = db_secret
+        self.vpc = vpc
+        self.sg = lambda_security_group
 
-        # database.add_sql_statement(
-        #     "CREATE DATABASE IF NOT EXISTS users;",
-        #     database_name="postgres",
-        #     username=connection_props["username"],
-        #     password=cdk.SecretValue(connection_props["password"]),
-        # )
+    def grant_access(self, lambda_function, access = None):        
+        self.db_secret.grant_read(lambda_function)
+        self.database.grant_connect(lambda_function)
 
-        # # Create a table in the database
-        # database.add_sql_statement(
-        #     """
-        #     CREATE TABLE IF NOT EXISTS users (
-        #         id SERIAL PRIMARY KEY,
-        #         name VARCHAR(255) NOT NULL
-        #     );
-        #     """,
-        #     database_name="users",
-        #     username=connection_props["username"],
-        #     password=cdk.SecretValue(connection_props["password"]),
-        # )
 
-        # self.algorithms = dynamodb.Table(
-        #     self, 
-        #     "Algorithms",
-        #     partition_key=dynamodb.Attribute(
-        #         name='algoID',
-        #         type=dynamodb.AttributeType.STRING
-        #     ),
-        #     removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
-        # )
-
-        # self.users = dynamodb.Table(
-        #     self,
-        #     "Users",
-        #     partition_key=dynamodb.Attribute(
-        #         name='userID',
-        #         type=dynamodb.AttributeType.STRING
-        #     ),
-        #     sort_key=dynamodb.Attribute(
-        #         name="algoID",
-        #         type=dynamodb.AttributeType.STRING
-        #     ),
-        #     removal_policy=RemovalPolicy.DESTROY  # You can adjust this based on your cleanup strategy
-        # )
 
 class API(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
@@ -170,9 +136,38 @@ class API(Stack):
             )
         )
 
+
         users = self.api.root.add_resource("users")
-        users_create_lambda = self.add_lambda(users, "POST", "users", "users.create.handler")
-        database.users.grant_write_data(users_create_lambda)
+        users_create_lambda = _lambda.Function(
+            self, 'users-create',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "users.create.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        users.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(users_create_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        # users_create_lambda = self.add_lambda(users, "POST", "users", "users.create.handler")
+        database.grant_access(users_create_lambda)
+        # database.users.grant_write_data(users_create_lambda)
         users_create_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
@@ -182,140 +177,170 @@ class API(Stack):
             )
         )
 
-        users_id = users.add_resource("{userID}")               
-        users_describe_lambda = self.add_lambda(users_id, "GET", "users-describe", "users.user.describe.handler")
-        database.users.grant_read_data(users_describe_lambda)
-        users_describe_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'cloudformation:DescribeStacks'
-                ],
-                resources=["*"]
-            )
+        users_list_lambda = _lambda.Function(
+            self, 'users-list',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "users.list.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
         )
+        users.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(users_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        database.grant_access(users_list_lambda)
+        # users_id = users.add_resource("{userID}")               
+        # users_describe_lambda = self.add_lambda(users_id, "GET", "users-describe", "users.user.describe.handler")
+        # # database.users.grant_read_data(users_describe_lambda)
+        # users_describe_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'cloudformation:DescribeStacks'
+        #         ],
+        #         resources=["*"]
+        #     )
+        # )
         
-        users_delete = users_id.add_method('POST')
+
+
+        # users_delete = users_id.add_method('POST')
         
-        algorithms = users_id.add_resource("algorithms")
+        # algorithms = users_id.add_resource("algorithms")
         
-        algorithms_lambda = self.add_lambda(algorithms, "POST", "algorithms", "algorithms.create.handler")        
-        database.algorithms.grant_write_data(algorithms_lambda)
-        algorithms_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'dynamodb:PutItem',
-                    'cloudformation:DescribeStacks'
-                ],
-                resources=['*']
-            )
-        )
+        # algorithms_lambda = self.add_lambda(algorithms, "POST", "algorithms", "algorithms.create.handler")        
+        # # database.algorithms.grant_write_data(algorithms_lambda)
+        # algorithms_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'dynamodb:PutItem',
+        #             'cloudformation:DescribeStacks'
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
         
-        # self.add_lambda(algorithms, "GET", "algorithms", "algorithms.list.handler")
-        algorithms_id = algorithms.add_resource("{algoID}")
-        algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.describe.handler")        
-        database.algorithms.grant_read_data(algorithms_id_lambda)
-        algorithms_id_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'dynamodb:GetItem',
-                    'cloudformation:DescribeStacks'
-                ],
-                resources=['*']
-            )
-        )
+        # # self.add_lambda(algorithms, "GET", "algorithms", "algorithms.list.handler")
+        # algorithms_id = algorithms.add_resource("{algoID}")
+        # algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.describe.handler")        
+        # # database.algorithms.grant_read_data(algorithms_id_lambda)
+        # algorithms_id_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'dynamodb:GetItem',
+        #             'cloudformation:DescribeStacks'
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
 
-        algorithms_provision = algorithms_id.add_resource("provision")
-        algorithms_provision_lambda = self.add_lambda(algorithms_provision, "POST", "provision", "algorithms.provision.provision.handler")
-        algorithms_provision_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'cloudformation:*',
-                    'iam:*',
-                    'log-group:*',
-                    'ec2:*',
-                    'ecr:*',
-                    'ecs:*',
-                    's3:*',
-                    'codebuild:*'
-                ],
-                resources=['*']
-            )
-        )
-
-
-        # algorithms_provision_status = algorithms_provision.add_resource("status")
-        algorithms_provision_status_lambda = self.add_lambda(algorithms_provision, "GET", "provision-status", "algorithms.provision.status.handler")
-        algorithms_provision_status_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions = [
-                    'cloudformation:DescribeStacks'
-                ],
-                resources=["*"]
-            )
-        )
+        # algorithms_provision = algorithms_id.add_resource("provision")
+        # algorithms_provision_lambda = self.add_lambda(algorithms_provision, "POST", "provision", "algorithms.provision.provision.handler")
+        # algorithms_provision_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'cloudformation:*',
+        #             'iam:*',
+        #             'log-group:*',
+        #             'ec2:*',
+        #             'ecr:*',
+        #             'ecs:*',
+        #             's3:*',
+        #             'codebuild:*'
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
 
 
-        algorithms_build = algorithms_id.add_resource("build")
-        algorithms_build_lambda = self.add_lambda(algorithms_build, 'POST', 'build', "algorithms.build.build.handler", duration=30)
-        algorithms_build_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions = [
-                    'cloudformation:DescribeStacks',
-                    's3:PutObject',
-                    's3:ListBucket',
-                    's3:GetObject',
-                    'codebuild:StartBuild'
-                ],
-                resources = ['*']
-            )
-        )
-        algorithms_build_status_lambda = self.add_lambda(algorithms_build, "GET", "build-status", "algorithms.destroy.status.handler")
+        # # algorithms_provision_status = algorithms_provision.add_resource("status")
+        # algorithms_provision_status_lambda = self.add_lambda(algorithms_provision, "GET", "provision-status", "algorithms.provision.status.handler")
+        # algorithms_provision_status_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions = [
+        #             'cloudformation:DescribeStacks'
+        #         ],
+        #         resources=["*"]
+        #     )
+        # )
 
-        algorithms_execute = algorithms_id.add_resource("execute")
-        algorithms_execute_lambda = self.add_lambda(algorithms_execute, "POST", "execute", "algorithms.execute.execute.handler")
-        algorithms_execute_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'cloudformation:DescribeStacks',
-                    'ecs:RunTask',
-                    'iam:PassRole'
-                ],
-                resources=["*"]
-            )
-        )
-        algorithms_execute_status_lambda = self.add_lambda(algorithms_execute, "GET", "execute-status", "algorithms.execute.status.handler")
 
-        algorithms_destroy = algorithms_id.add_resource("destroy")
-        algorithms_destroy_lambda = self.add_lambda(algorithms_destroy, "POST", "destroy", "algorithms.destroy.destroy.handler", duration = 30)
-        algorithms_destroy_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:Delete*',
-                    's3:ListBucket',
-                    'cloudformation:DeleteStack',
-                    'cloudformation:DescribeStacks',
-                    'codebuild:DeleteProject',
-                    'ec2:*',
-                    'ecr:Delete*',
-                    'ecs:DeregisterTaskDefinition',
-                    'ecs:DescribeClusters',
-                    'iam:Delete*',
-                    'ecs:Delete*',
-                    'logs:DeleteLogGroup',
-                    'ecr:DescribeImages',
-                    'ecr:BatchGetImage',
-                    'ecr:ListImages',
-                    'ecr:BatchDeleteImage'
+        # algorithms_build = algorithms_id.add_resource("build")
+        # algorithms_build_lambda = self.add_lambda(algorithms_build, 'POST', 'build', "algorithms.build.build.handler", duration=30)
+        # algorithms_build_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions = [
+        #             'cloudformation:DescribeStacks',
+        #             's3:PutObject',
+        #             's3:ListBucket',
+        #             's3:GetObject',
+        #             'codebuild:StartBuild'
+        #         ],
+        #         resources = ['*']
+        #     )
+        # )
+        # algorithms_build_status_lambda = self.add_lambda(algorithms_build, "GET", "build-status", "algorithms.destroy.status.handler")
 
-                ],
-                resources=['*'],
-            )
-        )
-        algorithms_destroy_status_lambda = self.add_lambda(algorithms_destroy, "GET", "destroy-status", "algorithms.destroy.status.handler")
+        # algorithms_execute = algorithms_id.add_resource("execute")
+        # algorithms_execute_lambda = self.add_lambda(algorithms_execute, "POST", "execute", "algorithms.execute.execute.handler")
+        # algorithms_execute_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'cloudformation:DescribeStacks',
+        #             'ecs:RunTask',
+        #             'iam:PassRole'
+        #         ],
+        #         resources=["*"]
+        #     )
+        # )
+        # algorithms_execute_status_lambda = self.add_lambda(algorithms_execute, "GET", "execute-status", "algorithms.execute.status.handler")
 
-        algorithms_filesystem = algorithms_id.add_resource("filesystem")
-        algorithms_filesystem.add_method('GET')
-        algorithms_filesystem.add_method('POST')
+        # algorithms_destroy = algorithms_id.add_resource("destroy")
+        # algorithms_destroy_lambda = self.add_lambda(algorithms_destroy, "POST", "destroy", "algorithms.destroy.destroy.handler", duration = 30)
+        # algorithms_destroy_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             's3:Delete*',
+        #             's3:ListBucket',
+        #             'cloudformation:DeleteStack',
+        #             'cloudformation:DescribeStacks',
+        #             'codebuild:DeleteProject',
+        #             'ec2:*',
+        #             'ecr:Delete*',
+        #             'ecs:DeregisterTaskDefinition',
+        #             'ecs:DescribeClusters',
+        #             'iam:Delete*',
+        #             'ecs:Delete*',
+        #             'logs:DeleteLogGroup',
+        #             'ecr:DescribeImages',
+        #             'ecr:BatchGetImage',
+        #             'ecr:ListImages',
+        #             'ecr:BatchDeleteImage'
+
+        #         ],
+        #         resources=['*'],
+        #     )
+        # )
+        # algorithms_destroy_status_lambda = self.add_lambda(algorithms_destroy, "GET", "destroy-status", "algorithms.destroy.status.handler")
+
+        # algorithms_filesystem = algorithms_id.add_resource("filesystem")
+        # algorithms_filesystem.add_method('GET')
+        # algorithms_filesystem.add_method('POST')
 
         
         
@@ -457,10 +482,15 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.database = MasterDB(self, "MasterDB")
-        # self.api = API(self, "API", self.database)
+        self.api = API(self, "API", self.database)
         # self.templates = Templates(self, "Templates")
         # self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
+        CfnOutput(
+            self,
+            "APIURL",
+            value = self.api.api.url
+        )
         # CfnOutput(
         #     self, 
         #     'AlgorithmDB',
