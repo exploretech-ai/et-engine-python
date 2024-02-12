@@ -2,7 +2,6 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     Duration,
-    aws_dynamodb as dynamodb,
     RemovalPolicy,
     aws_iam as iam,
     aws_s3 as s3,
@@ -16,10 +15,8 @@ from aws_cdk import (
     aws_route53_targets as targets,
     aws_rds as rds,
     aws_ec2 as ec2,
-    aws_secretsmanager as asm
 )
 import aws_cdk as cdk
-from aws_cdk import RemovalPolicy
 
 from constructs import Construct
 import os
@@ -46,6 +43,7 @@ class MasterDB(Stack):
                 )
             ]
         ) 
+        
         db_security_group = ec2.SecurityGroup(
             self,
             'DBSecurityGroup',
@@ -62,7 +60,6 @@ class MasterDB(Stack):
             'Lambda to Postgres database'
         )
         
-
         db_secret = rds.DatabaseSecret(
             self,
             "RDSSecret",
@@ -84,7 +81,6 @@ class MasterDB(Stack):
         )
 
         
-
         lambda_function = _lambda.Function(
             self, "DatabaseInitFunction",
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -110,10 +106,12 @@ class MasterDB(Stack):
         database.grant_connect(lambda_function)
         db_secret.grant_read(lambda_function)
 
+
         self.database = database
         self.db_secret = db_secret
         self.vpc = vpc
         self.sg = lambda_security_group
+
 
     def grant_access(self, lambda_function, access = None):        
         self.db_secret.grant_read(lambda_function)
@@ -165,9 +163,7 @@ class API(Stack):
                 },
             }],
         )
-        # users_create_lambda = self.add_lambda(users, "POST", "users", "users.create.handler")
         database.grant_access(users_create_lambda)
-        # database.users.grant_write_data(users_create_lambda)
         users_create_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
@@ -205,163 +201,265 @@ class API(Stack):
             }],
         )
         database.grant_access(users_list_lambda)
-        # users_id = users.add_resource("{userID}")               
-        # users_describe_lambda = self.add_lambda(users_id, "GET", "users-describe", "users.user.describe.handler")
-        # # database.users.grant_read_data(users_describe_lambda)
-        # users_describe_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'cloudformation:DescribeStacks'
-        #         ],
-        #         resources=["*"]
-        #     )
-        # )
-        
 
 
-        # users_delete = users_id.add_method('POST')
-        
-        # algorithms = users_id.add_resource("algorithms")
-        
-        # algorithms_lambda = self.add_lambda(algorithms, "POST", "algorithms", "algorithms.create.handler")        
-        # # database.algorithms.grant_write_data(algorithms_lambda)
-        # algorithms_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'dynamodb:PutItem',
-        #             'cloudformation:DescribeStacks'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-        
-        # # self.add_lambda(algorithms, "GET", "algorithms", "algorithms.list.handler")
-        # algorithms_id = algorithms.add_resource("{algoID}")
-        # algorithms_id_lambda = self.add_lambda(algorithms_id, "GET", "algorithm", "algorithms.algorithm.describe.handler")        
-        # # database.algorithms.grant_read_data(algorithms_id_lambda)
-        # algorithms_id_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'dynamodb:GetItem',
-        #             'cloudformation:DescribeStacks'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-
-        # algorithms_provision = algorithms_id.add_resource("provision")
-        # algorithms_provision_lambda = self.add_lambda(algorithms_provision, "POST", "provision", "algorithms.provision.provision.handler")
-        # algorithms_provision_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'cloudformation:*',
-        #             'iam:*',
-        #             'log-group:*',
-        #             'ec2:*',
-        #             'ecr:*',
-        #             'ecs:*',
-        #             's3:*',
-        #             'codebuild:*'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-
-
-        # # algorithms_provision_status = algorithms_provision.add_resource("status")
-        # algorithms_provision_status_lambda = self.add_lambda(algorithms_provision, "GET", "provision-status", "algorithms.provision.status.handler")
-        # algorithms_provision_status_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions = [
-        #             'cloudformation:DescribeStacks'
-        #         ],
-        #         resources=["*"]
-        #     )
-        # )
-
-
-        # algorithms_build = algorithms_id.add_resource("build")
-        # algorithms_build_lambda = self.add_lambda(algorithms_build, 'POST', 'build', "algorithms.build.build.handler", duration=30)
-        # algorithms_build_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions = [
-        #             'cloudformation:DescribeStacks',
-        #             's3:PutObject',
-        #             's3:ListBucket',
-        #             's3:GetObject',
-        #             'codebuild:StartBuild'
-        #         ],
-        #         resources = ['*']
-        #     )
-        # )
-        # algorithms_build_status_lambda = self.add_lambda(algorithms_build, "GET", "build-status", "algorithms.destroy.status.handler")
-
-        # algorithms_execute = algorithms_id.add_resource("execute")
-        # algorithms_execute_lambda = self.add_lambda(algorithms_execute, "POST", "execute", "algorithms.execute.execute.handler")
-        # algorithms_execute_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'cloudformation:DescribeStacks',
-        #             'ecs:RunTask',
-        #             'iam:PassRole'
-        #         ],
-        #         resources=["*"]
-        #     )
-        # )
-        # algorithms_execute_status_lambda = self.add_lambda(algorithms_execute, "GET", "execute-status", "algorithms.execute.status.handler")
-
-        # algorithms_destroy = algorithms_id.add_resource("destroy")
-        # algorithms_destroy_lambda = self.add_lambda(algorithms_destroy, "POST", "destroy", "algorithms.destroy.destroy.handler", duration = 30)
-        # algorithms_destroy_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             's3:Delete*',
-        #             's3:ListBucket',
-        #             'cloudformation:DeleteStack',
-        #             'cloudformation:DescribeStacks',
-        #             'codebuild:DeleteProject',
-        #             'ec2:*',
-        #             'ecr:Delete*',
-        #             'ecs:DeregisterTaskDefinition',
-        #             'ecs:DescribeClusters',
-        #             'iam:Delete*',
-        #             'ecs:Delete*',
-        #             'logs:DeleteLogGroup',
-        #             'ecr:DescribeImages',
-        #             'ecr:BatchGetImage',
-        #             'ecr:ListImages',
-        #             'ecr:BatchDeleteImage'
-
-        #         ],
-        #         resources=['*'],
-        #     )
-        # )
-        # algorithms_destroy_status_lambda = self.add_lambda(algorithms_destroy, "GET", "destroy-status", "algorithms.destroy.status.handler")
-
-        # algorithms_filesystem = algorithms_id.add_resource("filesystem")
-        # algorithms_filesystem.add_method('GET')
-        # algorithms_filesystem.add_method('POST')
-
-        
-        
-
-    def add_lambda(self, resource, request_type, method_prefix, handler, duration = 3):
-        """
-        name: base name of the method, needs to be in folder named 'lambda' with a handler method
-        type: 'POST', 'GET', etc.
-
-        """
-
-        method_lambda = _lambda.Function(
-            self, method_prefix + '-' + request_type,
+        user_id = users.add_resource("{userID}")   
+        user_id_describe_lambda = _lambda.Function(
+            self, 'user-id-describe',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= handler,
+            handler= "users.user.describe.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(duration)
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
         )
-        resource.add_method(
-            request_type,
-            integration=apigateway.LambdaIntegration(method_lambda),
+        user_id.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(user_id_describe_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        database.grant_access(user_id_describe_lambda)
+
+        
+        algorithms = user_id.add_resource("algorithms")
+        algorithms_create_lambda = _lambda.Function(
+            self, 'algorithm-create',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.create.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithms.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(algorithms_create_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        database.grant_access(algorithms_create_lambda)
+        
+        algorithms_list_lambda = _lambda.Function(
+            self, 'algorithm-list',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.list.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithms.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(algorithms_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        database.grant_access(algorithms_list_lambda)
+
+
+        algorithm_id = algorithms.add_resource("{algoID}")
+        algorithm_id_describe_lambda = _lambda.Function(
+            self, 'algorithm-describe',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.algorithm.describe.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_id.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(algorithm_id_describe_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        database.grant_access(algorithm_id_describe_lambda)
+
+
+        algorithm_provision = algorithm_id.add_resource("provision")
+        algorithm_provision_lambda = _lambda.Function(
+            self, 'algorithm-provision',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.provision.provision.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_provision.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(algorithm_provision_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        algorithm_provision_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:*',
+                    'iam:*',
+                    'log-group:*',
+                    'ec2:*',
+                    'ecr:*',
+                    'ecs:*',
+                    's3:*',
+                    'codebuild:*'
+                ],
+                resources=['*']
+            )
+        )
+
+        algorithm_provision_status_lambda = _lambda.Function(
+            self, 'algorithm-provision-status',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.provision.status.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_provision.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(algorithm_provision_status_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        algorithm_provision_status_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions = [
+                    'cloudformation:DescribeStacks'
+                ],
+                resources=["*"]
+            )
+        )
+
+
+        algorithm_build = algorithm_id.add_resource("build")
+        algorithm_build_lambda = _lambda.Function(
+            self, 'algorithm-build',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.build.build.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_build.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(algorithm_build_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        algorithm_build_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions = [
+                    'cloudformation:DescribeStacks',
+                    's3:PutObject',
+                    's3:ListBucket',
+                    's3:GetObject',
+                    'codebuild:StartBuild'
+                ],
+                resources = ['*']
+            )
+        )
+
+        algorithm_build_status_lambda = _lambda.Function(
+            self, 'algorithm-build-status',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.build.status.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_build.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(algorithm_build_status_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -373,10 +471,160 @@ class API(Stack):
             }],
         )
         
-        return method_lambda
 
-        # algorithms_computestack = algorithms_id.add_resource("computestack")
+        algorithm_execute = algorithm_id.add_resource("execute")
+        algorithm_execute_lambda = _lambda.Function(
+            self, 'algorithm-execute',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.execute.execute.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_execute.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(algorithm_execute_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        algorithm_execute_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:DescribeStacks',
+                    'ecs:RunTask',
+                    'iam:PassRole'
+                ],
+                resources=["*"]
+            )
+        )
 
+        algorithm_execute_status_lambda = _lambda.Function(
+            self, 'algorithm-execute-status',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.execute.status.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_execute.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(algorithm_execute_status_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        
+        
+        algorithm_destroy = algorithm_id.add_resource("destroy")
+        algorithm_destroy_lambda = _lambda.Function(
+            self, 'algorithm-destroy',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.destroy.destroy.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg],
+            timeout=Duration.seconds(30)
+        )
+        algorithm_destroy.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(algorithm_destroy_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        algorithm_destroy_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:Delete*',
+                    's3:ListBucket',
+                    'cloudformation:DeleteStack',
+                    'cloudformation:DescribeStacks',
+                    'codebuild:DeleteProject',
+                    'ec2:*',
+                    'ecr:Delete*',
+                    'ecs:DeregisterTaskDefinition',
+                    'ecs:DescribeClusters',
+                    'iam:Delete*',
+                    'ecs:Delete*',
+                    'logs:DeleteLogGroup',
+                    'ecr:DescribeImages',
+                    'ecr:BatchGetImage',
+                    'ecr:ListImages',
+                    'ecr:BatchDeleteImage'
+
+                ],
+                resources=['*'],
+            )
+        )
+
+        algorithm_destroy_status_lambda = _lambda.Function(
+            self, 'algorithm-destroy-status',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "algorithms.destroy.status.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        algorithm_destroy.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(algorithm_destroy_status_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+        
+
+        # algorithms_filesystem = algorithms_id.add_resource("filesystem")
+        # algorithms_filesystem.add_method('GET')
+        # algorithms_filesystem.add_method('POST')
+
+        
+        
 class Templates(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -483,7 +731,7 @@ class ETEngine(Stack):
 
         self.database = MasterDB(self, "MasterDB")
         self.api = API(self, "API", self.database)
-        # self.templates = Templates(self, "Templates")
+        self.templates = Templates(self, "Templates")
         # self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
         CfnOutput(
@@ -491,19 +739,9 @@ class ETEngine(Stack):
             "APIURL",
             value = self.api.api.url
         )
-        # CfnOutput(
-        #     self, 
-        #     'AlgorithmDB',
-        #     value = self.database.algorithms.table_name
-        # )
-        # CfnOutput(
-        #     self, 
-        #     'UserDB',
-        #     value = self.database.users.table_name
-        # )
-        # CfnOutput(
-        #     self,
-        #     "TemplateBucket",
-        #     value = self.templates.dockerbuild_template.bucket_name
-        # )
+        CfnOutput(
+            self,
+            "TemplateBucket",
+            value = self.templates.dockerbuild_template.bucket_name
+        )
 

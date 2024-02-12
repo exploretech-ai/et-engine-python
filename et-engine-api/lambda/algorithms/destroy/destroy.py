@@ -73,7 +73,7 @@ def handler(event, context):
 
     try:
             
-        algoID = event['pathParameters']['id']
+        algoID = event['pathParameters']['algoID']
         cf_client = boto3.client('cloudformation')
         cf_outputs = get_stack_output(algoID)
 

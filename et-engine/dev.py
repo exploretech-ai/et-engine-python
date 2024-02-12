@@ -27,21 +27,21 @@ if __name__ == "__main__":
     input_data = VectorDataset([0,0,0])
 
     
-    algo = TestAlgorithm()
+    algo = TestAlgorithm(id="cd80bc66-a489-4802-a734-389ee9ffd98f")
     # print(algo.id)
 
-    algo.provision()
+    # algo.provision()
     
     
-    output = algo.build('dev-dockerfile', 'dev-helloworld.py')
+    # output = algo.build('dev-dockerfile', 'dev-helloworld.py')
     # print(output)
     
     
-    time.sleep(200)
-    output_data = algo(input_data)
+    # time.sleep(200)
+    # output_data = algo(input_data)
 
 
-    time.sleep(200)
+    # time.sleep(200)
     output = algo.destroy()
     print(output)
 

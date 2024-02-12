@@ -451,7 +451,7 @@ def ProvisionResources(algo_ID):
 def handler(event, context):
 
     try:
-        algoID = event['pathParameters']['id']
+        algoID = event['pathParameters']['algoID']
         stack = ProvisionResources(algoID)
 
         cf = boto3.client('cloudformation')

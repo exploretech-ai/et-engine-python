@@ -3,7 +3,7 @@ from time import sleep
 import json
 from ..storage.filesystem import FileSystem
 
-API_URL = 'https://xmnogdgtx4.execute-api.us-east-2.amazonaws.com/prod/'
+API_URL = 'https://gsgj2z3zpj.execute-api.us-east-2.amazonaws.com/prod/'
 
 
 
@@ -53,7 +53,7 @@ class Algorithm:
         #     'file': '/path/to/dummy/file',
         #     'id': self.id
         # }
-        x = requests.post(API_URL + f'algorithms/{self.id}/execute')
+        x = requests.post(API_URL + f'users/0/algorithms/{self.id}/execute')
         print(x.text)
 
         # print("Returns the API execution message")
@@ -72,13 +72,13 @@ class Algorithm:
         
 
         print('Provisioning resources')
-        response = requests.post(API_URL + f'algorithms/{self.id}/provision')
+        response = requests.post(API_URL + f'users/0/algorithms/{self.id}/provision')
         
 
         # Loop that checks status
         if monitor:
             for i in range(20):
-                status = requests.get(API_URL + f'algorithms/{self.id}/provision')
+                status = requests.get(API_URL + f'users/0/algorithms/{self.id}/provision')
                 status = status.text[1:-1]
 
                 if status == "ready":
@@ -98,7 +98,7 @@ class Algorithm:
 
     def destroy(self):
 
-        x = requests.post(API_URL + f'algorithms/{self.id}/destroy')
+        x = requests.post(API_URL + f'users/0/algorithms/{self.id}/destroy')
         return x.text
 
     def build(self, dockerfile, app):
@@ -115,7 +115,7 @@ class Algorithm:
             'app': app
         }
 
-        response = requests.post(API_URL + f'algorithms/{self.id}/build', json=resources)
+        response = requests.post(API_URL + f'users/0/algorithms/{self.id}/build', json=resources)
         # print(response.text)
         
         dockerile_url = json.loads(response.text)["presignedUrl1"]

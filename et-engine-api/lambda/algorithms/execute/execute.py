@@ -26,7 +26,7 @@ def get_output_value(outputs, key):
 def handler(event, context):
 
     try:
-        algoID = event['pathParameters']['id']
+        algoID = event['pathParameters']['algoID']
 
         # params = json.loads(event['body'])
 
@@ -37,12 +37,6 @@ def handler(event, context):
         subnet_ids = get_output_value(cf_outputs, "PublicSubnetId")
         security_group_ids = get_output_value(cf_outputs, "SecurityGroupID")
         
-        # subnet_ids = "subnet-0578476bb41d3ac47"
-        # security_group_ids = "sg-01bb6b247853cd9e5"
-
-        # THESE WORK
-        # subnet_ids = "subnet-06f7655a729b6c494"
-        # security_group_ids = "sg-07dfca753315715a2" 
 
     except Exception as e:
         return {
