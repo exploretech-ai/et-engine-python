@@ -5,13 +5,12 @@ import UserID from './components/UserID'
 import AlgorithmsList from './components/Algorithm'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [userID, setUserID] = useState('');
 
   return (
     <div className="App">
       <header className="App-header">
-        <UserID/>
-        <AlgorithmsList/>
+        <UserID userID={userID} setUserID={setUserID}/>
       </header>
     </div>
   )

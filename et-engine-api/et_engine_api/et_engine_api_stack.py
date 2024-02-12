@@ -732,7 +732,7 @@ class ETEngine(Stack):
         self.database = MasterDB(self, "MasterDB")
         self.api = API(self, "API", self.database)
         self.templates = Templates(self, "Templates")
-        # self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
+        self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
         CfnOutput(
             self,

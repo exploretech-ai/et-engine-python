@@ -65,6 +65,9 @@ def handler(event, context):
         connection.commit()
         return {
             'statusCode': 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*"
+            },
             'body': json.dumps(data)
         }
 

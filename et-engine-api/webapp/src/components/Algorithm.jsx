@@ -1,4 +1,4 @@
-import React from "react"
+import React, {useState} from "react"
 
 function Algorithm({id, name}) {
     // 
@@ -17,18 +17,27 @@ function Algorithm({id, name}) {
     )
 }
 
-function AlgorithmsList() {
+function AlgorithmsList({userID, setUserID}) {
+
+    const [itemData, setItemData] = useState([])
 
 
-    async function fetchAvailableAlgorithms(userID) {
+    async function fetchAvailableAlgorithms() {
         // GET /algorithms?user={userID}
-        const response = await fetch(`https://xmnogdgtx4.execute-api.us-east-2.amazonaws.com/prod/users/${userID}/algorithms`);
+        const userID = "0"
+        setItemData([0, 1])
+        // const response = await fetch(`https://gsgj2z3zpj.execute-api.us-east-2.amazonaws.com/prod/users/${userID}/algorithms`);
+        // const data = await response.json();
+        // console.log(data)
     }
+
+
+    // const items = [0, 1]
 
     return (
         <div>
-            <Algorithm id={0} name={"Hello World"}/>
-            <Algorithm id={1} name={"Hello World"}/>
+            <button onClick={fetchAvailableAlgorithms}>Get Algorithms</button>
+            {itemData.map((item, index) => (<Algorithm id={item} name="hello" key={item}/>))}
         </div>
     )
 }
