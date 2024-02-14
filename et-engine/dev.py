@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # algo.provision()
     
     
-    # output = algo.build('dev-dockerfile', 'dev-helloworld.py')
+    output = algo.build('dev-dockerfile', 'dev-helloworld.py')
     # print(output)
     
     
@@ -42,8 +42,8 @@ if __name__ == "__main__":
 
 
     # time.sleep(200)
-    output = algo.destroy()
-    print(output)
+    # output = algo.destroy()
+    # print(output)
 
     # print(input_data)
     # print(output_data)

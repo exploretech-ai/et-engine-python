@@ -4,10 +4,10 @@ import os
 import aws_cdk as cdk
 
 from et_engine_api.et_engine_api_stack import ETEngine
-
+from et_engine_api.et_engine_modules import *
 
 app = cdk.App()
-ETEngine(app, "ETEngine",
+engine = ETEngine(app, "ETEngine",
     # If you don't specify 'env', this stack will be environment-agnostic.
     # Account/Region-dependent features and context lookups will not work,
     # but a single synthesized template can be deployed anywhere.
@@ -24,5 +24,12 @@ ETEngine(app, "ETEngine",
 
     # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
     )
+
+
+templates = cdk.App()
+ComputeModule(templates, "Module-Compute")
+BuildModule(templates, "Module-Build")
+templates.synth()
+
 
 app.synth()

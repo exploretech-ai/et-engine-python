@@ -2,8 +2,6 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     Duration,
-    RemovalPolicy,
-    aws_iam as iam,
     aws_s3 as s3,
     aws_apigateway as apigateway,
     aws_s3_deployment as s3_deploy,
@@ -15,11 +13,11 @@ from aws_cdk import (
     aws_route53_targets as targets,
     aws_rds as rds,
     aws_ec2 as ec2,
+    aws_iam as iam,
 )
 import aws_cdk as cdk
-
 from constructs import Construct
-import os
+
 
 class MasterDB(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -116,7 +114,6 @@ class MasterDB(Stack):
     def grant_access(self, lambda_function, access = None):        
         self.db_secret.grant_read(lambda_function)
         self.database.grant_connect(lambda_function)
-
 
 
 class API(Stack):
@@ -358,11 +355,13 @@ class API(Stack):
                     'cloudformation:*',
                     'iam:*',
                     'log-group:*',
+                    'logs:*',
                     'ec2:*',
                     'ecr:*',
                     'ecs:*',
                     's3:*',
-                    'codebuild:*'
+                    'codebuild:*',
+                    'ssm:*'
                 ],
                 resources=['*']
             )
@@ -416,7 +415,8 @@ class API(Stack):
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
-            security_groups=[database.sg]
+            security_groups=[database.sg],
+            timeout=Duration.seconds(30)
         )
         algorithm_build.add_method(
             "POST",
@@ -623,8 +623,7 @@ class API(Stack):
         # algorithms_filesystem.add_method('GET')
         # algorithms_filesystem.add_method('POST')
 
-        
-        
+             
 class Templates(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -642,6 +641,7 @@ class Templates(Stack):
             'DockerBuildTemplate',
             value = self.dockerbuild_template.bucket_name
         )
+
 
 class WebApp(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -722,8 +722,7 @@ class WebApp(Stack):
             value = bucket.bucket_name
         )
 
-
-        
+      
 class ETEngine(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:

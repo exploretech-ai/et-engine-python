@@ -108,8 +108,6 @@ def ConfigCompute(algo_ID):
             }
         }
     }
-
-
     compute_stack["SecurityGroup"] = {
         "Type" : "AWS::EC2::SecurityGroup",
         "Properties" : {
@@ -119,6 +117,7 @@ def ConfigCompute(algo_ID):
             }
         }
     }
+    
     compute_stack['ContainerRepo'] = {
         "Type": "AWS::ECR::Repository",
         "Properties": {
@@ -215,6 +214,7 @@ def ConfigCompute(algo_ID):
             "LogGroupName": f"/ecs/hello-world-task-{algo_ID}"
         }
     }
+
     compute_stack["CodeBuildRole"] = {
         "Type": "AWS::IAM::Role",
         "Properties": {
@@ -447,24 +447,32 @@ def ProvisionResources(algo_ID):
 
     return template
 
+def get_stack():
+    
+    s3 = boto3.client('s3')
+    return s3.get_object(Bucket="computemodule-codebucketff4c7ad6-kh9e9qicppyn", Key="cfn/Module-Compute.template.json")
 
 def handler(event, context):
 
     try:
         algoID = event['pathParameters']['algoID']
-        stack = ProvisionResources(algoID)
+
+        # stack = ProvisionResources(algoID)
+        stack = get_stack()
+        stack = stack['Body'].read().decode('utf-8')
+
 
         cf = boto3.client('cloudformation')
         cf.create_stack(
             StackName = f"engine-algo-{algoID}", 
-            TemplateBody = json.dumps(stack),
+            TemplateBody = stack,
             OnFailure = 'DELETE',
             Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
         )
 
         return {
             'statusCode': 200,
-            'body': json.dumps("This request will provision the provided algoID")
+            'body': json.dumps("provision started")
         }
 
     except Exception as e:
@@ -474,5 +482,16 @@ def handler(event, context):
         }
 
 
-    
+if __name__ == "__main__":
 
+    stack = get_stack()
+    stack = stack['Body'].read().decode('utf-8')
+
+
+    cf = boto3.client('cloudformation')
+    cf.create_stack(
+        StackName = f"engine-algo-0000", 
+        TemplateBody = stack,
+        OnFailure = 'DELETE',
+        Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
+    )

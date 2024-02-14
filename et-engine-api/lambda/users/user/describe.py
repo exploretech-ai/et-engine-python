@@ -55,8 +55,6 @@ def handler(event, context):
         connection = connect()
         with connection.cursor() as cursor:
 
-            # sql_query = "select * from information_schema.tables"
-            # sql_query = f"INSERT INTO Users (userID, name) VALUES ('{userID}', '{name}')"
             sql_query = f"SELECT * FROM Users  WHERE userID = '{userID}'"
             cursor.execute(sql_query)
             data = cursor.fetchall()
@@ -72,14 +70,6 @@ def handler(event, context):
         }
 
     
-    # try:
-    #     rds_create_user("0", "ET")
-
-    #     return {
-    #         'statusCode': 200,
-    #         'body': json.dumps("success")
-    #     }   
-        
     except Exception as e:
         return {
             'statusCode': 500,
