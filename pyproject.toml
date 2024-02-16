@@ -16,6 +16,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dynamic = ["version"]
+dependencies = [
+  'requests',
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
