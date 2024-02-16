@@ -322,8 +322,8 @@ class API(Stack):
         database.grant_access(workflow_id_describe_lambda)
 
 
-        workflow_submit = workflow_id.add_resource("submit")
-        workflow_submit_lambda = _lambda.Function(
+        # workflow_submit = workflow_id.add_resource("submit")
+        workflow_id_submit_lambda = _lambda.Function(
             self, 'workflow-submit',
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= "workflows.submit.submit.handler",
@@ -336,9 +336,9 @@ class API(Stack):
             ),
             security_groups=[database.sg]
         )
-        workflow_submit.add_method(
+        workflow_id.add_method(
             "POST",
-            integration=apigateway.LambdaIntegration(workflow_submit_lambda),
+            integration=apigateway.LambdaIntegration(workflow_id_submit_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -349,7 +349,7 @@ class API(Stack):
                 },
             }],
         )
-        workflow_submit_lambda.add_to_role_policy(
+        workflow_id_submit_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     's3:*'
@@ -357,14 +357,73 @@ class API(Stack):
                 resources=['*']
             )
         )
-        database.grant_access(workflow_submit_lambda)
+        database.grant_access(workflow_id_submit_lambda)
+
+        modules = workflow_id.add_resource("modules")
+        modules_list_lambda = _lambda.Function(
+            self, 'modules-list',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "workflows.workflow.modules.list.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        modules.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(modules_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
 
 
-        workflow_provision = workflow_id.add_resource("provision")
-        workflow_provision_lambda = _lambda.Function(
+        module_name = modules.add_resource("{moduleName}")
+        module_describe_lambda = _lambda.Function(
+            self, 'module-describe',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "workflows.workflow.modules.module.describe.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            # timeout = Duration.minutes(5),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        module_name.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(module_describe_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+        )
+
+
+        module_provision = module_name.add_resource("provision")
+        module_provision_lambda = _lambda.Function(
             self, 'workflow-provision',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.provision.provision.handler",
+            handler= "workflows.workflow.modules.module.provision.provision.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -375,9 +434,9 @@ class API(Stack):
             security_groups=[database.sg],
             timeout=Duration.seconds(10)
         )
-        workflow_provision.add_method(
+        module_provision.add_method(
             "POST",
-            integration=apigateway.LambdaIntegration(workflow_provision_lambda),
+            integration=apigateway.LambdaIntegration(module_provision_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -388,7 +447,7 @@ class API(Stack):
                 },
             }],
         )
-        workflow_provision_lambda.add_to_role_policy(
+        module_provision_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     'cloudformation:*',
@@ -406,10 +465,10 @@ class API(Stack):
             )
         )
 
-        workflow_provision_status_lambda = _lambda.Function(
+        module_provision_status_lambda = _lambda.Function(
             self, 'workflow-provision-status',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.provision.status.handler",
+            handler= "workflows.workflow.modules.module.provision.status.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -419,9 +478,9 @@ class API(Stack):
             ),
             security_groups=[database.sg]
         )
-        workflow_provision.add_method(
+        module_provision.add_method(
             "GET",
-            integration=apigateway.LambdaIntegration(workflow_provision_status_lambda),
+            integration=apigateway.LambdaIntegration(module_provision_status_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -432,7 +491,7 @@ class API(Stack):
                 },
             }],
         )
-        workflow_provision_status_lambda.add_to_role_policy(
+        module_provision_status_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions = [
                     'cloudformation:DescribeStacks'
@@ -442,80 +501,80 @@ class API(Stack):
         )
 
 
-        workflow_build = workflow_id.add_resource("build")
-        workflow_build_lambda = _lambda.Function(
-            self, 'workflow-build',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.build.build.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg],
-            timeout=Duration.seconds(30)
-        )
-        workflow_build.add_method(
-            "POST",
-            integration=apigateway.LambdaIntegration(workflow_build_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-        )
-        workflow_build_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions = [
-                    'cloudformation:DescribeStacks',
-                    's3:PutObject',
-                    's3:ListBucket',
-                    's3:GetObject',
-                    'codebuild:StartBuild'
-                ],
-                resources = ['*']
-            )
-        )
+        # module_build = module_name.add_resource("build")
+        # module_build_lambda = _lambda.Function(
+        #     self, 'workflow-build',
+        #     runtime=_lambda.Runtime.PYTHON_3_8,
+        #     handler= "workflows.workflow.modules.module.build.build.handler",
+        #     code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+        #     vpc=database.vpc,
+        #     vpc_subnets=ec2.SubnetSelection(
+        #         subnets=database.vpc.select_subnets(
+        #             subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+        #         ).subnets
+        #     ),
+        #     security_groups=[database.sg],
+        #     timeout=Duration.seconds(30)
+        # )
+        # module_build.add_method(
+        #     "POST",
+        #     integration=apigateway.LambdaIntegration(module_build_lambda),
+        #     method_responses=[{
+        #         'statusCode': '200',
+        #         'responseParameters': {
+        #             'method.response.header.Content-Type': True,
+        #         },
+        #         'responseModels': {
+        #             'application/json': apigateway.Model.EMPTY_MODEL,
+        #         },
+        #     }],
+        # )
+        # module_build_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions = [
+        #             'cloudformation:DescribeStacks',
+        #             's3:PutObject',
+        #             's3:ListBucket',
+        #             's3:GetObject',
+        #             'codebuild:StartBuild'
+        #         ],
+        #         resources = ['*']
+        #     )
+        # )
 
-        workflow_build_status_lambda = _lambda.Function(
-            self, 'workflow-build-status',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.build.status.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
-        )
-        workflow_build.add_method(
-            "GET",
-            integration=apigateway.LambdaIntegration(workflow_build_status_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-        )
+        # module_build_status_lambda = _lambda.Function(
+        #     self, 'workflow-build-status',
+        #     runtime=_lambda.Runtime.PYTHON_3_8,
+        #     handler= "workflows.workflow.modules.module.build.status.handler",
+        #     code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+        #     vpc=database.vpc,
+        #     vpc_subnets=ec2.SubnetSelection(
+        #         subnets=database.vpc.select_subnets(
+        #             subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+        #         ).subnets
+        #     ),
+        #     security_groups=[database.sg]
+        # )
+        # module_build.add_method(
+        #     "GET",
+        #     integration=apigateway.LambdaIntegration(module_build_status_lambda),
+        #     method_responses=[{
+        #         'statusCode': '200',
+        #         'responseParameters': {
+        #             'method.response.header.Content-Type': True,
+        #         },
+        #         'responseModels': {
+        #             'application/json': apigateway.Model.EMPTY_MODEL,
+        #         },
+        #     }],
+        # )
         
 
-        workflow_execute = workflow_id.add_resource("execute")
-        workflow_execute_lambda = _lambda.Function(
+        module_execute = module_name.add_resource("execute")
+        module_execute_lambda = _lambda.Function(
             self, 'workflow-execute',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.execute.execute.handler",
+            handler= "workflows.workflow.modules.module.execute.execute.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -525,9 +584,9 @@ class API(Stack):
             ),
             security_groups=[database.sg]
         )
-        workflow_execute.add_method(
+        module_execute.add_method(
             "POST",
-            integration=apigateway.LambdaIntegration(workflow_execute_lambda),
+            integration=apigateway.LambdaIntegration(module_execute_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -538,7 +597,7 @@ class API(Stack):
                 },
             }],
         )
-        workflow_execute_lambda.add_to_role_policy(
+        module_execute_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     'cloudformation:DescribeStacks',
@@ -549,10 +608,10 @@ class API(Stack):
             )
         )
 
-        workflow_execute_status_lambda = _lambda.Function(
+        module_execute_status_lambda = _lambda.Function(
             self, 'workflow-execute-status',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.execute.status.handler",
+            handler= "workflows.workflow.modules.module.execute.status.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -562,9 +621,9 @@ class API(Stack):
             ),
             security_groups=[database.sg]
         )
-        workflow_execute.add_method(
+        module_execute.add_method(
             "GET",
-            integration=apigateway.LambdaIntegration(workflow_execute_status_lambda),
+            integration=apigateway.LambdaIntegration(module_execute_status_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -577,11 +636,11 @@ class API(Stack):
         )
         
         
-        workflow_destroy = workflow_id.add_resource("destroy")
-        workflow_destroy_lambda = _lambda.Function(
+        module_destroy = module_name.add_resource("destroy")
+        module_destroy_lambda = _lambda.Function(
             self, 'workflow-destroy',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.destroy.destroy.handler",
+            handler= "workflows.workflow.modules.module.destroy.destroy.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -592,9 +651,9 @@ class API(Stack):
             security_groups=[database.sg],
             timeout=Duration.seconds(30)
         )
-        workflow_destroy.add_method(
+        module_destroy.add_method(
             "POST",
-            integration=apigateway.LambdaIntegration(workflow_destroy_lambda),
+            integration=apigateway.LambdaIntegration(module_destroy_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
@@ -605,7 +664,7 @@ class API(Stack):
                 },
             }],
         )
-        workflow_destroy_lambda.add_to_role_policy(
+        module_destroy_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     's3:Delete*',
@@ -630,10 +689,10 @@ class API(Stack):
             )
         )
 
-        workflow_destroy_status_lambda = _lambda.Function(
+        module_destroy_status_lambda = _lambda.Function(
             self, 'workflow-destroy-status',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "workflows.destroy.status.handler",
+            handler= "workflows.workflow.modules.module.destroy.status.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -643,9 +702,9 @@ class API(Stack):
             ),
             security_groups=[database.sg]
         )
-        workflow_destroy.add_method(
+        module_destroy.add_method(
             "GET",
-            integration=apigateway.LambdaIntegration(workflow_destroy_status_lambda),
+            integration=apigateway.LambdaIntegration(module_destroy_status_lambda),
             method_responses=[{
                 'statusCode': '200',
                 'responseParameters': {
