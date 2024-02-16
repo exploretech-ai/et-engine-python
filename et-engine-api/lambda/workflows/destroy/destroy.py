@@ -2,10 +2,10 @@ import boto3
 import json
 
 
-def get_stack_output(algoID):
+def get_stack_output(workflowID):
 
     cf_client = boto3.client('cloudformation')
-    cf_response = cf_client.describe_stacks(StackName=f"engine-algo-{algoID}")
+    cf_response = cf_client.describe_stacks(StackName=f"engine-workflow-{workflowID}")
     cf_outputs = cf_response["Stacks"][0]["Outputs"]
     
     return cf_outputs
@@ -73,9 +73,9 @@ def handler(event, context):
 
     try:
             
-        algoID = event['pathParameters']['algoID']
+        workflowID = event['pathParameters']['workflowID']
         cf_client = boto3.client('cloudformation')
-        cf_outputs = get_stack_output(algoID)
+        cf_outputs = get_stack_output(workflowID)
 
     except Exception as e:
             return {
@@ -112,7 +112,7 @@ def handler(event, context):
     
     try:
 
-        cf_client.delete_stack(StackName=f"engine-algo-{algoID}")
+        cf_client.delete_stack(StackName=f"engine-workflow-{workflowID}")
 
         response = {
             'statusCode': 200,

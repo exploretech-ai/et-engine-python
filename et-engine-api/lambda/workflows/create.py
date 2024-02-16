@@ -50,19 +50,21 @@ def handler(event, context):
     Creates a new algorithm ID and pushes to the database
     '''
     try:
-        algoID = event['pathParameters']['algoID']
+        
+        workflowID = uuid.uuid4().hex
+        userID = "0"
+        name = "hello, world"
 
         connection = connect()
         with connection.cursor() as cursor:
-            sql_query = f"SELECT * FROM Algorithms WHERE algoID = '{algoID}'"
+            sql_query = f"INSERT INTO Workflows (workflowID, userID, name) VALUES ('{workflowID}', '{userID}', '{name}')"
             cursor.execute(sql_query)
-            data = cursor.fetchall()
 
         connection.commit()
 
         return {
             'statusCode': 200,
-            'body': json.dumps(data)
+            'body': json.dumps(workflowID[1:-1])
         }
 
     

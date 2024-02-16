@@ -1,8 +1,9 @@
 # app.py
 import os
 
-name = os.getenv('NAME', 'World')
+name = os.getenv('NAME', 'Underworld')
 print(f"Hello, {name}!")
+print("Hello, Underworld - without environment variable")
 
 
 # This app mimics a Monte Carlo simulation

@@ -30,9 +30,9 @@ STATUS_MAP = {
 def handler(event, context):
 
     try:
-        algoID = event['pathParameters']['algoID']        
+        workflowID = event['pathParameters']['workflowID']        
         cf_client = boto3.client('cloudformation')
-        stack_info = cf_client.describe_stacks(StackName=f"engine-algo-{algoID}")['Stacks'][0]
+        stack_info = cf_client.describe_stacks(StackName=f"engine-workflow-{workflowID}")['Stacks'][0]
         stack_status = STATUS_MAP[stack_info['StackStatus']]
 
         return {

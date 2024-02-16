@@ -32,7 +32,7 @@ function UserID({userID, setUserID}) {
 
     const handleApiRequest = async () => {
         try {
-          const response = await fetch(`https://gsgj2z3zpj.execute-api.us-east-2.amazonaws.com/prod/users/${userID}/algorithms`);
+          const response = await fetch(`https://gsgj2z3zpj.execute-api.us-east-2.amazonaws.com/prod/users/${userID}/workflows`);
           const data = await response.json();
           console.log(data)
           setItemData(data)

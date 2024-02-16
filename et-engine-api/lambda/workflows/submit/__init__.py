@@ -1,11 +1,8 @@
 import json
-import uuid
 import boto3
-from datetime import datetime
 from botocore.exceptions import ClientError
 import psycopg2
 
-# from . import rds_create_user
 
 def get_secret():
 
@@ -44,42 +41,3 @@ def connect():
         database="EngineMasterDB"
     )
 
-
-def handler(event, context):
-    '''
-    Creates a new algorithm ID and pushes to the database
-    '''
-    try:
-        userID = event['pathParameters']['userID']
-
-        connection = connect()
-        with connection.cursor() as cursor:
-            sql_query = f"SELECT * FROM Algorithms WHERE userID = '{userID}'"
-            cursor.execute(sql_query)
-            data = cursor.fetchall()
-
-        connection.commit()
-
-        return {
-            'statusCode': 200,
-             "headers": {
-                "Access-Control-Allow-Origin": "*"
-            },
-            'body': json.dumps(data)
-        }
-
-    
-    # try:
-    #     rds_create_user("0", "ET")
-
-    #     return {
-    #         'statusCode': 200,
-    #         'body': json.dumps("success")
-    #     }   
-        
-    except Exception as e:
-        return {
-            'statusCode': 500,
-            'body': json.dumps(f'Error creating user {e}')
-        }
-        

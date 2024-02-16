@@ -68,10 +68,11 @@ def handler(event, context):
 
         cursor = connection.cursor()
         create_table_sql = """
-            CREATE TABLE IF NOT EXISTS Algorithms (
-                algoID UUID PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS Workflows (
+                workflowID UUID PRIMARY KEY,
                 userID VARCHAR(255) NOT NULL,
-                name VARCHAR(255) NOT NULL
+                name VARCHAR(255) NOT NULL,
+                graph VARCHAR
             );
         """
         cursor.execute(create_table_sql)
@@ -79,12 +80,12 @@ def handler(event, context):
 
         
 
-        print("Table 'algorithms' created successfully!")
-        # sql_query = "select * from information_schema.columns where table_schema = 'public' and table_name   = 'users'"
-        # sql_query = "DROP TABLE Algorithms"
-        # cursor.execute(sql_query)
+        print("Table 'workflows' created successfully!")
+        sql_query = "select * from information_schema.columns where table_schema = 'public' and table_name   = 'workflows'"
+        # sql_query = "DROP TABLE Workflows"
+        cursor.execute(sql_query)
         # connection.commit()
-        # print(cursor.fetchall())
+        print(cursor.fetchall())
 
     finally:
         # Close the cursor and connection
