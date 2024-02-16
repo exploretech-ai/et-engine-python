@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+backend = "setuptools.build_meta"
+
+[project]
+name = "et-engine"
+authors = [
+    {name = "Alex Miltenberger", email = "alex@exploretech.ai"},
+]
+description = "api for running probabilistic computing"
+readme = "README.rst"
+requires-python = ">=3.7"
+keywords = ["api", "exploretech"]
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["version"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
