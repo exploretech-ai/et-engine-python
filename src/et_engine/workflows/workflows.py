@@ -7,12 +7,41 @@ API_URL = 'https://gsgj2z3zpj.execute-api.us-east-2.amazonaws.com/prod/'
 
 
 class Module:
-    def __init__(self, module_name) -> None:
+    """
+    Each Module must have the following arguments:
+
+    type (str): the type of compute stack (options: parallel, if, gpu, bigmem, cpu)
+    connections (list of str): string id of modules that are output connections to the module
+    config: (dict): key-value pairs of compute stack configuration parameters
+    args: (dict): key-value pairs of arguments, where keys are the argument name and values are the expected argument type (string, path, or directory)
+
+    """
+    def __init__(self, module_name, module_type, connections, config, args) -> None:
         self.name = module_name
         self.params = {
-            "type": "single-node",
-            "properties": None
+            "type": module_type,
+            "connections": connections,
+            "config": config,
+            "args": args
         }
+
+class ParallelComputeNode(Module):
+    type = "parallel"
+
+    def __init__(self, module_name, output_connection, config, args) -> None:
+        super().__init__(module_name, self.type, [output_connection], config, args)
+
+
+class BigMemNode(Module):
+    pass
+
+class GPUNode(Module):
+    pass
+
+class IfStatementNode(Module):
+    pass
+
+ 
 
 
 class START(Module):
@@ -181,11 +210,12 @@ class Workflow:
 
         # loop through self.nodes and add them to a "nodes" dict
         node_dict = {
-            "START": None,
-            "END": None
+            "START": None
         }
         for node in self.nodes:
             node_dict[node.name] = node.params
+
+        node_dict["END"] = None
 
         self.edges["START->" + self.nodes[0].name] = {
             "source": "START",
