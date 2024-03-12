@@ -1,2 +1,2 @@
-from configure import configure
+from .credentials import configure
 
