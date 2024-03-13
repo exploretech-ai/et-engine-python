@@ -40,9 +40,11 @@ class VirtualFileSystemClient:
 
     def connect(self, name):
 
-        # GET enpoint/vfs
-        url = API_ENDPOINT + "vfs"
-        status = requests.get(url, params={"name": name}, auth=('user', 'pass'))
+        # query 'name' and return the vfsID, wrap it into a VirtualFileSystem object and return to user
+        status = requests.get(
+            self.url, 
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
         return status
         
 
@@ -62,8 +64,7 @@ class VirtualFileSystemClient:
         )
         return status
 
-    def file_exists(self):
-        pass
+    
 
 
 class ToolsClient:
