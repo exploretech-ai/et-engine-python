@@ -64,6 +64,13 @@ class VirtualFileSystemClient:
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         return status
+    
+    def delete(self, name):
+        status = requests.get(
+            self.url,
+            data=json.dumps({"name": name}),
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
 
     
 
