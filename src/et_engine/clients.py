@@ -26,7 +26,7 @@ class VirtualFileSystemClient(Session):
 
     def create(self, name):
         url = API_ENDPOINT + "vfs"
-        status = requests.get(url, params={"name": name}, auth=(self.user, self.password))
+        status = requests.post(url, data={"name": name}, auth=(self.user, self.password))
         return status
 
     def file_exists(self):
