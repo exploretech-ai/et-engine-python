@@ -1,6 +1,9 @@
 import requests
+import boto3
+
 
 API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
 
 class Session:
 
@@ -10,6 +13,25 @@ class Session:
             lines = f.readlines()
             self.user = lines[0].strip()
             self.password = lines[1].strip()
+
+        cognito = boto3.client('cognito-idp')
+        auth_response = cognito.initiate_auth(
+            ClientId = COGNITO_CLIENT_ID,
+            AuthFlow = 'USER_PASSWORD_AUTH',
+            AuthParameters = {
+                "USERNAME": self.user,
+                "PASSWORD": self.password
+            }
+        )
+        # If authentication is successful, extract the tokens
+        if auth_response and 'AuthenticationResult' in auth_response:
+            self.id_token = auth_response['AuthenticationResult']['IdToken']
+            self.access_token = auth_response['AuthenticationResult']['AccessToken']
+            self.refresh_token = auth_response['AuthenticationResult'].get('RefreshToken')  # Optional, depends on your Cognito settings
+            
+        else:
+            print("Authentication failed: No authentication result found.")
+            return None
 
 class VirtualFileSystemClient(Session):
 
