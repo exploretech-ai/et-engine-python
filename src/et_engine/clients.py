@@ -54,6 +54,9 @@ class VirtualFileSystemClient:
 
 
 class ToolsClient:
+
+    def __init__(self, session):
+        self.session = session
     
     def create(self):
         pass
