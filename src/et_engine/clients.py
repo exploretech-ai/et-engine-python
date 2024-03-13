@@ -66,9 +66,9 @@ class VirtualFileSystemClient:
         return status
     
     def delete(self, name):
-        status = requests.get(
+        status = requests.delete(
             self.url,
-            data=json.dumps({"name": name}),
+            params={'name':name},
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         return status
