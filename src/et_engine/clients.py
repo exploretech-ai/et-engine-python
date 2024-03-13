@@ -8,8 +8,8 @@ class Session:
         
         with open(credentials) as f:
             lines = f.readlines()
-            self.user = lines[0]
-            self.password = lines[1]
+            self.user = lines[0].strip()
+            self.password = lines[1].strip()
 
 class VirtualFileSystemClient(Session):
 
