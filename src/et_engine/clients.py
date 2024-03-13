@@ -1,6 +1,6 @@
 import requests
 import boto3
-
+import json
 
 API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
 COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
@@ -46,7 +46,11 @@ class VirtualFileSystemClient:
 
     def create(self, name):
         url = API_ENDPOINT + "vfs"
-        status = requests.post(url, data={"name": name}, headers={"Authorization": f"Bearer {self.session.id_token}"})
+        status = requests.post(
+            url, 
+            data=json.dumps({"name": name}), 
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
         return status
 
     def file_exists(self):
