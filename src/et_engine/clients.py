@@ -31,7 +31,7 @@ class Session:
             
         else:
             print("Authentication failed: No authentication result found.")
-            return None
+            return auth_response
 
 class VirtualFileSystemClient(Session):
 
