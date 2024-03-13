@@ -43,6 +43,7 @@ class VirtualFileSystemClient:
         # query 'name' and return the vfsID, wrap it into a VirtualFileSystem object and return to user
         status = requests.get(
             self.url, 
+            params={'name':name},
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         return status
