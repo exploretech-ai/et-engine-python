@@ -33,6 +33,8 @@ class Session:
 
 class VirtualFileSystemClient:
 
+    url = API_ENDPOINT + "vfs"
+
     def __init__(self, session):
         self.session = session
 
@@ -45,10 +47,17 @@ class VirtualFileSystemClient:
         
 
     def create(self, name):
-        url = API_ENDPOINT + "vfs"
+        
         status = requests.post(
-            url, 
+            self.url, 
             data=json.dumps({"name": name}), 
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
+        return status
+    
+    def list(self):
+        status = requests.get(
+            self.url,
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         return status
