@@ -27,15 +27,14 @@ class Session:
         if auth_response and 'AuthenticationResult' in auth_response:
             self.id_token = auth_response['AuthenticationResult']['IdToken']
             self.access_token = auth_response['AuthenticationResult']['AccessToken']
-            self.refresh_token = auth_response['AuthenticationResult'].get('RefreshToken')  # Optional, depends on your Cognito settings
             
         else:
             print(f"Authentication failed: {auth_response}")
 
 class VirtualFileSystemClient:
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
+    def __init__(self, session):
+        self.session = session
 
     def connect(self, name):
 
@@ -47,7 +46,7 @@ class VirtualFileSystemClient:
 
     def create(self, name):
         url = API_ENDPOINT + "vfs"
-        status = requests.post(url, data={"name": name}, auth=(self.user, self.password))
+        status = requests.post(url, data={"name": name}, headers={"Authorization": f"Bearer {self.session.id_token}"})
         return status
 
     def file_exists(self):
@@ -65,7 +64,7 @@ class Client(Session):
     def __init__(self, credentials):
         super().__init__(credentials)
 
-        self.vfs = VirtualFileSystemClient()
-        self.tools = ToolsClient()
+        self.vfs = VirtualFileSystemClient(self)
+        self.tools = ToolsClient(self)
 
 
