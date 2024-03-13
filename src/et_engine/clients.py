@@ -30,13 +30,12 @@ class Session:
             self.refresh_token = auth_response['AuthenticationResult'].get('RefreshToken')  # Optional, depends on your Cognito settings
             
         else:
-            print("Authentication failed: No authentication result found.")
-            return auth_response
+            print(f"Authentication failed: {auth_response}")
 
-class VirtualFileSystemClient(Session):
+class VirtualFileSystemClient:
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
 
     def connect(self, name):
 
@@ -55,7 +54,7 @@ class VirtualFileSystemClient(Session):
         pass
 
 
-class ToolsClient(Session):
+class ToolsClient:
     
     def create(self):
         pass
@@ -66,7 +65,7 @@ class Client(Session):
     def __init__(self, credentials):
         super().__init__(credentials)
 
-        self.vfs = VirtualFileSystemClient(credentials)
-        self.tools = ToolsClient(credentials)
+        self.vfs = VirtualFileSystemClient()
+        self.tools = ToolsClient()
 
 
