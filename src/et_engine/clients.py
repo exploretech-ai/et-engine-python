@@ -5,8 +5,11 @@ API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
 class Session:
 
     def __init__(self, credentials):
-        pass
-
+        
+        with open(credentials) as f:
+            lines = f.readlines()
+            self.user = lines[0]
+            self.password = lines[1]
 
 class VirtualFileSystemClient(Session):
 
@@ -23,7 +26,7 @@ class VirtualFileSystemClient(Session):
 
     def create(self, name):
         url = API_ENDPOINT + "vfs"
-        status = requests.get(url, params={"name": name}, auth=('user', 'pass'))
+        status = requests.get(url, params={"name": name}, auth=(self.user, self.password))
         return status
 
     def file_exists(self):
