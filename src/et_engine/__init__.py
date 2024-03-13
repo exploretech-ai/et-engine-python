@@ -1,2 +1,2 @@
-from .credentials import configure
+from .clients import Client
 
