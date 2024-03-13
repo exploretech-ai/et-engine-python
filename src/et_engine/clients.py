@@ -71,6 +71,7 @@ class VirtualFileSystemClient:
             data=json.dumps({"name": name}),
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
+        return status
 
     
 
