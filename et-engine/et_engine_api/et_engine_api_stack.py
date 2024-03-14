@@ -121,6 +121,8 @@ class API2(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        template_bucket = s3.Bucket(self, "Templates", bucket_name="et-engine-templates")
+
         self.user_pool = cognito.UserPool(
             self, 
             "UserPool",
@@ -141,7 +143,7 @@ class API2(Stack):
             "APIClient",
             auth_flows = cognito.AuthFlow(user_password = True)
         )
-        # Create an API Gateway
+
         self.api = apigateway.RestApi(
             self, 'API',
             rest_api_name='ETEngineAPI',
@@ -263,8 +265,6 @@ class API2(Stack):
 
 
         vfs_id = vfs.add_resource("{vfsID}")
-        # GET + querystring = presigned url for downloading file
-        # POST + body = presigned url for uploading file
         vfs_upload_lambda = _lambda.Function(
             self, 'vfs-upload',
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -345,7 +345,89 @@ class API2(Stack):
 
 
         tools = self.api.root.add_resource("tools")
-        # POST = create new tool
+        # >>>>> POST = create new tool
+        # START HERE AND JUST GET A METHOD THAT ADDS A RECORD TO THE TOOLS TABLE
+        tools_create_lambda = _lambda.Function(
+            self, 'tools-create',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.create.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(tools_create_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_create_lambda)
+        tools_create_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:CreateStack',
+                    'ssm:GetParameters',
+                    's3:CreateBucket',
+                    'ec2:*',
+                    'ecr:CreateRepository',
+                    'ecr:DeleteRepository',
+                    'ecr:DescribeRepositories',
+                    'ecs:CreateCluster',
+                    'ecs:DeleteCluster',
+                    'ecs:DescribeClusters',
+                    'ecs:RegisterTaskDefinition',
+                    'ecs:DeregisterTaskDefinition',
+                    'iam:PutRolePolicy',
+                    'iam:DeleteRolePolicy',
+                    'iam:CreateRole',
+                    'iam:DeleteRole',
+                    'iam:GetRole',
+                    'iam:PassRole',
+                    'logs:DeleteLogGroup',
+                    'codebuild:CreateProject'
+                    # 'iam:*',
+                    # 'log-group:*',
+                    # 'logs:*',
+                    # 'ec2:*',
+                    # 'ecr:*',
+                    # 'ecs:*',
+                    # 's3:*',
+                    # 'codebuild:*',
+                ],
+                resources=['*']
+            )
+        )
+        tools_create_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:GetObject'
+                ],
+                resources=[
+                    template_bucket.bucket_arn,
+                    f"{template_bucket.bucket_arn}/*"
+                ]
+            )
+        )
+
+        # <<<<<
+        
+        # GET = list tools available to user
+        # DELETE = delete tool
 
 
         tools_id = tools.add_resource("{toolID}")
@@ -1069,9 +1151,10 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         
-
+        
         database = MasterDB(self, "MasterDB")
         api = API2(self, "API", database)
+        
         # self.templates = Templates(self, "Templates")
         # self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
