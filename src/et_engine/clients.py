@@ -2,7 +2,7 @@ import requests
 import boto3
 import json
 
-from vfs import VirtualFileSystem
+from .vfs import VirtualFileSystem
 
 class Session:
 
