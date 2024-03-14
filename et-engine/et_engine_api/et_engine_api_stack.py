@@ -14,6 +14,7 @@ from aws_cdk import (
     aws_rds as rds,
     aws_ec2 as ec2,
     aws_iam as iam,
+    aws_cognito as cognito
 )
 import aws_cdk as cdk
 from constructs import Construct
@@ -114,6 +115,244 @@ class MasterDB(Stack):
     def grant_access(self, lambda_function, access = None):        
         self.db_secret.grant_read(lambda_function)
         self.database.grant_connect(lambda_function)
+
+
+class API2(Stack):
+    def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+
+        self.user_pool = cognito.UserPool(
+            self, 
+            "UserPool",
+            user_pool_name="APIPool",
+            self_sign_up_enabled=True,
+            sign_in_aliases={
+                'email': True,
+                'username': False
+            },
+            standard_attributes={
+                'email': {
+                    'required': True,
+                    'mutable': True
+                }
+            }
+        )
+        self.api_client = self.user_pool.add_client(
+            "APIClient",
+            auth_flows = cognito.AuthFlow(user_password = True)
+        )
+        # Create an API Gateway
+        self.api = apigateway.RestApi(
+            self, 'API',
+            rest_api_name='ETEngineAPI',
+            description='Core API for provisioning resources and running workflows',
+            default_cors_preflight_options=apigateway.CorsOptions(
+                allow_origins=apigateway.Cors.ALL_ORIGINS,
+                allow_methods=apigateway.Cors.ALL_METHODS
+            )
+        )
+        authorizer = apigateway.CognitoUserPoolsAuthorizer(
+            self,
+            'CognitoAuthorizer',
+            cognito_user_pools=[self.user_pool]
+        )
+
+
+        vfs = self.api.root.add_resource("vfs")
+        vfs_create_lambda = _lambda.Function(
+            self, 'vfs-create',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.create.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(vfs_create_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(vfs_create_lambda)
+        vfs_create_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:CreateBucket'
+                ],
+                resources=['*']
+            )
+        )
+
+        vfs_list_lambda = _lambda.Function(
+            self, 'vfs-list',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.list.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(vfs_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(vfs_list_lambda)
+
+        vfs_delete_lambda = _lambda.Function(
+            self, 'vfs-delete',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.delete.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs.add_method(
+            "DELETE",
+            integration=apigateway.LambdaIntegration(vfs_delete_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(vfs_delete_lambda)
+
+
+
+        vfs_id = vfs.add_resource("{vfsID}")
+        # GET + querystring = presigned url for downloading file
+        # POST + body = presigned url for uploading file
+        vfs_upload_lambda = _lambda.Function(
+            self, 'vfs-upload',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.upload.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs_id.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(vfs_upload_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(vfs_upload_lambda)
+        vfs_upload_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:PutObject'
+                ],
+                resources=['*']
+            )
+        )
+        
+        vfs_download_lambda = _lambda.Function(
+            self, 'vfs-download',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.download.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs_id.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(vfs_download_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(vfs_download_lambda)
+        vfs_download_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:GetObject'
+                ],
+                resources=['*']
+            )
+        )
+
+
+        tools = self.api.root.add_resource("tools")
+        # POST = create new tool
+
+
+        tools_id = tools.add_resource("{toolID}")
+        # POST + body = execute tool with params in body
+        # GET = fetch tool description
+
+
 
 
 class API(Stack):
@@ -359,6 +598,7 @@ class API(Stack):
         )
         database.grant_access(workflow_id_submit_lambda)
 
+
         modules = workflow_id.add_resource("modules")
         modules_list_lambda = _lambda.Function(
             self, 'modules-list',
@@ -387,6 +627,7 @@ class API(Stack):
                 },
             }],
         )
+        database.grant_access(modules_list_lambda)
 
 
         module_name = modules.add_resource("{moduleName}")
@@ -417,6 +658,7 @@ class API(Stack):
                 },
             }],
         )
+        database.grant_access(module_describe_lambda)
 
 
         module_provision = module_name.add_resource("provision")
@@ -826,19 +1068,33 @@ class ETEngine(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        self.database = MasterDB(self, "MasterDB")
-        self.api = API(self, "API", self.database)
-        self.templates = Templates(self, "Templates")
-        self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
+        
+
+        database = MasterDB(self, "MasterDB")
+        api = API2(self, "API", database)
+        # self.templates = Templates(self, "Templates")
+        # self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
         CfnOutput(
             self,
             "APIURL",
-            value = self.api.api.url
+            value = api.api.url
+        )
+        # CfnOutput(
+        #     self,
+        #     "TemplateBucket",
+        #     value = self.templates.dockerbuild_template.bucket_name
+        # )
+
+        
+        CfnOutput(
+            self,
+            "UserPoolID",
+            value=api.user_pool.user_pool_id
         )
         CfnOutput(
             self,
-            "TemplateBucket",
-            value = self.templates.dockerbuild_template.bucket_name
+            "APIClientID",
+            value=api.api_client.user_pool_client_id
         )
 

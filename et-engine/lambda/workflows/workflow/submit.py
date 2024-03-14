@@ -1,5 +1,5 @@
 import json
-from . import connect
+from ... import connect
 
 
 def insert_graph(workflowID, graph):

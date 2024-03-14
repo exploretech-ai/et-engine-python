@@ -30,6 +30,7 @@ def get_secret():
     return get_secret_value_response['SecretString']
 
 
+
 def connect():
     print("obtaining secret")
     db_secret = json.loads(get_secret())
