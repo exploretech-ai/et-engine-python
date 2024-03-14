@@ -12,22 +12,38 @@ class VirtualFileSystem:
         pass
 
     def upload(self, local_file, remote_file):
-        presigned_post = requests.post(
+        response = requests.post(
             self.url, 
             data=json.dumps({"key": remote_file}),
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
-        upload_url = json.loads(presigned_post.text)
+        presigned_post = json.loads(response.text)
         
         with open(local_file, 'rb') as f:
             files = {'file': (local_file, f)}
             upload_response = requests.post(
-                upload_url['url'], 
-                data=upload_url['fields'], 
+                presigned_post['url'], 
+                data=presigned_post['fields'], 
                 files=files
             )
 
         return upload_response
     
     def download(self, remote_file, local_file):
-        pass
+        response = requests.get(
+            self.url, 
+            params={"key": remote_file},
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
+        presigned_url = json.loads(response.text)
+        return presigned_url
+        
+        with open(local_file, 'rb') as f:
+            files = {'file': (local_file, f)}
+            upload_response = requests.post(
+                presigned_post['url'], 
+                data=presigned_post['fields'], 
+                files=files
+            )
+
+        return upload_response
