@@ -17,7 +17,6 @@ class VirtualFileSystem:
             data=json.dumps({"key": remote_file}),
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
-        return presigned_post.text
         upload_url = json.loads(presigned_post.text)
         
         with open(local_file, 'rb') as f:
@@ -28,7 +27,7 @@ class VirtualFileSystem:
                 files=files
             )
 
-        return upload_response.text
+        return upload_response
     
     def download(self, remote_file, local_file):
         pass
