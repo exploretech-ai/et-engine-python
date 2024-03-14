@@ -37,12 +37,14 @@ class VirtualFileSystem:
         )
         presigned_url = json.loads(response.text)
         
-        download_response = requests.get(
-                presigned_url
-            )
+        with requests.get(presigned_url, stream=True) as r:
+            r.raise_for_status()
+            with open(local_file, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=None):
+                    f.write(chunk)
         # with open(local_file, 'rb') as f:
         #     download_response = requests.get(
         #         presigned_url
         #     )
 
-        return download_response
+        return 
