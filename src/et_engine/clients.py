@@ -2,10 +2,13 @@ import requests
 import boto3
 import json
 
-API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
-COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
+from vfs import VirtualFileSystem
 
 class Session:
+
+    API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+    COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
+
 
     def __init__(self, credentials):
         
@@ -16,7 +19,7 @@ class Session:
 
         cognito = boto3.client('cognito-idp')
         auth_response = cognito.initiate_auth(
-            ClientId = COGNITO_CLIENT_ID,
+            ClientId = self.COGNITO_CLIENT_ID,
             AuthFlow = 'USER_PASSWORD_AUTH',
             AuthParameters = {
                 "USERNAME": self.user,
@@ -33,10 +36,9 @@ class Session:
 
 class VirtualFileSystemClient:
 
-    url = API_ENDPOINT + "vfs"
-
     def __init__(self, session):
         self.session = session
+        self.url = session.API_ENDPOINT + "vfs"
 
     def connect(self, name):
 
@@ -46,7 +48,8 @@ class VirtualFileSystemClient:
             params={'name':name},
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
-        return status
+
+        return VirtualFileSystem(status.json(), self.session)
         
 
     def create(self, name):
