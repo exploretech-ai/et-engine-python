@@ -36,14 +36,13 @@ class VirtualFileSystem:
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         presigned_url = json.loads(response.text)
-        return presigned_url
         
-        with open(local_file, 'rb') as f:
-            files = {'file': (local_file, f)}
-            upload_response = requests.post(
-                presigned_post['url'], 
-                data=presigned_post['fields'], 
-                files=files
+        download_response = requests.get(
+                presigned_url
             )
+        # with open(local_file, 'rb') as f:
+        #     download_response = requests.get(
+        #         presigned_url
+        #     )
 
-        return upload_response
+        return download_response
