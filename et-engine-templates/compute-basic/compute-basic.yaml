@@ -1,0 +1,625 @@
+Parameters:
+  toolID:
+    Type: String
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Resources:
+  CodeBucketFF4C7AD6:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Join:
+          - ""
+          - - tool-
+            - Ref: toolID
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBucket/Resource
+  CodeBucketNotifications9E54147D:
+    Type: Custom::S3BucketNotifications
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691
+          - Arn
+      BucketName:
+        Ref: CodeBucketFF4C7AD6
+      NotificationConfiguration:
+        LambdaFunctionConfigurations:
+          - Events:
+              - s3:ObjectCreated:*
+            LambdaFunctionArn:
+              Fn::GetAtt:
+                - codebuildtrigger9AB2B5F9
+                - Arn
+      Managed: true
+    DependsOn:
+      - CodeBucketAllowBucketNotificationsToComputeBasicStackcodebuildtrigger21EFA26BBA183F57
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBucket/Notifications/Resource
+  CodeBucketAllowBucketNotificationsToComputeBasicStackcodebuildtrigger21EFA26BBA183F57:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - codebuildtrigger9AB2B5F9
+          - Arn
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
+      SourceArn:
+        Fn::GetAtt:
+          - CodeBucketFF4C7AD6
+          - Arn
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBucket/AllowBucketNotificationsToComputeBasicStackcodebuildtrigger21EFA26B
+  codebuildtriggerServiceRole85085266:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/codebuild-trigger/ServiceRole/Resource
+  codebuildtriggerServiceRoleDefaultPolicy7CBEB25A:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: codebuild:StartBuild
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: codebuildtriggerServiceRoleDefaultPolicy7CBEB25A
+      Roles:
+        - Ref: codebuildtriggerServiceRole85085266
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/codebuild-trigger/ServiceRole/DefaultPolicy/Resource
+  codebuildtrigger9AB2B5F9:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: "
+
+          import boto3
+
+          def handler(event, context):
+
+          \    print(\"hello, world\")
+
+          \    tool = event['Records'][0]['s3']['bucket']['name']
+
+          \    codebuild = boto3.client('codebuild')
+
+          \    codebuild.start_build(projectName=tool)
+
+          \            "
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - codebuildtriggerServiceRole85085266
+          - Arn
+      Runtime: python3.8
+    DependsOn:
+      - codebuildtriggerServiceRoleDefaultPolicy7CBEB25A
+      - codebuildtriggerServiceRole85085266
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/codebuild-trigger/Resource
+  BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource
+  BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: s3:PutBucketNotification
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36
+      Roles:
+        - Ref: BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/DefaultPolicy/Resource
+  BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: AWS CloudFormation handler for "Custom::S3BucketNotifications" resources (@aws-cdk/aws-s3)
+      Code:
+        ZipFile: |
+          import boto3  # type: ignore
+          import json
+          import logging
+          import urllib.request
+
+          s3 = boto3.client("s3")
+
+          EVENTBRIDGE_CONFIGURATION = 'EventBridgeConfiguration'
+          CONFIGURATION_TYPES = ["TopicConfigurations", "QueueConfigurations", "LambdaFunctionConfigurations"]
+
+          def handler(event: dict, context):
+            response_status = "SUCCESS"
+            error_message = ""
+            try:
+              props = event["ResourceProperties"]
+              notification_configuration = props["NotificationConfiguration"]
+              managed = props.get('Managed', 'true').lower() == 'true'
+              stack_id = event['StackId']
+              old = event.get("OldResourceProperties", {}).get("NotificationConfiguration", {})
+              if managed:
+                config = handle_managed(event["RequestType"], notification_configuration)
+              else:
+                config = handle_unmanaged(props["BucketName"], stack_id, event["RequestType"], notification_configuration, old)
+              s3.put_bucket_notification_configuration(Bucket=props["BucketName"], NotificationConfiguration=config)
+            except Exception as e:
+              logging.exception("Failed to put bucket notification configuration")
+              response_status = "FAILED"
+              error_message = f"Error: {str(e)}. "
+            finally:
+              submit_response(event, context, response_status, error_message)
+
+          def handle_managed(request_type, notification_configuration):
+            if request_type == 'Delete':
+              return {}
+            return notification_configuration
+
+          def handle_unmanaged(bucket, stack_id, request_type, notification_configuration, old):
+            def with_id(n):
+              n['Id'] = f"{stack_id}-{hash(json.dumps(n, sort_keys=True))}"
+              return n
+
+            external_notifications = {}
+            existing_notifications = s3.get_bucket_notification_configuration(Bucket=bucket)
+            for t in CONFIGURATION_TYPES:
+              if request_type == 'Update':
+                  ids = [with_id(n) for n in old.get(t, [])]
+                  old_incoming_ids = [n['Id'] for n in ids]
+                  external_notifications[t] = [n for n in existing_notifications.get(t, []) if not n['Id'] in old_incoming_ids]
+              elif request_type == 'Create':
+                  external_notifications[t] = [n for n in existing_notifications.get(t, [])]
+            if EVENTBRIDGE_CONFIGURATION in existing_notifications:
+              external_notifications[EVENTBRIDGE_CONFIGURATION] = existing_notifications[EVENTBRIDGE_CONFIGURATION]
+
+            if request_type == 'Delete':
+              return external_notifications
+
+            notifications = {}
+            for t in CONFIGURATION_TYPES:
+              external = external_notifications.get(t, [])
+              incoming = [with_id(n) for n in notification_configuration.get(t, [])]
+              notifications[t] = external + incoming
+
+            if EVENTBRIDGE_CONFIGURATION in notification_configuration:
+              notifications[EVENTBRIDGE_CONFIGURATION] = notification_configuration[EVENTBRIDGE_CONFIGURATION]
+            elif EVENTBRIDGE_CONFIGURATION in external_notifications:
+              notifications[EVENTBRIDGE_CONFIGURATION] = external_notifications[EVENTBRIDGE_CONFIGURATION]
+
+            return notifications
+
+          def submit_response(event: dict, context, response_status: str, error_message: str):
+            response_body = json.dumps(
+              {
+                "Status": response_status,
+                "Reason": f"{error_message}See the details in CloudWatch Log Stream: {context.log_stream_name}",
+                "PhysicalResourceId": event.get("PhysicalResourceId") or event["LogicalResourceId"],
+                "StackId": event["StackId"],
+                "RequestId": event["RequestId"],
+                "LogicalResourceId": event["LogicalResourceId"],
+                "NoEcho": False,
+              }
+            ).encode("utf-8")
+            headers = {"content-type": "", "content-length": str(len(response_body))}
+            try:
+              req = urllib.request.Request(url=event["ResponseURL"], headers=headers, data=response_body, method="PUT")
+              with urllib.request.urlopen(req) as response:
+                print(response.read().decode("utf-8"))
+              print("Status code: " + response.reason)
+            except Exception as e:
+                print("send(..) failed executing request.urlopen(..): " + str(e))
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC
+          - Arn
+      Runtime: python3.9
+      Timeout: 300
+    DependsOn:
+      - BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36
+      - BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource
+  ClusterVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/ClusterVPC
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-2a
+      CidrBlock: 10.0.0.0/18
+      MapPublicIpOnLaunch: true
+      VpcId:
+        Fn::GetAtt:
+          - ClusterVPC
+          - VpcId
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/PublicSubnet
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/InternetGateway
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        Fn::GetAtt:
+          - InternetGateway
+          - InternetGatewayId
+      VpcId:
+        Fn::GetAtt:
+          - ClusterVPC
+          - VpcId
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/GatewayAttachment
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Fn::GetAtt:
+          - ClusterVPC
+          - VpcId
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/PublicRouteTable
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Fn::GetAtt:
+          - InternetGateway
+          - InternetGatewayId
+      RouteTableId:
+        Fn::GetAtt:
+          - PublicRouteTable
+          - RouteTableId
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/PublicRoute
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Fn::GetAtt:
+          - PublicRouteTable
+          - RouteTableId
+      SubnetId:
+        Fn::GetAtt:
+          - PublicSubnet
+          - SubnetId
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/PublicSubnetRouteTableAssociation
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ECS Cluster
+      VpcId:
+        Fn::GetAtt:
+          - ClusterVPC
+          - VpcId
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/SecurityGroup
+  ContainerRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName:
+        Fn::Join:
+          - ""
+          - - tool-
+            - Ref: toolID
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/ContainerRepo
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/ECSCluster
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - ecr:*
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource: "*"
+            Version: "2012-10-17"
+          PolicyName: ECSTaskExecutionPolicy
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/ECSTaskExecutionRole
+  ECSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Join:
+          - ""
+          - - /ecs/tool-
+            - Ref: toolID
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/ECSLogGroup
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image:
+            Fn::Join:
+              - ""
+              - - Fn::GetAtt:
+                    - ContainerRepo
+                    - RepositoryUri
+                - :latest
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Fn::Join:
+                  - ""
+                  - - /ecs/tool-
+                    - Ref: toolID
+              awslogs-region: us-east-2
+              awslogs-stream-prefix:
+                Fn::Join:
+                  - ""
+                  - - tool-
+                    - Ref: toolID
+          Name:
+            Fn::Join:
+              - ""
+              - - tool-
+                - Ref: toolID
+      Cpu: "256"
+      ExecutionRoleArn:
+        Fn::GetAtt:
+          - ECSTaskExecutionRole
+          - Arn
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/ECSTaskDefinition
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: "2012-10-17"
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: ecr:*
+                Effect: Allow
+                Resource:
+                  Fn::GetAtt:
+                    - ContainerRepo
+                    - Arn
+              - Action:
+                  - ecr:GetAuthorizationToken
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - s3:Get*
+                  - s3:List*
+                Effect: Allow
+                Resource:
+                  - Fn::GetAtt:
+                      - CodeBucketFF4C7AD6
+                      - Arn
+                  - Fn::Join:
+                      - ""
+                      - - Fn::GetAtt:
+                            - CodeBucketFF4C7AD6
+                            - Arn
+                        - /*
+            Version: "2012-10-17"
+          PolicyName: CodeBuildPolicy
+      RoleName: CodeBuildRole-stack
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBuildRole
+  DockerBuilder:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Location:
+          Ref: CodeBucketFF4C7AD6
+        Type: S3
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: IMAGE_TAG
+            Value: latest
+          - Name: AWS_DEFAULT_REGION
+            Value:
+              Ref: AWS::Region
+          - Name: ECR_REPO_URI
+            Value:
+              Fn::GetAtt:
+                - ContainerRepo
+                - RepositoryUri
+          - Name: IMAGE_REPO_NAME
+            Value:
+              Fn::Join:
+                - ""
+                - - tool-
+                  - Ref: toolID
+          - Name: AWS_ACCOUNT_ID
+            Value: "734818840861"
+        Image: aws/codebuild/standard:4.0
+        PrivilegedMode: true
+        Type: LINUX_CONTAINER
+      Name:
+        Fn::Join:
+          - ""
+          - - tool-
+            - Ref: toolID
+      ServiceRole:
+        Fn::GetAtt:
+          - CodeBuildRole
+          - Arn
+      Source:
+        Location:
+          Fn::Join:
+            - ""
+            - - Ref: CodeBucketFF4C7AD6
+              - /tool.zip
+        Type: S3
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/DockerBuilder
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/0VQwW7CMAz9Fu4hG0XazowJNGmHiqJdpzQ1YJrEKE6Eqop/X5LCOPn52X5+diUX1Zt8nakrz3XXzw22cmyC0r1YH1ytvLIQwItU/x15KcePqHsIuTihmzDKtp2SY+4Hb5EZyYlNdDpkkOgHvglUVo47MpDpEmsyqIeyrKCbAF0VsZ96nekmtm5a+OWSk4S3KsBVlZnUc89WIZk+WXBhko4B9qp9LErZU+tZXDGTRvXw2YCOHsOw9RQv2YiXeRouxBjID4nhYm1tIuevJLhX3H/CAR1OFxo6cp76pmOREZo6aCOaLrO1pzPo9LSiyxS9BvEPsjK57q5UD+FE7mUpFwv5Pjsz4txHF9CC3E3xDyBCK+W9AQAA
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - af-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ca-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-northwest-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-3
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - il-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - sa-east-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-2
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+

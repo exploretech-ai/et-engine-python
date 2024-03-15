@@ -31,11 +31,11 @@ def handler(event, context):
 
     # List all available vfs
     try:
-        # available_tools = lambda_utils.list_tools(user)
+        available_tools = lambda_utils.list_tools(user)
 
         # check if name is in available_vfs
-        # if tool_name in available_tools:
-        if False:
+        if tool_name in available_tools:
+        # if False:
             return {
                 'statusCode': 500,
                 'body': json.dumps(f"Failed: '{tool_name}' already exists")
@@ -45,18 +45,17 @@ def handler(event, context):
 
             tool_id = str(uuid.uuid4())
 
-            # connection = db.connect()
-            # cursor = connection.cursor()
-            # sql_query = f"""
-            #     INSERT INTO VirtualFileSystems (toolID, userID, name, description)
-            #     VALUES ('{tool_id}', '{user}', '{tool_name}', '{tool_description})
-            # """
-            # cursor.execute(sql_query)
-            # connection.commit()
-            # cursor.close()
-            # connection.close()
+            connection = db.connect()
+            cursor = connection.cursor()
+            sql_query = f"""
+                INSERT INTO Tools (toolID, userID, name, description)
+                VALUES ('{tool_id}', '{user}', '{tool_name}', '{tool_description}')
+            """
+            cursor.execute(sql_query)
+            connection.commit()
+            cursor.close()
+            connection.close()
 
-            # >>>>> s3 bucket added to cfn stack
             # Use create_stack to create the codebuild workflow here
             cfn = boto3.client('cloudformation')
             

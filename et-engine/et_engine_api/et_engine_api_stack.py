@@ -123,6 +123,8 @@ class API2(Stack):
 
         template_bucket = s3.Bucket(self, "Templates", bucket_name="et-engine-templates")
 
+
+
         self.user_pool = cognito.UserPool(
             self, 
             "UserPool",
@@ -345,8 +347,6 @@ class API2(Stack):
 
 
         tools = self.api.root.add_resource("tools")
-        # >>>>> POST = create new tool
-        # START HERE AND JUST GET A METHOD THAT ADDS A RECORD TO THE TOOLS TABLE
         tools_create_lambda = _lambda.Function(
             self, 'tools-create',
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -393,21 +393,23 @@ class API2(Stack):
                     'ecs:RegisterTaskDefinition',
                     'ecs:DeregisterTaskDefinition',
                     'iam:PutRolePolicy',
+                    'iam:GetRolePolicy',
                     'iam:DeleteRolePolicy',
+                    'iam:AttachRolePolicy',
+                    'iam:DetachRolePolicy',
                     'iam:CreateRole',
                     'iam:DeleteRole',
                     'iam:GetRole',
                     'iam:PassRole',
                     'logs:DeleteLogGroup',
-                    'codebuild:CreateProject'
-                    # 'iam:*',
-                    # 'log-group:*',
-                    # 'logs:*',
-                    # 'ec2:*',
-                    # 'ecr:*',
-                    # 'ecs:*',
-                    # 's3:*',
-                    # 'codebuild:*',
+                    'codebuild:CreateProject',
+                    'codebuild:DeleteProject',
+                    'lambda:CreateFunction',
+                    'lambda:DeleteFunction',
+                    'lambda:GetFunction',
+                    'lambda:AddPermission',
+                    'lambda:RemovePermission',
+                    'lambda:InvokeFunction'
                 ],
                 resources=['*']
             )
@@ -424,13 +426,112 @@ class API2(Stack):
             )
         )
 
-        # <<<<<
-        
-        # GET = list tools available to user
-        # DELETE = delete tool
+        tools_list_lambda = _lambda.Function(
+            self, 'tools-list',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.list.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(tools_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_list_lambda)
+
+        tools_delete_lambda = _lambda.Function(
+            self, 'tools-delete',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.delete.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools.add_method(
+            "DELETE",
+            integration=apigateway.LambdaIntegration(tools_delete_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_delete_lambda)
+
 
 
         tools_id = tools.add_resource("{toolID}")
+        tools_upload_lambda = _lambda.Function(
+            self, 'tools-upload',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.push.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools_id.add_method(
+            "PUT",
+            integration=apigateway.LambdaIntegration(tools_upload_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_upload_lambda)
+        tools_upload_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:PutObject'
+                ],
+                resources=['*']
+            )
+        )
+
+        
+        
         # POST + body = execute tool with params in body
         # GET = fetch tool description
 
@@ -1151,7 +1252,8 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         
-        
+
+
         database = MasterDB(self, "MasterDB")
         api = API2(self, "API", database)
         
