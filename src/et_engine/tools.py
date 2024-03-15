@@ -13,11 +13,15 @@ class Tool:
 
 
     def __call__(self, **kwargs):
-        print(kwargs)
-        return 
+
+        if kwargs:
+            data = json.dumps(kwargs)
+        else:
+            data = None
+            
         response = requests.post(
             self.url, 
-            data=json.dumps(kwargs),
+            data=data,
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         return response
