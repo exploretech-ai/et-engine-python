@@ -15,6 +15,7 @@ class Tool:
     def __call__(self, **kwargs):
         response = requests.post(
             self.url, 
+            data=json.dumps(kwargs),
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         return response
