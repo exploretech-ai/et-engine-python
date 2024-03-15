@@ -13,6 +13,8 @@ class Tool:
 
 
     def __call__(self, **kwargs):
+        print(kwargs)
+        return 
         response = requests.post(
             self.url, 
             data=json.dumps(kwargs),
