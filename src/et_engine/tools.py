@@ -8,8 +8,21 @@ class Tool:
         self.session = session
         self.url = session.API_ENDPOINT + f"tools/{tool_id}"
 
+
+
+
+
     def __call__(self, **kwargs):
-        pass
+        response = requests.post(
+            self.url, 
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
+        return response
+
+
+
+
+
 
     def push(self, folder):
 
