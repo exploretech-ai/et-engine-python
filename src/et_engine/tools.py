@@ -17,7 +17,7 @@ class Tool:
         zip_file = f"./{folder}.zip"
         shutil.make_archive(f"./{folder}", 'zip', folder)
 
-        response = requests.post(
+        response = requests.put(
             self.url, 
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
