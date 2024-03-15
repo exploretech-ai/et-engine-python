@@ -21,6 +21,7 @@ class Tool:
             self.url, 
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
+        return response
         presigned_post = json.loads(response.text)
         return presigned_post
         
