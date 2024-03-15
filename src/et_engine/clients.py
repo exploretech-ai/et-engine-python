@@ -1,7 +1,6 @@
 import requests
 import boto3
 import json
-import shutil
 
 
 from .vfs import VirtualFileSystem
@@ -58,12 +57,9 @@ class ToolsClient:
         self.session = session
         self.url = session.API_ENDPOINT + "tools"
     
-    def create(self, name, folder, description):
+    def create(self, name, description):
 
-        # ZIP folder
-        zip_file = f"./{name}.zip"
-        shutil.make_archive(f"./{name}", 'zip', folder)
-
+       
         # API Request
         response = requests.post(
             self.url, 
@@ -73,20 +69,18 @@ class ToolsClient:
             }), 
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
-        return response
-        presigned_post = json.loads(response.text)
-        
-        with open(zip_file, 'rb') as f:
-            files = {'file': (zip_file, f)}
-            upload_response = requests.post(
-                presigned_post['url'], 
-                data=presigned_post['fields'], 
-                files=files
-            )
-        return upload_response
 
-    def connect(self):
-        pass
+        return response
+        
+
+    def connect(self, name):
+        status = requests.get(
+            self.url, 
+            params={'name':name},
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
+
+        return Tool(status.json(), self.session)
 
     def list(self):
         pass
