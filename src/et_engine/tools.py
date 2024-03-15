@@ -22,6 +22,7 @@ class Tool:
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
         presigned_post = json.loads(response.text)
+        return presigned_post
         
         with open(zip_file, 'rb') as f:
             files = {'file': (zip_file, f)}
