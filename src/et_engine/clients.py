@@ -89,8 +89,13 @@ class ToolsClient:
         )
         return status
 
-    def delete(self):
-        pass
+    def delete(self, name):
+        status = requests.delete(
+            self.url,
+            params={'name':name},
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
+        return status
 
 
 class Client:
