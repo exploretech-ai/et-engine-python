@@ -83,7 +83,11 @@ class ToolsClient:
         return Tool(status.json(), self.session)
 
     def list(self):
-        pass
+        status = requests.get(
+            self.url,
+            headers={"Authorization": f"Bearer {self.session.id_token}"}
+        )
+        return status
 
     def delete(self):
         pass
