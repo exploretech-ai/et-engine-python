@@ -392,6 +392,7 @@ class API2(Stack):
                     'ecs:DescribeClusters',
                     'ecs:RegisterTaskDefinition',
                     'ecs:DeregisterTaskDefinition',
+                    'ecs:DescribeTaskDefinition',
                     'iam:PutRolePolicy',
                     'iam:GetRolePolicy',
                     'iam:DeleteRolePolicy',
@@ -525,6 +526,47 @@ class API2(Stack):
             iam.PolicyStatement(
                 actions=[
                     's3:PutObject'
+                ],
+                resources=['*']
+            )
+        )
+
+        tools_execute_lambda = _lambda.Function(
+            self, 'tools-execute',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.execute.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools_id.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(tools_execute_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_execute_lambda)
+        tools_execute_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:DescribeStacks',
+                    'ecs:RunTask',
+                    'iam:PassRole'
                 ],
                 resources=['*']
             )

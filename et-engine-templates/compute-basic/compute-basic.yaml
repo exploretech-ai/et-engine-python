@@ -527,10 +527,31 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/0VQwW7CMAz9Fu4hG0XazowJNGmHiqJdpzQ1YJrEKE6Eqop/X5LCOPn52X5+diUX1Zt8nakrz3XXzw22cmyC0r1YH1ytvLIQwItU/x15KcePqHsIuTihmzDKtp2SY+4Hb5EZyYlNdDpkkOgHvglUVo47MpDpEmsyqIeyrKCbAF0VsZ96nekmtm5a+OWSk4S3KsBVlZnUc89WIZk+WXBhko4B9qp9LErZU+tZXDGTRvXw2YCOHsOw9RQv2YiXeRouxBjID4nhYm1tIuevJLhX3H/CAR1OFxo6cp76pmOREZo6aCOaLrO1pzPo9LSiyxS9BvEPsjK57q5UD+FE7mUpFwv5Pjsz4txHF9CC3E3xDyBCK+W9AQAA
+      Analytics: v2:deflate64:H4sIAAAAAAAA/0VQwW7CMAz9Fu4hG0XazqzT0KRJqyjadUpTA6ZpXMWJUFXx70tSGCc/P9vPzy7kqniRzwt14aVuu6XBRk61V7oT5cFWyqkePDgR678Tr+X0FnQHPhVndBVG9U2r5JT6wfXIjGTFR7DaJxDpO74KVL2cdmQg0TlWZFCPeVlGVwG6yGI/VZnoOjR2Xvhpo5OIt8rDReWZ2HPLNj6aPvVg/SwdPOxVc18Us4fWo7hhJo3q7rMGHRz6cesoDMmIk2kaBmL05MbIcLZWmsDpKxHuFXfvcECL84WGjpymvuiYZYSmFpqApk1s5egMOj4t6zIFp0H8g0h+Bz+EfEJJtr1pVqM/kX1ay9VKvi7OjLh0wXrsQe7m+AcmDquMxwEAAA==
     Metadata:
       aws:cdk:path: ComputeBasicStack/CDKMetadata/Default
     Condition: CDKMetadataAvailable
+Outputs:
+  ClusterName:
+    Value:
+      Fn::GetAtt:
+        - ECSCluster
+        - Arn
+  TaskName:
+    Value:
+      Fn::GetAtt:
+        - ECSTaskDefinition
+        - TaskDefinitionArn
+  SecurityGroupID:
+    Value:
+      Fn::GetAtt:
+        - SecurityGroup
+        - GroupId
+  PublicSubnetId:
+    Value:
+      Fn::GetAtt:
+        - PublicSubnet
+        - SubnetId
 Conditions:
   CDKMetadataAvailable:
     Fn::Or:

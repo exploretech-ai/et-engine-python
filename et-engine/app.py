@@ -4,7 +4,6 @@ import os
 import aws_cdk as cdk
 
 from et_engine_api.et_engine_api_stack import ETEngine
-from et_engine_api.et_engine_modules import *
 
 app = cdk.App()
 engine = ETEngine(app, "ETEngine",
@@ -25,11 +24,6 @@ engine = ETEngine(app, "ETEngine",
     # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
     )
 
-
-templates = cdk.App()
-ComputeModule(templates, "Module-Compute")
-BuildModule(templates, "Module-Build")
-templates.synth()
 
 
 app.synth()

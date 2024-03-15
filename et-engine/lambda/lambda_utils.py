@@ -1,4 +1,6 @@
 import db
+import boto3
+
 
 def list_vfs(user):
     connection = db.connect()
@@ -131,3 +133,34 @@ def delete_by_name(user, vfs_name):
     connection.commit()
     cursor.close()
     connection.close()
+
+
+
+def get_tool_stack(tool_id):
+
+    cf_client = boto3.client('cloudformation')
+    cf_response = cf_client.describe_stacks(StackName=f"tool-{tool_id}")
+    cf_outputs = cf_response["Stacks"][0]["Outputs"]
+    
+    return cf_outputs
+
+def get_component_from_outputs(outputs, key):
+    value = None
+    for elem in outputs:
+        if elem["OutputKey"] == key:
+            value = elem["OutputValue"]
+
+    if value is None:
+        raise Exception("Key {key} not found")
+    
+    return value
+
+def get_tool_components(tool_id, keys):
+    outputs = get_tool_stack(tool_id)
+
+    components = {}
+    for key in keys:
+        components[key] = get_component_from_outputs(outputs, key)
+        
+    return components
+    

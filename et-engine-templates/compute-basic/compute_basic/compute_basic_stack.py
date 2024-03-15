@@ -292,49 +292,28 @@ def handler(event, context):
             service_role=codebuild_role.attr_arn
         )
 
-        # CfnOutput(
-        #     self,
-        #     "ClusterName",
-        #     value=ecs_cluster.attr_arn
-        # )
-        # CfnOutput(
-        #     self,
-        #     "TaskName",
-        #     value=ecs_task_definition.attr_task_definition_arn
-        # )
-        # CfnOutput(
-        #     self,
-        #     "SecurityGroupID",
-        #     value=security_group.attr_group_id
-        # )
-        # CfnOutput(
-        #     self,
-        #     "FileSystemName",
-        #     value=filesystem.bucket_name
-        # )
-        # CfnOutput(
-        #     self,
-        #     "CodeBuildBucketName",
-        #     value=codebuild_bucket.bucket_name
-        # )
-        # CfnOutput(
-        #     self,
-        #     "DockerBuilderName",
-        #     value=docker_builder.attr_arn.split('/')[-1]
-        # )
-        
-        # CfnOutput(
-        #     self,
-        #     "ContainerRepoName",
-        #     value="tool-"+tool_id
-        # )
+        CfnOutput(
+            self,
+            "ClusterName",
+            value=ecs_cluster.attr_arn
+        )
+        CfnOutput(
+            self,
+            "TaskName",
+            value=ecs_task_definition.attr_task_definition_arn
+        )
+        CfnOutput(
+            self,
+            "SecurityGroupID",
+            value=security_group.attr_group_id
+        )
         # CfnOutput(
         #     self,
         #     "VpcId",
         #     value=vpc.attr_vpc_id
         # )
-        # CfnOutput(
-        #     self,
-        #     "PublicSubnetId",
-        #     value=public_subnet.attr_subnet_id
-        # )
+        CfnOutput(
+            self,
+            "PublicSubnetId",
+            value=public_subnet.attr_subnet_id
+        )
