@@ -4,9 +4,9 @@ import json
 
 class Tool:
 
-    def __init__(self, tool_id, session) -> None:
-        self.session = session
-        self.url = session.API_ENDPOINT + f"tools/{tool_id}"
+    def __init__(self, tool_id, client) -> None:
+        self.session = client.session
+        self.url = client.API_ENDPOINT + f"tools/{tool_id}"
 
 
 
@@ -18,7 +18,7 @@ class Tool:
             data = json.dumps(kwargs)
         else:
             data = None
-            
+
         response = requests.post(
             self.url, 
             data=data,
