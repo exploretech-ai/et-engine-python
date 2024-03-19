@@ -248,8 +248,8 @@ class Client:
 
         self.session = Session(credentials)
         
-        self.vfs = VirtualFileSystemClient(self.session)
-        self.tools = ToolsClient(self.session)
+        self.vfs = VirtualFileSystemClient(self)
+        self.tools = ToolsClient(self)
 
         return self
             
