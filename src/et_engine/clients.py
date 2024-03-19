@@ -177,7 +177,10 @@ class Session:
             self.user = lines[0].strip()
             self.password = lines[1].strip()
         
-        cognito = boto3.client('cognito-idp')
+        cognito = boto3.client(
+            'cognito-idp',
+            region_name='us-east-2'
+        )
         auth_response = cognito.initiate_auth(
             ClientId = self.COGNITO_CLIENT_ID,
             AuthFlow = 'USER_PASSWORD_AUTH',
