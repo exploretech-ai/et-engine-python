@@ -175,7 +175,10 @@ class Session:
         """
         
         if credentials is None:
-            self.id_token = os.environ['ET_ENGINE_TOKEN']
+            try:
+                self.id_token = os.environ['ET_ENGINE_TOKEN']
+            except KeyError as e:
+                raise Exception('ET_ENGINE_TOKEN must be set if no credentials file is provided')
             return 
 
         with open(credentials) as f:
