@@ -8,9 +8,9 @@ from .tools import Tool
 
 class VirtualFileSystemClient:
 
-    def __init__(self, session):
-        self.session = session
-        self.url = session.API_ENDPOINT + "vfs"
+    def __init__(self, client):
+        self.session = client.session
+        self.url = client.API_ENDPOINT + "vfs"
 
     def connect(self, name):
 
