@@ -11,6 +11,7 @@ class VirtualFileSystemClient:
     def __init__(self, client):
         self.session = client.session
         self.url = client.API_ENDPOINT + "vfs"
+        self.client = client
 
     def connect(self, name):
 
@@ -21,7 +22,7 @@ class VirtualFileSystemClient:
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
 
-        return VirtualFileSystem(status.json(), self.session)
+        return VirtualFileSystem(status.json(), self.client)
         
 
     def create(self, name):

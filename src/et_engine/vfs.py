@@ -4,9 +4,9 @@ import json
 
 class VirtualFileSystem:
 
-    def __init__(self, vfs_id, session):
-        self.session = session
-        self.url = session.API_ENDPOINT + f"vfs/{vfs_id}"
+    def __init__(self, vfs_id, client):
+        self.session = client.session
+        self.url = client.API_ENDPOINT + f"vfs/{vfs_id}"
 
     def file_exists(self):
         pass
