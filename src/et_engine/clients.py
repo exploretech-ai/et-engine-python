@@ -73,6 +73,7 @@ class ToolsClient:
         
 
         """
+        self.client = client
         self.session = client.session
         self.url = client.API_ENDPOINT + "tools"
     
@@ -124,7 +125,7 @@ class ToolsClient:
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
 
-        return Tool(status.json(), self.session)
+        return Tool(status.json(), self.client)
 
     def list(self):
         status = requests.get(
