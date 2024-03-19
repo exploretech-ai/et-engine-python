@@ -63,18 +63,18 @@ class ToolsClient:
     
     """
 
-    def __init__(self, session):
+    def __init__(self, client):
         """Tools client constructor
         
         Parameters 
         ----------
-        session : Session
-            Authenticated session for the client
+        session : client
+            Authenticated base client
         
 
         """
-        self.session = session
-        self.url = session.API_ENDPOINT + "tools"
+        self.session = client.session
+        self.url = client.API_ENDPOINT + "tools"
     
     def create(self, name, description):
         """Creates a new Tool
