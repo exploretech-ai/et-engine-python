@@ -52,13 +52,56 @@ class VirtualFileSystemClient:
 
 
 class ToolsClient:
+    """Client to the ET Tools API
+
+    Attributes
+    ----------
+    session : Session
+        Authenticated session for the client
+    url : string
+        URL to the ET Tools API
+    
+    """
 
     def __init__(self, session):
+        """Tools client constructor
+        
+        Parameters 
+        ----------
+        session : Session
+            Authenticated session for the client
+        
+        Returns
+        ----------
+        ToolsClient
+            Authenticated client for interacting with the ET Tools API
+        """
         self.session = session
         self.url = session.API_ENDPOINT + "tools"
+        return self
     
     def create(self, name, description):
+        """Creates a new Tool
+        
+        Parameters
+        ----------
+        name : string
+            Name of the tool
+        description : string
+            Plain text description of the tool
 
+        Returns
+        -------
+        Tool
+            A Tool object connected to the newly-created tool
+
+        Raises
+        ------
+
+        Warnings
+        --------
+        The API works, but the method does not yet return a connected "Tool" object
+        """
        
         # API Request
         response = requests.post(
@@ -69,6 +112,11 @@ class ToolsClient:
             }), 
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
+
+        # >>>>>
+        # HERE I NEED TO POST-PROCESS THE RESPONSE AND TURN IT INTO A TOOL
+        # MAKE SURE TO HANDLE EXCEPTIONS
+        # <<<<<
 
         return response
         
@@ -98,19 +146,44 @@ class ToolsClient:
         return status
 
 
-class Client:
+class Session:
+    """Holds session credentials for the ET Engine Client
 
-    API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
-    COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
-
+    Attributes
+    ----------
+    user : string
+        The username associated with the session
+    password : string
+        The password associated with the user
+    id_token : string
+        The authenticated ID token for the session
+    access_token : string
+        The authenticated access token for the session
+    """
 
     def __init__(self, credentials):
+        """Authenticates and starts a session
         
+        Parameters
+        ----------
+        credentials : string
+            Path to a file containing the credentials (username in line 1, password in line 2)
+
+        Returns
+        ----------
+        Session
+            An authenticated Session object
+
+        Raises
+        ----------
+        Exception
+            Authentication error
+        """
         with open(credentials) as f:
             lines = f.readlines()
             self.user = lines[0].strip()
             self.password = lines[1].strip()
-
+        
         cognito = boto3.client('cognito-idp')
         auth_response = cognito.initiate_auth(
             ClientId = self.COGNITO_CLIENT_ID,
@@ -120,15 +193,67 @@ class Client:
                 "PASSWORD": self.password
             }
         )
+        
+
         # If authentication is successful, extract the tokens
         if auth_response and 'AuthenticationResult' in auth_response:
             self.id_token = auth_response['AuthenticationResult']['IdToken']
             self.access_token = auth_response['AuthenticationResult']['AccessToken']
-            self.vfs = VirtualFileSystemClient(self)
-            self.tools = ToolsClient(self)
-            
         else:
-            print(f"Authentication failed: {auth_response}")
+            raise Exception(f"Authentication failed: {auth_response}")
+        return self
+
+class Client:
+    """Base Client for accessing all the ET Engine features
+    
+    Attributes
+    ----------
+    API_ENDPOINT : string
+        URL to the API base
+    COGNITO_CLIENT_ID : string
+        Client ID associated with the cognito user pool that controls API access
+    session : Session
+        Authenticated session, including tokens
+    vfs : VirtualFileSystemClient
+        The ET Virtual File Systems client
+    tools : ToolsClient
+        The ET Tools client
+
+    
+    """
+
+    API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+    COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
+
+
+    def __init__(self, credentials):
+        """Initializes the ET Engine API Client by authenticating the user and starting a session
+        
+        Parameters
+        ----------
+        credentials : string
+            Path to a file containing the credentials (username in line 1, password in line 2)
+
+        Returns
+        ----------
+        Client
+            An authenticated client for interacting with the ET Engine API
+
+        Raises
+        ----------
+        Exception
+            Authentication error
+            
+        """
+
+        self.session = Session(credentials)
+        
+        self.vfs = VirtualFileSystemClient(self.session)
+        self.tools = ToolsClient(self.session)
+
+        return self
+            
+        
 
         
 
