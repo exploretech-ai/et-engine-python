@@ -241,8 +241,6 @@ class Client:
         
         self.vfs = VirtualFileSystemClient(self)
         self.tools = ToolsClient(self)
-
-        return self
             
         
 
