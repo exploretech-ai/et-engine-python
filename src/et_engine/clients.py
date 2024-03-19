@@ -1,7 +1,7 @@
 import requests
 import boto3
 import json
-
+import os
 
 from .vfs import VirtualFileSystem
 from .tools import Tool
@@ -173,10 +173,15 @@ class Session:
         Exception
             Authentication error
         """
+        
+        if credentials is None:
+            self.id_token = os.environ['ET_ENGINE_TOKEN']
+            return 
+
         with open(credentials) as f:
             lines = f.readlines()
-            self.user = lines[0].strip()
-            self.password = lines[1].strip()
+            user = lines[0].strip()
+            password = lines[1].strip()
         
         cognito = boto3.client(
             'cognito-idp',
@@ -186,8 +191,8 @@ class Session:
             ClientId = self.COGNITO_CLIENT_ID,
             AuthFlow = 'USER_PASSWORD_AUTH',
             AuthParameters = {
-                "USERNAME": self.user,
-                "PASSWORD": self.password
+                "USERNAME": user,
+                "PASSWORD": password
             }
         )
         
