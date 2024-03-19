@@ -227,7 +227,7 @@ class Client:
     
 
 
-    def __init__(self, credentials):
+    def __init__(self, credentials = None):
         """Initializes the ET Engine API Client by authenticating the user and starting a session
         
         Parameters
