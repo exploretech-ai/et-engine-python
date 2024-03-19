@@ -160,6 +160,7 @@ class Session:
     access_token : string
         The authenticated access token for the session
     """
+    COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
 
     def __init__(self, credentials):
         """Authenticates and starts a session
@@ -223,7 +224,7 @@ class Client:
     """
 
     API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
-    COGNITO_CLIENT_ID = "74gp8knmi8qsvl0mn51dnbgqd8"
+    
 
 
     def __init__(self, credentials):
