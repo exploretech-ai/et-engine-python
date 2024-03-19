@@ -170,11 +170,6 @@ class Session:
         credentials : string
             Path to a file containing the credentials (username in line 1, password in line 2)
 
-        Returns
-        ----------
-        Session
-            An authenticated Session object
-
         Raises
         ----------
         Exception
@@ -202,7 +197,6 @@ class Session:
             self.access_token = auth_response['AuthenticationResult']['AccessToken']
         else:
             raise Exception(f"Authentication failed: {auth_response}")
-        return self
 
 class Client:
     """Base Client for accessing all the ET Engine features
