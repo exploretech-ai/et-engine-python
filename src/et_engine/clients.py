@@ -71,14 +71,10 @@ class ToolsClient:
         session : Session
             Authenticated session for the client
         
-        Returns
-        ----------
-        ToolsClient
-            Authenticated client for interacting with the ET Tools API
+
         """
         self.session = session
         self.url = session.API_ENDPOINT + "tools"
-        return self
     
     def create(self, name, description):
         """Creates a new Tool
