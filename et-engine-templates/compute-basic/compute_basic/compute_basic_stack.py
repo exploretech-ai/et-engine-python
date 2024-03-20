@@ -197,7 +197,6 @@ def handler(event, context):
         codebuild_role = iam.CfnRole(
             self,
             "CodeBuildRole",
-            role_name="CodeBuildRole-stack",
             assume_role_policy_document=iam.PolicyDocument(
                 statements = [
                     iam.PolicyStatement(

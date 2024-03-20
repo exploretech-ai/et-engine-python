@@ -472,7 +472,6 @@ Resources:
                         - /*
             Version: "2012-10-17"
           PolicyName: CodeBuildPolicy
-      RoleName: CodeBuildRole-stack
     Metadata:
       aws:cdk:path: ComputeBasicStack/CodeBuildRole
   DockerBuilder:

@@ -13,23 +13,35 @@ def handler(event, context):
                 tool_id = lambda_utils.get_tool_id(user, tool_name)
                 return {
                     'statusCode': 200,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*'
+                    },
                     'body': json.dumps(tool_id)
                 }
             else:
                 return {
                     'statusCode': 500,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*'
+                    },
                     'body': json.dumps("Error: Invalid query string")
                 }
         else:
             available_vfs = lambda_utils.list_tools(user)
             return {
                 'statusCode': 200,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*'
+                },
                 'body': json.dumps(available_vfs)
             }
         
     except Exception as e:
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps(f'Error: {e}')
         }
     
