@@ -3,16 +3,36 @@ import requests
 import json
 
 class Tool:
+    """Class for interacting with a Tool
+    
+    Attributes
+    ----------
+    session : Session
+        authenticated session
+    url : string
+        VFS API endpoint
+    """
+
 
     def __init__(self, tool_id, client) -> None:
+        """Creates a new tool object from an existing tool ID
+
+        Parameters
+        ----------
+        tool_id : string
+            id associated with the tool of interest
+        client : Client
+            base authenticated client containing the active session
+        """
         self.session = client.session
         self.url = client.API_ENDPOINT + f"tools/{tool_id}"
 
 
-
-
-
     def __call__(self, **kwargs):
+        """Makes the object callable like a function
+        
+        Keyword arguments are passed to the Tool as environment variables
+        """
 
         if kwargs:
             data = json.dumps(kwargs)
@@ -27,11 +47,20 @@ class Tool:
         return response
 
 
-
-
-
-
     def push(self, folder):
+        """Update the tool code
+        
+        The tool folder must contain:
+            1. a Dockerfile
+            2. a buildspec.yml file
+
+        When pushed, the folder will be zipped and sent to the ET Engine. There, the tool will be built and run in a container.
+
+        Parameters
+        ----------
+        folder : string
+            Path to a folder containing the tool
+        """
 
         # ZIP folder
         zip_file = f"./{folder}.zip"

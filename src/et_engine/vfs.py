@@ -3,8 +3,26 @@ import json
 
 
 class VirtualFileSystem:
+    """Object for interacting with the ET Engine VFS API
+    
+    Attributes
+    ----------
+    session : Session
+        authenticated session
+    url : string
+        VFS API endpoint
+    """
 
     def __init__(self, vfs_id, client):
+        """Creates a new object connected to the VFS
+        
+        Parameters
+        ----------
+        vfs_id : string
+            id associated with the VFS of interest
+        client : Client
+            base authenticated client containing the active session
+        """
         self.session = client.session
         self.url = client.API_ENDPOINT + f"vfs/{vfs_id}"
 
@@ -12,6 +30,17 @@ class VirtualFileSystem:
         pass
 
     def upload(self, local_file, remote_file):
+        """Uploads a file to the VFS
+
+        Parameters
+        ----------
+        local_file : string
+            path to the local copy of the file to upload
+        remote_file : string
+            path to the remote copy of the uploaded file inside the VFS
+
+        
+        """
         response = requests.post(
             self.url, 
             data=json.dumps({"key": remote_file}),
@@ -30,6 +59,16 @@ class VirtualFileSystem:
         return upload_response
     
     def download(self, remote_file, local_file):
+        """Downloads a copy of a VFS file to the local machine
+
+        Parameters
+        ----------
+        remote_file : string
+            path to the remote copy of the file inside the VFS
+        local_file : string
+            path to the destination of the downloaded file
+        
+        """
         response = requests.get(
             self.url, 
             params={"key": remote_file},

@@ -7,13 +7,45 @@ from .vfs import VirtualFileSystem
 from .tools import Tool
 
 class VirtualFileSystemClient:
+    """Client for interacting with the VFS API
+    
+    Attributes
+    ----------
+    session : Session
+        Authenticated session
+    client : Client
+        Authenticated client
+    url : string
+        URL of the VFS API endpoint
+
+    """
 
     def __init__(self, client):
+        """Creates a VFS client
+        
+        Parameters
+        ----------
+        client : Client
+            Base authenticated client
+
+        """
         self.session = client.session
         self.url = client.API_ENDPOINT + "vfs"
         self.client = client
 
     def connect(self, name):
+        """Connects to a VFS and creates a new VFS object
+        
+        Parameters
+        ----------
+        name : string
+            name of the VFS to connect to
+
+        Returns
+        -------
+        vfs.VirtualFileSystem
+            connected VFS
+        """
 
         # query 'name' and return the vfsID, wrap it into a VirtualFileSystem object and return to user
         status = requests.get(
@@ -26,6 +58,18 @@ class VirtualFileSystemClient:
         
 
     def create(self, name):
+        """Creates a new VFS
+        
+        Parameters
+        ----------
+        name : string
+            Name of the VFS that will be created
+
+        Returns
+        -------
+        vfs.VirtualFileSystem
+            connected VFS
+        """
         
         status = requests.post(
             self.url, 
@@ -35,6 +79,13 @@ class VirtualFileSystemClient:
         return status
     
     def list(self):
+        """Lists the available VFS's
+        
+        Returns
+        -------
+        string
+            List of available VFS's
+        """
         status = requests.get(
             self.url,
             headers={"Authorization": f"Bearer {self.session.id_token}"}
@@ -42,6 +93,13 @@ class VirtualFileSystemClient:
         return status
     
     def delete(self, name):
+        """deletes the specified VFS
+        
+        Parameters
+        ----------
+        name : string
+            Name of the VFS to delete
+        """
         status = requests.delete(
             self.url,
             params={'name':name},
@@ -57,8 +115,8 @@ class ToolsClient:
 
     Attributes
     ----------
-    session : Session
-        Authenticated session for the client
+    client : Client
+        Authenticated client for the client
     url : string
         URL to the ET Tools API
     
@@ -69,7 +127,7 @@ class ToolsClient:
         
         Parameters 
         ----------
-        session : client
+        client : Client
             Authenticated base client
         
 
@@ -120,6 +178,18 @@ class ToolsClient:
         
 
     def connect(self, name):
+        """Creates a new Tool object from the queried tool name
+        
+        Parameters
+        ----------
+        name : string
+            Name of the tool to query and connect to
+
+        Returns
+        -------
+        tools.Tool
+            Tool object ready to use
+        """
         status = requests.get(
             self.url, 
             params={'name':name},
@@ -129,6 +199,13 @@ class ToolsClient:
         return Tool(status.json(), self.client)
 
     def list(self):
+        """lists the available tools
+
+        Returns
+        -------
+        string
+            a list of available tools
+        """
         status = requests.get(
             self.url,
             headers={"Authorization": f"Bearer {self.session.id_token}"}
@@ -136,6 +213,13 @@ class ToolsClient:
         return status
 
     def delete(self, name):
+        """deletes the specified tool
+        
+        Parameters
+        ----------
+        name : string
+            Name of the tool to delete
+        """
         status = requests.delete(
             self.url,
             params={'name':name},
