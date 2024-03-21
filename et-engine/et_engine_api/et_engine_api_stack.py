@@ -348,6 +348,46 @@ class API(Stack):
             )
         )
 
+        vfs_id_list = vfs_id.add_resource("list")
+        vfs_id_list_lambda = _lambda.Function(
+            self, 'vfs-list-directory',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.directory.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs_id_list.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(vfs_id_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(vfs_id_list_lambda)
+        vfs_id_list_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket'
+                ],
+                resources=['*']
+            )
+        )
+
 
         tools = self.api.root.add_resource("tools")
         tools_create_lambda = _lambda.Function(

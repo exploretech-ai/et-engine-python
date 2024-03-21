@@ -35,8 +35,8 @@ function App() {
       <div className="App">
         <Header user={user} />
         <div className='main-container'>
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 1}}/>
-      <ControlPanel activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 3}}/>
+          <Navbar activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 1}}/>
+          <ControlPanel activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 3}}/>
         </div>
         
     </div>

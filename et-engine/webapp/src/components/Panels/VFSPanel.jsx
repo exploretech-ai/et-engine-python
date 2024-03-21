@@ -1,16 +1,34 @@
 import React, {useState, useEffect} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
+import VFSNavbar from "./VFS/Navbar";
+import Directory from "./VFS/Directory";
+import './VFSPanel.css'
+
+class VFS {
+    constructor(name, id) {
+        this.name = name
+        this.id = id
+    }
+}
+
+
 
 const VFSPanel = () => {
-    const [data, setData] = useState(null);
+    const [idToken, setIdToken] = useState(null)
+    const [activeVFS, setActiveVFS] = useState(null)
+    const [vfsData, setVfsData] = useState(null)
+
 
     const fetchData = async () => {
+
         let session = null
         try {
             session = await fetchAuthSession();   // Fetch the authentication session
         } catch (err) {
-          console.log(err);
+            console.log(err);
         }
+        setIdToken(session.tokens.idToken.toString())
+
 
         const response = await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
@@ -21,21 +39,43 @@ const VFSPanel = () => {
             }
         );
         const result = await response.json();
-        setData(result);
+        // console.log(result)
+
+        if (result) {
+            const vfsIds = []
+            for (const name of result) {
+                // Get the VFS ID's for each VFS
+                const id = await fetch(
+                    "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs?" + new URLSearchParams({name: name}), {
+                        method: "GET",
+                        headers: {
+                            "Authorization": "Bearer " + session.tokens.idToken.toString()
+                        }
+                    }
+                )
+                .then(response => response.json())
+
+                vfsIds.push(new VFS(name, id))
+            }
+            setVfsData(vfsIds)
+            setActiveVFS(vfsIds[0])
+        }
+        
+        
     };
 
 
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+    useEffect(async () => {
+        await fetchData()
+    }, [])
 
 
 
     return (
-        <div>
-            <p>Available Virtual File Systems:</p>
-            {data && <p>{data}</p>}
+        <div className="vfs-panel">
+            <VFSNavbar vfsData={vfsData} activeVFS={activeVFS} setActiveVFS={setActiveVFS} style={{flex: 1}}/>
+            <Directory style={{flex: 5}} idToken={idToken} activeVFS={activeVFS}/>
         </div>
     )
 }
