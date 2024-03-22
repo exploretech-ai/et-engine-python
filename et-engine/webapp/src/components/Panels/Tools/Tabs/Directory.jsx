@@ -31,7 +31,7 @@ const DirectoryView = ({currentDirectory, setCurrentDirectory, currentDirectoryP
     for(const dir in currentDirectory) {
 
         if (currentDirectory[dir] === null) {
-            components.push(<FileComponent name={dir}/>)
+            components.push(<FileComponent name={dir} key={dir}/>)
         } else {
             components.push(
                 <FolderComponent 
@@ -54,23 +54,22 @@ const DirectoryView = ({currentDirectory, setCurrentDirectory, currentDirectoryP
 
 const CurrentDirectoryPath = ({path, setPath, directory, setDirectory}) => {
 
-    const handleClick = () => {
-        const newPath = [...path.slice(0, i+1)]
-        setPath(newPath);
-
-        let subfolder = {...directory}
-        for (let i = 1; i < newPath.length; i++){
-            subfolder = subfolder[newPath[i]]
-        }
-        setDirectory(subfolder)
-    }
     const folders = []
     if (path){
 
         for (let i = 0; i < path.length; i++) {
             const component = path[i]
             folders.push(
-                <div key={i} onClick={() => handleClick()}>
+                <div key={i} onClick={() => {
+                    const newPath = [...path.slice(0, i+1)]
+                    setPath(newPath);
+
+                    let subfolder = {...directory}
+                    for (let i = 1; i < newPath.length; i++){
+                        subfolder = subfolder[newPath[i]]
+                    }
+                    setDirectory(subfolder)
+                }}>
                     {component + '/'}
                 </div>)
 
@@ -85,7 +84,7 @@ const CurrentDirectoryPath = ({path, setPath, directory, setDirectory}) => {
     )
 }
 
-const Directory = ({style, activeVFS, idToken}) => {
+const Directory = ({style, activeTool, idToken}) => {
 
     const [directory, setDirectory] = useState(null)
     const [currentDirectory, setCurrentDirectory] = useState(null)
@@ -94,9 +93,9 @@ const Directory = ({style, activeVFS, idToken}) => {
     useEffect(async () => {
         
         // Fetch directory structure here
-        if (activeVFS && idToken) {
+        if (activeTool && idToken) {
             const files = await fetch(
-                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + activeVFS.id + "/list", {
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools/" + activeTool.id + "/code", {
                     method: "GET",
                     headers: {
                         "Authorization": "Bearer " + idToken
@@ -124,7 +123,7 @@ const Directory = ({style, activeVFS, idToken}) => {
             
 
         }
-    }, [activeVFS])
+    }, [activeTool, idToken])
 
 
 

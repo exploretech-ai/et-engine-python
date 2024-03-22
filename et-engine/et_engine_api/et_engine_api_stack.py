@@ -615,6 +615,158 @@ class API(Stack):
             )
         )
 
+        tools_describe_lambda = _lambda.Function(
+            self, 'tools-describe',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.describe.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools_id.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(tools_describe_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_describe_lambda)
+        
+
+        tools_code = tools_id.add_resource('code')
+        tools_code_get_lambda = _lambda.Function(
+            self, 'tools-code-get',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.code.get.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools_code.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(tools_code_get_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_code_get_lambda)
+        tools_code_get_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket'
+                ],
+                resources=['*']
+            )
+        )
+
+        tools_build = tools_id.add_resource('build')
+        tools_build_get_lambda = _lambda.Function(
+            self, 'tools-build-get',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.build.get.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools_build.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(tools_build_get_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_build_get_lambda)
+        tools_build_get_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'codebuild:ListBuildsForProject',
+                    'codebuild:BatchGetBuilds'
+                ],
+                resources=['*']
+            )
+        )
+
+        tools_tasks = tools_id.add_resource('tasks')
+        tools_tasks_get_lambda = _lambda.Function(
+            self, 'tools-tasks-get',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tools.tasks.get.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tools_tasks.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(tools_tasks_get_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        database.grant_access(tools_tasks_get_lambda)
+        tools_tasks_get_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'ecr:DescribeImages'
+                ],
+                resources=['*']
+            )
+        )
         
         
         # POST + body = execute tool with params in body

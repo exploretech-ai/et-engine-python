@@ -95,6 +95,23 @@ def get_tool_name(user, tool_id):
     return tool_name[0][0]
 
 
+def describe_tool(user, tool_id):
+    connection = db.connect()
+    cursor = connection.cursor()
+    sql_query = f"""
+        SELECT * FROM Tools 
+        WHERE userID = '{user}' 
+        AND toolID = '{tool_id}'
+    """
+    cursor.execute(sql_query)
+    params = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    return params
+
+
 def delete_by_id(user, vfs_id):
     connection = db.connect()
     cursor = connection.cursor()
@@ -164,3 +181,23 @@ def get_tool_components(tool_id, keys):
         
     return components
     
+
+def to_hierarchy(directory_contents):
+    files = []
+    for obj in directory_contents['Contents']:
+        files.append(obj['Key'])
+
+    directory = []
+    for file in files:
+        directory.append(file.split('/'))
+
+    hierarchy = {}
+    for file in directory:
+        current_branch = hierarchy
+        for component in file[:-1]:
+            if component not in current_branch:
+                current_branch[component] = {}
+            current_branch = current_branch[component]
+        current_branch[file[-1]] = None
+
+    return hierarchy

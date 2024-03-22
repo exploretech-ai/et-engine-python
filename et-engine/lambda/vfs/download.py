@@ -23,6 +23,9 @@ def handler(event, context):
         if vfs_name not in available_vfs:
             return {
                 'statusCode': 403,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*'
+                },
                 'body': json.dumps('VFS unavailable')
             }
 
@@ -36,6 +39,9 @@ def handler(event, context):
         )
         return {
             'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body' : json.dumps(presigned_url)
         }   
     
@@ -45,6 +51,7 @@ def handler(event, context):
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
             },
             'body': json.dumps(f"Error: {e}"),
         } 
