@@ -99,8 +99,6 @@ Resources:
 
           def handler(event, context):
 
-          \    print(\"hello, world\")
-
           \    tool = event['Records'][0]['s3']['bucket']['name']
 
           \    codebuild = boto3.client('codebuild')
@@ -551,6 +549,8 @@ Outputs:
       Fn::GetAtt:
         - PublicSubnet
         - SubnetId
+  TestString:
+    Value: test2
 Conditions:
   CDKMetadataAvailable:
     Fn::Or:

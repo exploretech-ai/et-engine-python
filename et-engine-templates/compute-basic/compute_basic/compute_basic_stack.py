@@ -47,7 +47,6 @@ class ComputeBasicStack(Stack):
             code = _lambda.InlineCode("""
 import boto3
 def handler(event, context):
-    print("hello, world")
     tool = event['Records'][0]['s3']['bucket']['name']
     codebuild = boto3.client('codebuild')
     codebuild.start_build(projectName=tool)
@@ -316,3 +315,11 @@ def handler(event, context):
             "PublicSubnetId",
             value=public_subnet.attr_subnet_id
         )
+
+        # >>>>> This is a new parameter to test the stack update lambda
+        CfnOutput(
+            self,
+            "TestString",
+            value="test2"
+        )
+        # <<<<<
