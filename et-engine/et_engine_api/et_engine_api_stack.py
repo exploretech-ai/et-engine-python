@@ -24,7 +24,6 @@ class MasterDB(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-
         vpc = ec2.Vpc(
             self, 
             "RDSVPC",
@@ -773,26 +772,6 @@ class API(Stack):
         # GET = fetch tool description
 
 
-
-class Templates(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)
-
-        self.dockerbuild_template = s3.Bucket(self, 'et-engine-dockerbuild-template')
-        self.dockerbuild_template_contents = s3_deploy.BucketDeployment(
-            self, 
-            'et-engine-dockerbuild-template-deploy', 
-            sources=[s3_deploy.Source.asset('./engine-dockerbuild-template')],
-            destination_bucket=self.dockerbuild_template,
-            retain_on_delete=False
-        )
-        self.dockerbuild_template_output = CfnOutput(
-            self,
-            'DockerBuildTemplate',
-            value = self.dockerbuild_template.bucket_name
-        )
-
-
 class WebApp(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -878,27 +857,15 @@ class ETEngine(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        
-
-
         database = MasterDB(self, "MasterDB")
         api = API(self, "API", database)
-        
-        # self.templates = Templates(self, "Templates")
-        self.webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
+        webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
 
         CfnOutput(
             self,
             "APIURL",
             value = api.api.url
         )
-        # CfnOutput(
-        #     self,
-        #     "TemplateBucket",
-        #     value = self.templates.dockerbuild_template.bucket_name
-        # )
-
-        
         CfnOutput(
             self,
             "UserPoolID",
