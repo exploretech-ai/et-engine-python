@@ -1,6 +1,14 @@
 Parameters:
   toolID:
     Type: String
+  sgID:
+    Type: String
+  vpc:
+    Type: String
+  subnetID:
+    Type: String
+  clusterARN:
+    Type: String
   BootstrapVersion:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /cdk-bootstrap/hnb659fds/version
@@ -256,89 +264,6 @@ Resources:
       - BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC
     Metadata:
       aws:cdk:path: ComputeBasicStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource
-  ClusterVPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ClusterVPC
-  PublicSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: us-east-2a
-      CidrBlock: 10.0.0.0/18
-      MapPublicIpOnLaunch: true
-      VpcId:
-        Fn::GetAtt:
-          - ClusterVPC
-          - VpcId
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/PublicSubnet
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/InternetGateway
-  GatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId:
-        Fn::GetAtt:
-          - InternetGateway
-          - InternetGatewayId
-      VpcId:
-        Fn::GetAtt:
-          - ClusterVPC
-          - VpcId
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/GatewayAttachment
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId:
-        Fn::GetAtt:
-          - ClusterVPC
-          - VpcId
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/PublicRouteTable
-  PublicRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Fn::GetAtt:
-          - InternetGateway
-          - InternetGatewayId
-      RouteTableId:
-        Fn::GetAtt:
-          - PublicRouteTable
-          - RouteTableId
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/PublicRoute
-  PublicSubnetRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId:
-        Fn::GetAtt:
-          - PublicRouteTable
-          - RouteTableId
-      SubnetId:
-        Fn::GetAtt:
-          - PublicSubnet
-          - SubnetId
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/PublicSubnetRouteTableAssociation
-  SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for ECS Cluster
-      VpcId:
-        Fn::GetAtt:
-          - ClusterVPC
-          - VpcId
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/SecurityGroup
   ContainerRepo:
     Type: AWS::ECR::Repository
     Properties:
@@ -349,10 +274,6 @@ Resources:
             - Ref: toolID
     Metadata:
       aws:cdk:path: ComputeBasicStack/ContainerRepo
-  ECSCluster:
-    Type: AWS::ECS::Cluster
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ECSCluster
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -524,16 +445,14 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/0VQwW7CMAz9Fu4hG0XazqzT0KRJqyjadUpTA6ZpXMWJUFXx70tSGCc/P9vPzy7kqniRzwt14aVuu6XBRk61V7oT5cFWyqkePDgR678Tr+X0FnQHPhVndBVG9U2r5JT6wfXIjGTFR7DaJxDpO74KVL2cdmQg0TlWZFCPeVlGVwG6yGI/VZnoOjR2Xvhpo5OIt8rDReWZ2HPLNj6aPvVg/SwdPOxVc18Us4fWo7hhJo3q7rMGHRz6cesoDMmIk2kaBmL05MbIcLZWmsDpKxHuFXfvcECL84WGjpymvuiYZYSmFpqApk1s5egMOj4t6zIFp0H8g0h+Bz+EfEJJtr1pVqM/kX1ay9VKvi7OjLh0wXrsQe7m+AcmDquMxwEAAA==
+      Analytics: v2:deflate64:H4sIAAAAAAAA/z2PT0/DMAzFP8vuqaGbNO4MwQWJanBHaeINr0lc5Y+mKup3J0kFJ//8nuVn76HfH+FxJ++hU3rqDI2QP6NUkzhd3CC9tBjRi+J/53CA/JzUhLGaG63CSDtqCbnOo7cUArETr8mpWKHIf7wKkhbymQ1WudWBDamlhTVaBSoP1cWZA0X2izB8DVV65+ub5zSXkdZ/yTC94IUctSTFGsdERldv8HxDVc5rqwInr1D8QxE/UpxTe+TETtN237DEH3YPB+h7eNrdAlHnk4tkEc5b/QVPOTprMQEAAA==
     Metadata:
       aws:cdk:path: ComputeBasicStack/CDKMetadata/Default
     Condition: CDKMetadataAvailable
 Outputs:
   ClusterName:
     Value:
-      Fn::GetAtt:
-        - ECSCluster
-        - Arn
+      Ref: clusterARN
   TaskName:
     Value:
       Fn::GetAtt:
@@ -541,14 +460,13 @@ Outputs:
         - TaskDefinitionArn
   SecurityGroupID:
     Value:
-      Fn::GetAtt:
-        - SecurityGroup
-        - GroupId
+      Ref: sgID
+  VpcId:
+    Value:
+      Ref: vpc
   PublicSubnetId:
     Value:
-      Fn::GetAtt:
-        - PublicSubnet
-        - SubnetId
+      Ref: subnetID
   TestString:
     Value: test2
 Conditions:

@@ -201,3 +201,28 @@ def to_hierarchy(directory_contents):
         current_branch[file[-1]] = None
 
     return hierarchy
+
+
+def compute_template_parameters(tool_id):
+    return [
+        {
+            'ParameterKey': 'toolID',
+            'ParameterValue': tool_id
+        },
+        {
+            'ParameterKey': 'sgID',
+            'ParameterValue': "sg-079740940f50d1c0c"
+        },
+        {
+            'ParameterKey': 'vpc',
+            'ParameterValue': "vpc-061ec0370154cb533"
+        },
+        {
+            'ParameterKey': 'subnetID',
+            'ParameterValue': "subnet-01718714cf4d09cd6"
+        },
+        {
+            'ParameterKey': 'clusterARN',
+            'ParameterValue': "arn:aws:ecs:us-east-2:734818840861:cluster/ETEngineAPI706397EC-ECSCluster-9WCMNlXS7HnP"
+        }
+    ]

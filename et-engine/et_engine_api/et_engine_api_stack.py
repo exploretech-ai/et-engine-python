@@ -14,7 +14,8 @@ from aws_cdk import (
     aws_rds as rds,
     aws_ec2 as ec2,
     aws_iam as iam,
-    aws_cognito as cognito
+    aws_cognito as cognito,
+    aws_ecs as ecs
 )
 import aws_cdk as cdk
 from constructs import Construct
@@ -120,8 +121,8 @@ class API(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # COMPUTE TEMPLATE STORAGE & LAMBDA UPDATER
         template_bucket = s3.Bucket(self, "Templates", bucket_name="et-engine-templates")
-        # >>>>> Need a lambda that controls template updating here (optionally trigger on s3 upload)
         tools_update_lambda = _lambda.Function(
             self, 'tool-template-update',
             description="Script to update computing templates",
@@ -193,9 +194,64 @@ class API(Stack):
             s3.EventType.OBJECT_CREATED, 
             s3n.LambdaDestination(tools_update_lambda)
         )
-        # <<<<<
+
+        # COMPUTE CLUSTER VPC
+        self.vpc = ec2.CfnVPC(
+            self,
+            "ClusterVPC",
+            enable_dns_hostnames=True,
+            enable_dns_support=True,
+            cidr_block="10.0.0.0/16"
+        )
+        self.public_subnet = ec2.CfnSubnet(
+            self,
+            "PublicSubnet",
+            vpc_id=self.vpc.attr_vpc_id,
+            availability_zone="us-east-2a",
+            cidr_block="10.0.0.0/18",
+            map_public_ip_on_launch=True
+        )
+        internet_gateway = ec2.CfnInternetGateway(
+            self, 
+            "InternetGateway"
+        )
+        gateway_attachment = ec2.CfnVPCGatewayAttachment(
+            self,
+            "GatewayAttachment",
+            vpc_id=self.vpc.attr_vpc_id,
+            internet_gateway_id=internet_gateway.attr_internet_gateway_id
+        )
+        public_route_table = ec2.CfnRouteTable(
+            self,
+            "PublicRouteTable",
+            vpc_id=self.vpc.attr_vpc_id
+        )
+        public_route = ec2.CfnRoute(
+            self,
+            "PublicRoute",
+            route_table_id=public_route_table.attr_route_table_id,
+            destination_cidr_block="0.0.0.0/0",
+            gateway_id=internet_gateway.attr_internet_gateway_id
+        )
+        public_subnet_route_table_association = ec2.CfnSubnetRouteTableAssociation(
+            self,
+            "PublicSubnetRouteTableAssociation",
+            subnet_id=self.public_subnet.attr_subnet_id,
+            route_table_id=public_route_table.attr_route_table_id
+        )
+        self.security_group = ec2.CfnSecurityGroup(
+            self,
+            "SecurityGroup",
+            group_description="Security group for ECS Cluster",
+            vpc_id=self.vpc.attr_vpc_id
+        )
+        self.ecs_cluster = ecs.CfnCluster(
+            self,
+            "ECSCluster"
+        )
 
 
+        # USER POOL
         self.user_pool = cognito.UserPool(
             self, 
             "UserPool",
@@ -952,5 +1008,26 @@ class ETEngine(Stack):
             self,
             "WebAppClientID",
             value=api.webapp_client.user_pool_client_id
+        )
+
+        CfnOutput(
+            self,
+            "ComputeClusterVPCID",
+            value=api.vpc.attr_vpc_id
+        )
+        CfnOutput(
+            self,
+            "ClusterName",
+            value=api.ecs_cluster.attr_arn
+        )
+        CfnOutput(
+            self,
+            "SecurityGroupID",
+            value=api.security_group.attr_group_id
+        )
+        CfnOutput(
+            self,
+            "PublicSubnetId",
+            value=api.public_subnet.attr_subnet_id
         )
 

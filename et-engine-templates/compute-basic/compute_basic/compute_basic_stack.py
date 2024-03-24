@@ -26,12 +26,22 @@ class ComputeBasicStack(Stack):
             self,
             "toolID"
         ).value_as_string
-
-        # VPC needs to be a global variable and vpc.attr_vpc_id needs to be accessed here
-        #     - Only 5 VPC's per region are allowed and 200 subnets are allowed per region
-        #     - ecs.run_task() needs subnet and security group id, which can be accessed by querying the stack by its name and its outputs
-
-        # The LAMBDA codebuild trigger needs to be defined externally and referenced here
+        sg_id = CfnParameter(
+            self,
+            "sgID"
+        ).value_as_string
+        vpc_id = CfnParameter(
+            self,
+            "vpc"
+        ).value_as_string
+        subnet_id = CfnParameter(
+            self,
+            "subnetID"
+        ).value_as_string
+        cluster_name = CfnParameter(
+            self,
+            "clusterARN"
+        ).value_as_string
         # <<<<<
 
         code_bucket = s3.Bucket(
@@ -67,68 +77,12 @@ def handler(event, context):
         )
 
 
-        # >>>>> THIS WILL NEED TO BE MOVED OUTSIDE THE TEMPLATE AND attr_vpc_id NEEDS TO BE IMPORTED AS A PARAMETER
-        vpc = ec2.CfnVPC(
-            self,
-            "ClusterVPC",
-            enable_dns_hostnames=True,
-            enable_dns_support=True,
-            cidr_block="10.0.0.0/16"
-        )
-        # <<<<<
-
-        public_subnet = ec2.CfnSubnet(
-            self,
-            "PublicSubnet",
-            vpc_id=vpc.attr_vpc_id,
-            availability_zone="us-east-2a",
-            cidr_block="10.0.0.0/18",
-            map_public_ip_on_launch=True
-        )
-        internet_gateway = ec2.CfnInternetGateway(
-            self, 
-            "InternetGateway"
-        )
-        gateway_attachment = ec2.CfnVPCGatewayAttachment(
-            self,
-            "GatewayAttachment",
-            vpc_id=vpc.attr_vpc_id,
-            internet_gateway_id=internet_gateway.attr_internet_gateway_id
-        )
-        public_route_table = ec2.CfnRouteTable(
-            self,
-            "PublicRouteTable",
-            vpc_id=vpc.attr_vpc_id
-        )
-        public_route = ec2.CfnRoute(
-            self,
-            "PublicRoute",
-            route_table_id=public_route_table.attr_route_table_id,
-            destination_cidr_block="0.0.0.0/0",
-            gateway_id=internet_gateway.attr_internet_gateway_id
-        )
-        public_subnet_route_table_association = ec2.CfnSubnetRouteTableAssociation(
-            self,
-            "PublicSubnetRouteTableAssociation",
-            subnet_id=public_subnet.attr_subnet_id,
-            route_table_id=public_route_table.attr_route_table_id
-        )
-        security_group = ec2.CfnSecurityGroup(
-            self,
-            "SecurityGroup",
-            group_description="Security group for ECS Cluster",
-            vpc_id=vpc.attr_vpc_id
-        )
-
         container_repo = ecr.CfnRepository(
             self,
             "ContainerRepo",
             repository_name="tool-" + tool_id
         )
-        ecs_cluster = ecs.CfnCluster(
-            self,
-            "ECSCluster"
-        )
+
         ecs_task_execution_role = iam.CfnRole(
             self,
             "ECSTaskExecutionRole",
@@ -293,7 +247,7 @@ def handler(event, context):
         CfnOutput(
             self,
             "ClusterName",
-            value=ecs_cluster.attr_arn
+            value=cluster_name
         )
         CfnOutput(
             self,
@@ -303,17 +257,17 @@ def handler(event, context):
         CfnOutput(
             self,
             "SecurityGroupID",
-            value=security_group.attr_group_id
+            value=sg_id
         )
-        # CfnOutput(
-        #     self,
-        #     "VpcId",
-        #     value=vpc.attr_vpc_id
-        # )
+        CfnOutput(
+            self,
+            "VpcId",
+            value=vpc_id
+        )
         CfnOutput(
             self,
             "PublicSubnetId",
-            value=public_subnet.attr_subnet_id
+            value=subnet_id
         )
 
         # >>>>> This is a new parameter to test the stack update lambda

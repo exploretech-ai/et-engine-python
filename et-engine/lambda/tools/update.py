@@ -1,6 +1,7 @@
 import json
 import boto3
 import db
+import lambda_utils
 
 def handler(event, context):
     print('Fetching tool list')
@@ -31,12 +32,7 @@ def handler(event, context):
             cloudformation.update_stack(
                 StackName=tool_stack_name, 
                 TemplateURL='https://et-engine-templates.s3.us-east-2.amazonaws.com/compute-basic.yaml',
-                Parameters=[
-                    {
-                        'ParameterKey': 'toolID',
-                        'ParameterValue': tool_id
-                    },
-                ],
+                Parameters=lambda_utils.compute_template_parameters(tool_id),
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
 

@@ -62,12 +62,7 @@ def handler(event, context):
             cfn.create_stack(
                 StackName='tool-' + tool_id,
                 TemplateURL='https://et-engine-templates.s3.us-east-2.amazonaws.com/compute-basic.yaml',
-                Parameters=[
-                    {
-                        'ParameterKey': 'toolID',
-                        'ParameterValue': tool_id
-                    },
-                ],
+                Parameters=lambda_utils.compute_template_parameters(tool_id),
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
 
