@@ -121,7 +121,7 @@ class API(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # COMPUTE TEMPLATE STORAGE & LAMBDA UPDATER
+        
         template_bucket = s3.Bucket(self, "Templates", bucket_name="et-engine-templates")
         tools_update_lambda = _lambda.Function(
             self, 'tool-template-update',
@@ -986,8 +986,10 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         database = MasterDB(self, "MasterDB")
+        # compute = Compute(self, "Compute", database)
         api = API(self, "API", database)
         webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
+        
 
         CfnOutput(
             self,

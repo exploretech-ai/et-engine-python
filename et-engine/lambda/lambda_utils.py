@@ -204,6 +204,9 @@ def to_hierarchy(directory_contents):
 
 
 def compute_template_parameters(tool_id):
+    """
+    Note that these are hard-coded from ETEngine Cloudformation outputs :O
+    """
     return [
         {
             'ParameterKey': 'toolID',
@@ -211,18 +214,18 @@ def compute_template_parameters(tool_id):
         },
         {
             'ParameterKey': 'sgID',
-            'ParameterValue': "sg-079740940f50d1c0c"
+            'ParameterValue': "sg-0bd78f5b54d13458d"
         },
         {
             'ParameterKey': 'vpc',
-            'ParameterValue': "vpc-061ec0370154cb533"
+            'ParameterValue': "vpc-06e4ae4d2ba2d8470"
         },
         {
             'ParameterKey': 'subnetID',
-            'ParameterValue': "subnet-01718714cf4d09cd6"
+            'ParameterValue': "subnet-05635b3c68c2f3544"
         },
         {
             'ParameterKey': 'clusterARN',
-            'ParameterValue': "arn:aws:ecs:us-east-2:734818840861:cluster/ETEngineAPI706397EC-ECSCluster-9WCMNlXS7HnP"
+            'ParameterValue': "arn:aws:ecs:us-east-2:734818840861:cluster/ETEngineAPI706397EC-ECSCluster-E85wMgFSFryE"
         }
     ]
