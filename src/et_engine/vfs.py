@@ -46,6 +46,7 @@ class VirtualFileSystem:
             data=json.dumps({"key": remote_file}),
             headers={"Authorization": f"Bearer {self.session.id_token}"}
         )
+        response.raise_for_status()
         presigned_post = json.loads(response.text)
         
         with open(local_file, 'rb') as f:
