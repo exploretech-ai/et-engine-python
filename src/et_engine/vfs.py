@@ -49,7 +49,7 @@ class VirtualFileSystem:
         response.raise_for_status()
         presigned_post = json.loads(response.text)
         
-        with open(local_file, 'rb') as f:
+        with open(local_file, 'r') as f:
             files = {'file': (local_file, f)}
             upload_response = requests.post(
                 presigned_post['url'], 
