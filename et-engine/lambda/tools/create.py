@@ -45,16 +45,7 @@ def handler(event, context):
 
             tool_id = str(uuid.uuid4())
 
-            connection = db.connect()
-            cursor = connection.cursor()
-            sql_query = f"""
-                INSERT INTO Tools (toolID, userID, name, description)
-                VALUES ('{tool_id}', '{user}', '{tool_name}', '{tool_description}')
-            """
-            cursor.execute(sql_query)
-            connection.commit()
-            cursor.close()
-            connection.close()
+            
 
             # Use create_stack to create the codebuild workflow here
             cfn = boto3.client('cloudformation')
@@ -65,6 +56,18 @@ def handler(event, context):
                 Parameters=lambda_utils.compute_template_parameters(tool_id),
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
+
+            # Deletes database record
+            connection = db.connect()
+            cursor = connection.cursor()
+            sql_query = f"""
+                INSERT INTO Tools (toolID, userID, name, description)
+                VALUES ('{tool_id}', '{user}', '{tool_name}', '{tool_description}')
+            """
+            cursor.execute(sql_query)
+            connection.commit()
+            cursor.close()
+            connection.close()
 
             return {
                 'statusCode': 200,

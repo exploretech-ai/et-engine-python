@@ -1,5 +1,6 @@
 import db
 import boto3
+from botocore.client import ClientError
 
 
 def list_vfs(user):
@@ -229,3 +230,73 @@ def compute_template_parameters(tool_id):
             'ParameterValue': "arn:aws:ecs:us-east-2:734818840861:cluster/ETEngineAPI706397EC-ECSCluster-E85wMgFSFryE"
         }
     ]
+
+def empty_bucket(bucket_name):
+    
+    try:
+        s3 = boto3.resource('s3')
+
+        # Checks if bucket exists, throws a Client Error. If not, runs delete workflow.
+        s3.meta.client.head_bucket(Bucket=bucket_name)
+
+        # Actually delete bucket
+        bucket = s3.Bucket(bucket_name)
+        bucket.objects.all().delete()
+
+        # s3 = boto3.client('s3')
+        # s3.delete_bucket(Bucket=bucket_name)
+
+    except ClientError:
+        print('Bucket already empty')
+        
+
+def delete_repository(repo_name):
+    """
+    Modified from here: https://stackoverflow.com/questions/58843927/boto3-script-to-delete-all-images-which-are-untagged
+    """
+
+    ecr = boto3.client('ecr')
+
+    # Checks if bucket exists, throws a Client Error. If not, runs delete workflow.
+    repositories = ecr.describe_repositories()
+
+    repository_names = [repo['repositoryName'] for repo in repositories['repositories']]
+
+    if repository_names and repo_name in repository_names:
+        images = ecr.list_images(
+            repositoryName=repo_name
+        )
+        if images['imageIds']:
+            ecr.batch_delete_image(
+                repositoryName=repo_name,
+                imageIds=images['imageIds']
+            )
+        else:
+            # raise Exception(f'Repository {repo_name} Empty')
+            pass
+
+        # ecr.delete_repository(
+        #     repositoryName=repo_name,
+        #     force=True
+        # )
+
+
+def stack_exists(name, required_status = 'CREATE_COMPLETE'):
+    cfn = boto3.client('cloudformation')
+    try:
+        data = cfn.describe_stacks(StackName = name)
+    except ClientError:
+        return False
+    return data['Stacks'][0]['StackStatus'] == required_status
+
+def delete_stack(stack_name):
+    
+    cfn = boto3.client('cloudformation')
+
+    if stack_exists(stack_name):
+        response = cfn.delete_stack(
+            StackName=stack_name
+        )
+        s3 = boto3.client('s3')
+        # s3.delete_bucket(Bucket=stack_name)
+

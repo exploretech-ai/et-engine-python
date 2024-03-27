@@ -1,8 +1,10 @@
 import json
 import lambda_utils
+import boto3
 
-def empty_bucket(vfs_id):
-    bucket_name = "vfs-" + vfs_id
+
+
+
 
 def handler(event, context):
 
@@ -23,7 +25,7 @@ def handler(event, context):
                 vfs_name = event['queryStringParameters']['name']
                 vfs_id = lambda_utils.get_vfs_id(user, vfs_name)
                 
-                empty_bucket(vfs_id)
+                lambda_utils.empty_bucket("vfs-"+vfs_id)
                 lambda_utils.delete_by_id(user, vfs_id)
 
                 return {

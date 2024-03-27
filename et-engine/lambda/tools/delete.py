@@ -1,8 +1,22 @@
 import json
 import lambda_utils
+import boto3
 
-def empty_bucket(vfs_id):
-    bucket_name = "vfs-" + vfs_id
+def delete_workflow(tool_id):
+    tool_name = "tool-"+tool_id
+    
+    # Delete S3 Bucket
+    lambda_utils.empty_bucket(tool_name)
+
+    # Delete ECR Image
+    lambda_utils.delete_repository(tool_name)
+
+    # Delete Stack
+    lambda_utils.delete_stack(tool_name)
+
+
+
+
 
 def handler(event, context):
 
@@ -23,7 +37,8 @@ def handler(event, context):
                 tool_name = event['queryStringParameters']['name']
                 tool_id = lambda_utils.get_tool_id(user, tool_name)
                 
-                empty_bucket(tool_id)
+                delete_workflow(tool_id)
+
                 lambda_utils.delete_tool_by_id(user, tool_id)
 
                 return {

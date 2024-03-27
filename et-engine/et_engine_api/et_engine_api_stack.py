@@ -144,8 +144,9 @@ class API(Stack):
                 actions=[
                     'cloudformation:UpdateStack',
                     'ssm:GetParameters',
-                    's3:CreateBucket',
+                    's3:*',
                     'ec2:*',
+                    'iam:*',
                     'ecr:CreateRepository',
                     'ecr:DeleteRepository',
                     'ecr:DescribeRepositories',
@@ -174,22 +175,22 @@ class API(Stack):
                     'lambda:AddPermission',
                     'lambda:RemovePermission',
                     'lambda:InvokeFunction',
-                    'lambda:UpdateFunctionCode'
+                    'lambda:UpdateFunctionCode',
                 ],
                 resources=['*']
             )
         )
-        tools_update_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:GetObject'
-                ],
-                resources=[
-                    template_bucket.bucket_arn,
-                    f"{template_bucket.bucket_arn}/*"
-                ]
-            )
-        )
+        # tools_update_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             's3:GetObject'
+        #         ],
+        #         resources=[
+        #             template_bucket.bucket_arn,
+        #             f"{template_bucket.bucket_arn}/*"
+        #         ]
+        #     )
+        # )
         template_bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED, 
             s3n.LambdaDestination(tools_update_lambda)
@@ -393,6 +394,16 @@ class API(Stack):
             authorization_type = apigateway.AuthorizationType.COGNITO,
         )
         database.grant_access(vfs_delete_lambda)
+        vfs_delete_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket',
+                    's3:DeleteObject',
+                    's3:DeleteBucket'
+                ],
+                resources=['*']
+            )
+        )
 
 
 
@@ -552,8 +563,9 @@ class API(Stack):
                 actions=[
                     'cloudformation:CreateStack',
                     'ssm:GetParameters',
-                    's3:CreateBucket',
+                    's3:*',
                     'ec2:*',
+                    'iam:*',
                     'ecr:CreateRepository',
                     'ecr:DeleteRepository',
                     'ecr:DescribeRepositories',
@@ -585,17 +597,17 @@ class API(Stack):
                 resources=['*']
             )
         )
-        tools_create_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:GetObject'
-                ],
-                resources=[
-                    template_bucket.bucket_arn,
-                    f"{template_bucket.bucket_arn}/*"
-                ]
-            )
-        )
+        # tools_create_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             's3:GetObject'
+        #         ],
+        #         resources=[
+        #             template_bucket.bucket_arn,
+        #             f"{template_bucket.bucket_arn}/*"
+        #         ]
+        #     )
+        # )
 
         tools_list_lambda = _lambda.Function(
             self, 'tools-list',
@@ -658,6 +670,34 @@ class API(Stack):
             authorization_type = apigateway.AuthorizationType.COGNITO,
         )
         database.grant_access(tools_delete_lambda)
+        tools_delete_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket',
+                    's3:DeleteObject',
+                    's3:DeleteBucket',
+                    's3:*',
+                    'ecs:DeregisterTaskDefinition',
+                    'ecr:ListImages',
+                    'ecr:DeleteImage',
+                    'ecr:BatchDeleteImage',
+                    'ecr:DescribeRepositories',
+                    'ecr:DeleteRepository',
+                    'cloudformation:DeleteStack',
+                    'cloudformation:DescribeStacks',
+                    'codebuild:DeleteProject',
+                    'logs:DeleteLogGroup',
+                    'lambda:InvokeFunction',
+                    'lambda:RemovePermission',
+                    'lambda:DeleteFunction',
+                    'iam:DeleteRolePolicy',
+                    'iam:DetachRolePolicy',
+                    'iam:DeleteRole'
+
+                ],
+                resources=['*']
+            )
+        )
 
 
 

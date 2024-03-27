@@ -20,8 +20,7 @@ class ComputeBasicStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # >>>>> PARAMETERS
-        # tool-id
+        # PARAMETERS
         tool_id = CfnParameter(
             self,
             "toolID"
@@ -42,14 +41,14 @@ class ComputeBasicStack(Stack):
             self,
             "clusterARN"
         ).value_as_string
-        # <<<<<
 
+        # Bucket & Build Trigger
         code_bucket = s3.Bucket(
             self,
             "CodeBucket",
             bucket_name = "tool-" + tool_id,
-            # auto_delete_objects = True,
-            # removal_policy = cdk.RemovalPolicy.DESTROY
+            auto_delete_objects = True,
+            removal_policy = cdk.RemovalPolicy.DESTROY
         )
         codebuild_trigger = _lambda.Function(
             self, 'codebuild-trigger',
@@ -76,13 +75,14 @@ def handler(event, context):
             s3n.LambdaDestination(codebuild_trigger)
         )
 
-
+        # Container Image
         container_repo = ecr.CfnRepository(
             self,
             "ContainerRepo",
             repository_name="tool-" + tool_id
         )
 
+        # IAM Roles [ARE THESE REDUNDANT?]
         ecs_task_execution_role = iam.CfnRole(
             self,
             "ECSTaskExecutionRole",
@@ -117,36 +117,6 @@ def handler(event, context):
                 )
             ]
         )
-        ecs_log_group = logs.CfnLogGroup(
-            self,
-            "ECSLogGroup",
-            log_group_name="/ecs/tool-" + tool_id
-        )
-        ecs_task_definition = ecs.CfnTaskDefinition(
-            self,
-            "ECSTaskDefinition",
-            cpu="256",
-            memory="512",
-            network_mode="awsvpc",
-            requires_compatibilities=["FARGATE"],
-            execution_role_arn=ecs_task_execution_role.attr_arn,
-            container_definitions=[
-                ecs.CfnTaskDefinition.ContainerDefinitionProperty(
-                    name="tool-" + tool_id,
-                    image=f"{container_repo.attr_repository_uri}:latest",
-                    essential=True,
-                    log_configuration=ecs.CfnTaskDefinition.LogConfigurationProperty(
-                        log_driver="awslogs",
-                        options={
-                            "awslogs-group": ecs_log_group.log_group_name,
-                            "awslogs-region": "us-east-2",
-                            "awslogs-stream-prefix": "tool-" + tool_id
-                        }
-                    )
-                )
-            ]
-        )
-
         codebuild_role = iam.CfnRole(
             self,
             "CodeBuildRole",
@@ -201,6 +171,39 @@ def handler(event, context):
                 )
             ]
         )
+
+        # ECS Needs  
+        ecs_log_group = logs.CfnLogGroup(
+            self,
+            "ECSLogGroup",
+            log_group_name="/ecs/tool-" + tool_id
+        )
+        ecs_task_definition = ecs.CfnTaskDefinition(
+            self,
+            "ECSTaskDefinition",
+            cpu="256",
+            memory="512",
+            network_mode="awsvpc",
+            requires_compatibilities=["FARGATE"],
+            execution_role_arn=ecs_task_execution_role.attr_arn,
+            container_definitions=[
+                ecs.CfnTaskDefinition.ContainerDefinitionProperty(
+                    name="tool-" + tool_id,
+                    image=f"{container_repo.attr_repository_uri}:latest",
+                    essential=True,
+                    log_configuration=ecs.CfnTaskDefinition.LogConfigurationProperty(
+                        log_driver="awslogs",
+                        options={
+                            "awslogs-group": ecs_log_group.log_group_name,
+                            "awslogs-region": "us-east-2",
+                            "awslogs-stream-prefix": "tool-" + tool_id
+                        }
+                    )
+                )
+            ]
+        )
+
+        # Codebuild Project
         docker_builder = codebuild.CfnProject(
             self,
             "DockerBuilder",
@@ -244,6 +247,7 @@ def handler(event, context):
             service_role=codebuild_role.attr_arn
         )
 
+        # OUTPUTS
         CfnOutput(
             self,
             "ClusterName",
@@ -270,10 +274,9 @@ def handler(event, context):
             value=subnet_id
         )
 
-        # >>>>> This is a new parameter to test the stack update lambda
-        CfnOutput(
-            self,
-            "TestString",
-            value="test2"
-        )
-        # <<<<<
+        # This is useful for testing stack updates
+        # CfnOutput(
+        #     self,
+        #     "TestString",
+        #     value="test2"
+        # )

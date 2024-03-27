@@ -22,10 +22,59 @@ Resources:
           - ""
           - - tool-
             - Ref: toolID
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
+      Tags:
+        - Key: aws-cdk:auto-delete-objects
+          Value: "true"
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
     Metadata:
       aws:cdk:path: ComputeBasicStack/CodeBucket/Resource
+  CodeBucketPolicy637E7C14:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: CodeBucketFF4C7AD6
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:DeleteObject*
+              - s3:GetBucket*
+              - s3:List*
+              - s3:PutBucketPolicy
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+                  - Arn
+            Resource:
+              - Fn::GetAtt:
+                  - CodeBucketFF4C7AD6
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - CodeBucketFF4C7AD6
+                        - Arn
+                    - /*
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBucket/Policy/Resource
+  CodeBucketAutoDeleteObjectsCustomResourceA4EDF0CF:
+    Type: Custom::S3AutoDeleteObjects
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F
+          - Arn
+      BucketName:
+        Ref: CodeBucketFF4C7AD6
+    DependsOn:
+      - CodeBucketPolicy637E7C14
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBucket/AutoDeleteObjectsCustomResource/Default
   CodeBucketNotifications9E54147D:
     Type: Custom::S3BucketNotifications
     Properties:
@@ -65,6 +114,47 @@ Resources:
           - Arn
     Metadata:
       aws:cdk:path: ComputeBasicStack/CodeBucket/AllowBucketNotificationsToComputeBasicStackcodebuildtrigger21EFA26B
+  CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role
+  CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: b7f33614a69548d6bafe224d751a7ef238cde19097415e553fe8b63a4c8fd8a6.zip
+      Timeout: 900
+      MemorySize: 128
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+          - Arn
+      Runtime: nodejs18.x
+      Description:
+        Fn::Join:
+          - ""
+          - - "Lambda function for auto-deleting objects in "
+            - Ref: CodeBucketFF4C7AD6
+            - " S3 bucket."
+    DependsOn:
+      - CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler
+      aws:asset:path: asset.b7f33614a69548d6bafe224d751a7ef238cde19097415e553fe8b63a4c8fd8a6
+      aws:asset:property: Code
   codebuildtriggerServiceRole85085266:
     Type: AWS::IAM::Role
     Properties:
@@ -297,6 +387,50 @@ Resources:
           PolicyName: ECSTaskExecutionPolicy
     Metadata:
       aws:cdk:path: ComputeBasicStack/ECSTaskExecutionRole
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: "2012-10-17"
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: ecr:*
+                Effect: Allow
+                Resource:
+                  Fn::GetAtt:
+                    - ContainerRepo
+                    - Arn
+              - Action:
+                  - ecr:GetAuthorizationToken
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - s3:Get*
+                  - s3:List*
+                Effect: Allow
+                Resource:
+                  - Fn::GetAtt:
+                      - CodeBucketFF4C7AD6
+                      - Arn
+                  - Fn::Join:
+                      - ""
+                      - - Fn::GetAtt:
+                            - CodeBucketFF4C7AD6
+                            - Arn
+                        - /*
+            Version: "2012-10-17"
+          PolicyName: CodeBuildPolicy
+    Metadata:
+      aws:cdk:path: ComputeBasicStack/CodeBuildRole
   ECSLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -349,50 +483,6 @@ Resources:
         - FARGATE
     Metadata:
       aws:cdk:path: ComputeBasicStack/ECSTaskDefinition
-  CodeBuildRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-        Version: "2012-10-17"
-      Policies:
-        - PolicyDocument:
-            Statement:
-              - Action: ecr:*
-                Effect: Allow
-                Resource:
-                  Fn::GetAtt:
-                    - ContainerRepo
-                    - Arn
-              - Action:
-                  - ecr:GetAuthorizationToken
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Effect: Allow
-                Resource: "*"
-              - Action:
-                  - s3:Get*
-                  - s3:List*
-                Effect: Allow
-                Resource:
-                  - Fn::GetAtt:
-                      - CodeBucketFF4C7AD6
-                      - Arn
-                  - Fn::Join:
-                      - ""
-                      - - Fn::GetAtt:
-                            - CodeBucketFF4C7AD6
-                            - Arn
-                        - /*
-            Version: "2012-10-17"
-          PolicyName: CodeBuildPolicy
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/CodeBuildRole
   DockerBuilder:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -445,7 +535,7 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/z2PT0/DMAzFP8vuqaGbNO4MwQWJanBHaeINr0lc5Y+mKup3J0kFJ//8nuVn76HfH+FxJ++hU3rqDI2QP6NUkzhd3CC9tBjRi+J/53CA/JzUhLGaG63CSDtqCbnOo7cUArETr8mpWKHIf7wKkhbymQ1WudWBDamlhTVaBSoP1cWZA0X2izB8DVV65+ub5zSXkdZ/yTC94IUctSTFGsdERldv8HxDVc5rqwInr1D8QxE/UpxTe+TETtN237DEH3YPB+h7eNrdAlHnk4tkEc5b/QVPOTprMQEAAA==
+      Analytics: v2:deflate64:H4sIAAAAAAAA/1VQwU7DMAz9lt3TQDcJzqwILkhUhTtKE6/zmsRVnICqav9O0zIGp/f8nv0seyvL7Z283agvLrTpC4utnN6i0r2oDr5WQTmIEMTsf0y8k9M+6R5iNn/YCjVZ1ONVXuuzsMq1Rskph0FwyIzkxVPyOmYyyxd+FqicnBqykOUFr6mXPNBBZhcGYowURmGp4yy9UPccKA1zy1K/K+4f4YAel02aDLQJrcleHegEOp5FlTiSa4ApBb3u/eX/rHniEw2EvWIQD8wQ5yd16Dvxd/g1xSEtz6nIG1zPqsd4JH+zk2Up7zcnRixC8hEdyGbFb/izC1uFAQAA
     Metadata:
       aws:cdk:path: ComputeBasicStack/CDKMetadata/Default
     Condition: CDKMetadataAvailable
@@ -467,8 +557,6 @@ Outputs:
   PublicSubnetId:
     Value:
       Ref: subnetID
-  TestString:
-    Value: test2
 Conditions:
   CDKMetadataAvailable:
     Fn::Or:
