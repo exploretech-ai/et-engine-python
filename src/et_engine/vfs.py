@@ -48,7 +48,7 @@ class VirtualFileSystem:
         )
         response.raise_for_status()
         presigned_post = json.loads(response.text)
-        print(presigned_post)
+        # print(presigned_post)
         
         with open(local_file, 'rb') as f:
             files = {'file': (local_file, f)}
