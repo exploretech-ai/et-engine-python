@@ -1,6 +1,4 @@
-.header {
-    position: fixed;
-    top: 10px;
-    right: 2.5%;
-  
-  }
+#header div {
+    display: contents;
+    text-align: right;
+}

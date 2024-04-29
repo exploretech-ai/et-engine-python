@@ -4,8 +4,9 @@ import './Header.css'
 
 const Header = ({user}) => {
     return (
-      <div className='header'>
-        User: {user.username}
+      <div id="header">
+        <div>User ID: </div>
+        <div>{user.username}</div>
       </div>
     )
   }

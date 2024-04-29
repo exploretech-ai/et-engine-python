@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react'
-import './App.css'
+// import './App.css'
 
 
 import {Amplify} from 'aws-amplify'
@@ -21,7 +21,28 @@ Amplify.configure({
 })
 
 
-
+const Sidebar = ({user}) => {
+  return(
+  <div id="sidebar">
+    
+      <h1>The Engine</h1>
+      <Header user={user} />
+      <nav>
+        <ul>
+          <li>
+            <a href={`/filesystems`}>Filesystems</a>
+          </li>
+          <li>
+            <a href={`/tools`}>Tools</a>
+          </li>
+          <li>
+            <a href={`/tools`}>Keys</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  )
+}
 
 
 function App() {
@@ -32,14 +53,16 @@ function App() {
   return (
     <Authenticator loginMechanisms={['email']} hideSignUp={true}>
     {({signOut, user}) => (
-      <div className="App">
-        <Header user={user} />
-        <div className='main-container'>
-          <Navbar activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 1}}/>
-          <ControlPanel activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 3}}/>
+      <>
+        <Sidebar user={user}/>
+        <div id="detail">
+          
+          <div className='main-container'>
+            <Navbar activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 1}}/>
+            <ControlPanel activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 3}}/>
+          </div>
         </div>
-        
-    </div>
+    </>
     )}
     </Authenticator>
   );
