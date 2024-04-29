@@ -30,7 +30,7 @@ function App() {
 
 
   return (
-    <Authenticator loginMechanisms={['email']}>
+    <Authenticator loginMechanisms={['email']} hideSignUp={true}>
     {({signOut, user}) => (
       <div className="App">
         <Header user={user} />
