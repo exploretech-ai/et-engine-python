@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
-import VFSNavbar from "./VFS/Navbar";
-import Directory from "./VFS/Directory";
+import VFSNavbar from "./Filesystems/Navbar";
+import Directory from "./Filesystems/Directory";
 import './Filesystems.css'
 
 class VFS {

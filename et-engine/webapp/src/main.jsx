@@ -2,10 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import './index.css'
 import App from './App'
+
 import Home from './pages/home'
 import Filesystems from './pages/Filesystems'
 import Tools from './pages/Tools'
-
+import Keys from './pages/Keys'
 
 import {
   createBrowserRouter,
@@ -32,6 +33,10 @@ const router = createBrowserRouter([
       {
         path: "tools",
         element: <Tools/>
+      },
+      {
+        path: "keys",
+        element: <Keys/>
       }
     ]
   }

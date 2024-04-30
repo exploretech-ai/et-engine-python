@@ -48,7 +48,7 @@ const Sidebar = ({user}) => {
             <Link to={`tools`}>Tools</Link>
           </li>
           <li>
-            <Link to={`keys`}>Keys</Link>
+            <Link to={`keys`}>API Keys</Link>
           </li>
         </ul>
       </nav>
