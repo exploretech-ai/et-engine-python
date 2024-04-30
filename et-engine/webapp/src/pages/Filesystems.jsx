@@ -2,7 +2,7 @@ import React, {useState, useEffect} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
 import VFSNavbar from "./VFS/Navbar";
 import Directory from "./VFS/Directory";
-import './VFSPanel.css'
+import './Filesystems.css'
 
 class VFS {
     constructor(name, id) {
@@ -13,7 +13,7 @@ class VFS {
 
 
 
-const VFSPanel = () => {
+const Filesystems = () => {
     const [idToken, setIdToken] = useState(null)
     const [activeVFS, setActiveVFS] = useState(null)
     const [vfsData, setVfsData] = useState(null)
@@ -80,4 +80,4 @@ const VFSPanel = () => {
     )
 }
 
-export default VFSPanel
+export default Filesystems

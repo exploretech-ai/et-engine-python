@@ -2,7 +2,7 @@ import React, {useState, useEffect} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
 import ToolNavbar from "./Tools/Navbar";
 import ToolContent from "./Tools/ToolContent";
-import './ToolsPanel.css'
+import './Tools.css'
 
 
 class Tool {
@@ -13,7 +13,7 @@ class Tool {
     }
 }
 
-const ToolsPanel = () => {
+const Tools = () => {
     const [idToken, setIdToken] = useState(null)
     const [activeTool, setActiveTool] = useState(null)
     const [toolData, setToolData] = useState(null)
@@ -75,4 +75,4 @@ const ToolsPanel = () => {
 
 }
 
-export default ToolsPanel
+export default Tools

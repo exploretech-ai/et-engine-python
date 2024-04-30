@@ -1,14 +1,12 @@
 import React, {useState, useEffect} from 'react'
-// import './App.css'
+import './App.css'
+import { Outlet, Link } from "react-router-dom";
 
 
 import {Amplify} from 'aws-amplify'
 import { Authenticator } from '@aws-amplify/ui-react'
 import '@aws-amplify/ui-react/dist/styles.css';
 
-import Header from './components/Header';
-import Navbar from './components/Navbar';
-import ControlPanel from './components/ControlPanel';
 
 Amplify.configure({
   Auth: {
@@ -21,6 +19,17 @@ Amplify.configure({
 })
 
 
+const Header = ({user}) => {
+  return (
+    <div id="header">
+      <div>User ID: </div>
+      <div>{user.username}</div>
+    </div>
+  )
+}
+
+
+
 const Sidebar = ({user}) => {
   return(
   <div id="sidebar">
@@ -30,13 +39,16 @@ const Sidebar = ({user}) => {
       <nav>
         <ul>
           <li>
-            <a href={`/filesystems`}>Filesystems</a>
+            <Link to={`home`}>Home</Link>
           </li>
           <li>
-            <a href={`/tools`}>Tools</a>
+            <Link to={`filesystems`}>Filesystems</Link>
           </li>
           <li>
-            <a href={`/tools`}>Keys</a>
+            <Link to={`tools`}>Tools</Link>
+          </li>
+          <li>
+            <Link to={`keys`}>Keys</Link>
           </li>
         </ul>
       </nav>
@@ -46,21 +58,13 @@ const Sidebar = ({user}) => {
 
 
 function App() {
-  const [activeTab, setActiveTab] = useState('VFS')
-
-
-
   return (
     <Authenticator loginMechanisms={['email']} hideSignUp={true}>
     {({signOut, user}) => (
       <>
         <Sidebar user={user}/>
         <div id="detail">
-          
-          <div className='main-container'>
-            <Navbar activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 1}}/>
-            <ControlPanel activeTab={activeTab} setActiveTab={setActiveTab} style={{flex: 3}}/>
-          </div>
+          <Outlet/>
         </div>
     </>
     )}
