@@ -2,7 +2,7 @@ import React from "react"
 
 const Keys = () => {
     return(
-        <div>Hello, world!</div>
+        <div>This is where you can view, add, and delete API keys.</div>
     )
 }
 
