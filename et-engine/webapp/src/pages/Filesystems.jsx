@@ -3,6 +3,7 @@ import { fetchAuthSession } from '@aws-amplify/auth';
 import VFSNavbar from "./Filesystems/Navbar";
 import Directory from "./Filesystems/Directory";
 import './Filesystems.css'
+import Page from "./Page";
 
 class VFS {
     constructor(name, id) {
@@ -73,10 +74,12 @@ const Filesystems = () => {
 
 
     return (
-        <div className="vfs-panel">
-            <VFSNavbar vfsData={vfsData} activeVFS={activeVFS} setActiveVFS={setActiveVFS} style={{flex: 1}}/>
-            <Directory style={{flex: 5}} idToken={idToken} activeVFS={activeVFS}/>
-        </div>
+        <Page name="Filesystems">
+            <div className="vfs-panel">
+                <VFSNavbar vfsData={vfsData} activeVFS={activeVFS} setActiveVFS={setActiveVFS} style={{flex: 1}}/>
+                <Directory style={{flex: 5}} idToken={idToken} activeVFS={activeVFS}/>
+            </div>
+        </Page>
     )
 }
 

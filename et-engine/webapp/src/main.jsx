@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'
 import './index.css'
 import App from './App'
 
-import Home from './pages/home'
+import Home from './pages/Home'
 import Filesystems from './pages/Filesystems'
 import Tools from './pages/Tools'
 import Keys from './pages/Keys'

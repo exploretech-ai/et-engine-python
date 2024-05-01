@@ -3,7 +3,7 @@ import { fetchAuthSession } from '@aws-amplify/auth';
 import ToolNavbar from "./Tools/Navbar";
 import ToolContent from "./Tools/ToolContent";
 import './Tools.css'
-
+import Page from "./Page";
 
 class Tool {
     constructor(name, id, description) {
@@ -66,10 +66,12 @@ const Tools = () => {
     }, [])
 
     return (
-        <div className="tool-panel">
-            <ToolNavbar toolData={toolData} activeTool={activeTool} setActiveTool={setActiveTool} style={{flex: 1}}/>
-            <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
-        </div>
+        <Page name="Tools">
+            <div className="tool-panel">
+                <ToolNavbar toolData={toolData} activeTool={activeTool} setActiveTool={setActiveTool} style={{flex: 1}}/>
+                <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
+            </div>
+        </Page>
     )
 
 

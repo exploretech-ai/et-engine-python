@@ -1,0 +1,25 @@
+
+.page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.page h1 {
+    padding-left: 20px
+}
+
+.page-header {
+    border-bottom: 2px solid #e3e3e3;
+}
+
+.page-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 80%;
+    margin-top: 30px;
+    border-radius: 2em;
+    padding-left: 25%;
+    padding-right: 25%;
+}

@@ -1,8 +1,11 @@
 import React from "react"
+import Page from "./Page"
 
 const Jobs = () => {
     return(
-        <div>This is where you can see the running compute jobs</div>
+        <Page name="Compute Jobs">
+            This is where you can see the past, present, and pending jobs.
+        </Page>
     )
 }
 

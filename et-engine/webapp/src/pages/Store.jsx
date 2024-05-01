@@ -1,8 +1,12 @@
 import React from "react"
+import Page from "./Page"
+
 
 const Store = () => {
     return(
-        <div>This is where you can explore and purchase computing tools</div>
+        <Page name="Explore">
+            Browse and purchase computing tools.
+        </Page>
     )
 }
 

@@ -1,8 +1,10 @@
 import React from "react"
+import Page from "./Page"
+
 
 const Home = () => {
     return(
-        <div>Hello, world!</div>
+        <Page name={'Home'}/>
     )
 }
 
