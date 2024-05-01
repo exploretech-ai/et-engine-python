@@ -11,20 +11,43 @@ class Key {
         this.id = id // NOTE: this is not the key, this is only for the purposes 
     }
 
-    delete() {
-        console.log(this.name + " is being deleted")
+    async delete(idToken) {
+        const response = await fetch(
+            "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/keys?" + new URLSearchParams({
+                name: this.name
+            }), {
+                method: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + idToken
+                }
+            }
+        ).then(response => {
+            if (response.ok) {
+                return true
+            } else {
+                console.log('NOT OK')
+                throw Error
+            }
+        }).catch(err => {
+            console.log('ERROR')
+            return false
+        })
+        return response
+        // console.log(this.name + " is being deleted client-side only. Server-side deletion not yet supported.")
     }
 }
 
-const KeyItem = ({apiKey, updateList}) =>{
 
-    const handleRemoveItem = (e) => {
-        apiKey.delete()
-        updateList(l => l.filter(item => item.id !== apiKey.id));
+const KeyItem = ({apiKey, updateList, idToken}) =>{
+
+    const handleRemoveItem = async (e) => {
+        const success = await apiKey.delete(idToken)
+        if (success) {
+            updateList(l => l.filter(item => item.id !== apiKey.id));
+        }
+        
     };
     
-
-
     return(
         <div>
             <p style={{flex: 2}}>{apiKey.name}</p>
@@ -64,23 +87,43 @@ const NewKeyForm = ({idToken, APIKeys, setAPIKeys, showKey, updateShowKey}) => {
                     description: formData.description
                 })
             }
-        ).then(response => response.json());
-        // If successful, it will return the key, the name, and a datestamp
-        console.log(response)
+        ).then(response => {
+            if (response.ok) {
+                if (response.status == 200) {
+                    throw Error('already exists')
+                } else {
+                    return response.json()
+                }
+            } else {
+                throw Error(response.json())
+            }
+        }).then(newKey => {
+
+            // Now update the API keys state, incrementing the next key id
+            let nextKeyID = 0
+            for (const key of APIKeys) { 
+                if (key.id >= nextKeyID) {nextKeyID = key.id + 1}
+            }
+
+            setAPIKeys([
+                ...APIKeys,
+                new Key(newKey.name, newKey.dateCreated, nextKeyID)
+            ])
+            
+            updateShowKey(newKey.key)
+
+        }).catch(err => {
+            
+            if (err.message.includes('already exists')) {
+                updateShowKey('Error: key "' + formData.name + '" already exists. Please try again with a different name.')
+            } else {
+                updateShowKey('An unknown error occurred. Please try again.')
+            }
+            // console.log('could not create key')
+        })
 
         
-        // Now update the API keys state, incrementing the next key id
-        let nextKeyID = 0
-        for (const key of APIKeys) { 
-            if (key.id >= nextKeyID) {nextKeyID = key.id + 1}
-        }
-
-        setAPIKeys([
-            ...APIKeys,
-            new Key(response.name, response.dateCreated, nextKeyID)
-        ])
         
-        updateShowKey(response.key)
     }
 
     return (
@@ -88,10 +131,10 @@ const NewKeyForm = ({idToken, APIKeys, setAPIKeys, showKey, updateShowKey}) => {
         {showKey ? 
             <>
                 <h3>Here's your new key</h3>
-                <p>Make sure to copy and store this key in a secure location. You will not be able to see this again. If you lose it, you will have to create another key. Once you have the key, you can add it to your environment by opening a terminal and typing EXPORT ET_ENGINE_API_KEY="..."</p>
+                <p>Make sure to copy and store this key in a secure location. You will not be able to see this again. If you lose it, you will have to create another key.</p>
                 <div className="key-container">
                     <span onClick={() => navigator.clipboard.writeText(showKey)}>
-                        <i class="fa fa-copy"></i>
+                        <i className="fa fa-copy"></i>
                     </span>
                     <p>{showKey}</p>
                 </div>
@@ -115,7 +158,6 @@ const NewKeyForm = ({idToken, APIKeys, setAPIKeys, showKey, updateShowKey}) => {
         </>
     )
 }
-
 
 
 const Modal = ({setModalOpen, idToken, APIKeys, setAPIKeys}) => {
@@ -152,6 +194,29 @@ const Keys = () => {
             console.log(err);
         }
         setIdToken(session.tokens.idToken.toString())
+
+        const response = await fetch(
+            "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/keys", {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + session.tokens.idToken.toString()
+                }
+            }
+        ).then(
+            response => response.json()
+        ).then(response => {
+            const newAPIKeys = []
+            let nextKeyID = 0
+            for (const item of response){
+                newAPIKeys.push(new Key(item.name, item.dateCreated, nextKeyID))
+                nextKeyID += 1
+            }
+            setAPIKeys(newAPIKeys)
+        })
+                
+        
+        
+
     }, [])
 
     const openModal = () => {

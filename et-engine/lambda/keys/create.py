@@ -37,8 +37,7 @@ def handler(event, context):
         key_id = str(uuid.uuid4())
         
 
-        f = Fernet(fernet_key)
-        key_token = f.encrypt(str.encode(key_id)).decode()
+        
         
         create_time = datetime.datetime.now()
         expired_time = create_time + datetime.timedelta(days=30)
@@ -46,29 +45,22 @@ def handler(event, context):
         create_time = create_time.strftime('%Y-%m-%d %H:%M:%S')
         expired_time = expired_time.strftime('%Y-%m-%d %H:%M:%S')
 
-        # connection = db.connect()
-        # cursor = connection.cursor()
-        sql_query = f"""
-            INSERT INTO APIKeys (keyID, userID, name, description, date_created, date_expired)
-            VALUES ('{key_id}', '{user}', '{key_name}', '{key_description}', '{create_time}', '{expired_time}')
-        """
-        print(sql_query)
-        # cursor.execute(sql_query)
-        # connection.commit()
-        # cursor.close()
-        # connection.close()
-
+        connection = db.connect()
+        
+        if check_if_key_name_exists(connection, user, key_name):
+            status_code = 200
+            response = None
+        else:
+            response = insert_new_key(connection, key_id, user, key_name, key_description, create_time, expired_time)
+            status_code = 201
+        connection.close()
 
         return {
-            'statusCode': 200,
+            'statusCode': status_code,
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps({
-                'name': key_name,
-                'key': key_token,
-                'dateCreated': create_time
-            })
+            'body': json.dumps(response)
         }
         
     except Exception as e:
@@ -81,16 +73,44 @@ def handler(event, context):
         }
 
 
+def insert_new_key(connection, key_id, user, key_name, key_description, create_time, expired_time):
+    f = Fernet(fernet_key)
+    key_token = f.encrypt(str.encode(key_id)).decode()
+    
+    sql_query = f"""
+        INSERT INTO APIKeys (keyID, userID, name, description, date_created, date_expired)
+        VALUES ('{key_id}', '{user}', '{key_name}', '{key_description}', '{create_time}', '{expired_time}')
+    """
+    print(sql_query)
 
-    # Check if "name" is in vfs & return error if so
+    cursor = connection.cursor()
+    
+    cursor.execute(sql_query)
+    connection.commit()
 
-    # If "name" is not in vfs:
-    #     1. Generate vfsID
-    #     2. Push [vfsID, name, userID] to table
-    #     3. Create new s3 bucket
-    #     4. Return vfsID
+    cursor.close()
 
     return {
-        'statusCode': 200,
-        'body': json.dumps('hello, world')
+        'name': key_name,
+        'key': key_token,
+        'dateCreated': create_time,
+        'dateExpired': expired_time
     }
+
+
+def check_if_key_name_exists(connection, user, desired_name):
+    
+    sql_query = f"""
+        SELECT name FROM APIKeys WHERE userID = '{user}'
+    """
+
+    cursor = connection.cursor()
+    cursor.execute(sql_query)
+
+    queried_keys = cursor.fetchall()
+    available_names = [name[0] for name in queried_keys]
+
+    cursor.close()
+    
+    return desired_name in available_names
+        
