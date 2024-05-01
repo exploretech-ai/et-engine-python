@@ -76,7 +76,8 @@ class MasterDB(Stack):
                 subnets=vpc.select_subnets(
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
-            )
+            ),
+            # storage_encrypted=True # <--- eventually need to do this
         )
 
         
@@ -180,23 +181,13 @@ class API(Stack):
                 resources=['*']
             )
         )
-        # tools_update_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             's3:GetObject'
-        #         ],
-        #         resources=[
-        #             template_bucket.bucket_arn,
-        #             f"{template_bucket.bucket_arn}/*"
-        #         ]
-        #     )
-        # )
+
         template_bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED, 
             s3n.LambdaDestination(tools_update_lambda)
         )
 
-        # COMPUTE CLUSTER VPC
+        # COMPUTE CLUSTER CONFIG
         self.vpc = ec2.CfnVPC(
             self,
             "ClusterVPC",
@@ -277,6 +268,8 @@ class API(Stack):
             "WebappClient"
         )
 
+
+        # API DEFNITION
         self.api = apigateway.RestApi(
             self, 'API',
             rest_api_name='ETEngineAPI',
@@ -292,7 +285,54 @@ class API(Stack):
             cognito_user_pools=[self.user_pool]
         )
 
+        key_authorizer_lambda = _lambda.Function(
+            self, 'key-authorizer-lambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "key-authorizer.handler",
+            code=_lambda.Code.from_asset('lambda'),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        database.grant_access(key_authorizer_lambda)
+        key_authorizer = apigateway.TokenAuthorizer(
+            self,
+            'key-authorizer',
+            handler=key_authorizer_lambda
+        )
 
+
+        # API KEY METHODS
+        keys = self.api.root.add_resource("keys")
+        keys_create_lambda = _lambda.Function(
+            self, 'keys-create-lambda',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "keys.create.handler",
+            code=_lambda.Code.from_asset('lambda'),
+            timeout = Duration.seconds(30),
+        )
+        keys.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(keys_create_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = authorizer,
+            authorization_type = apigateway.AuthorizationType.COGNITO,
+        )
+        # keys_delete_lambda
+
+        # VFS API METHODS
         vfs = self.api.root.add_resource("vfs")
         vfs_create_lambda = _lambda.Function(
             self, 'vfs-create',
@@ -320,8 +360,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(vfs_create_lambda)
         vfs_create_lambda.add_to_role_policy(
@@ -359,8 +399,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(vfs_list_lambda)
 
@@ -390,8 +430,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(vfs_delete_lambda)
         vfs_delete_lambda.add_to_role_policy(
@@ -404,7 +444,6 @@ class API(Stack):
                 resources=['*']
             )
         )
-
 
 
         vfs_id = vfs.add_resource("{vfsID}")
@@ -434,8 +473,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(vfs_upload_lambda)
         vfs_upload_lambda.add_to_role_policy(
@@ -473,8 +512,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(vfs_download_lambda)
         vfs_download_lambda.add_to_role_policy(
@@ -513,8 +552,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(vfs_id_list_lambda)
         vfs_id_list_lambda.add_to_role_policy(
@@ -527,6 +566,7 @@ class API(Stack):
         )
 
 
+        # TOOLS API METHODS
         tools = self.api.root.add_resource("tools")
         tools_create_lambda = _lambda.Function(
             self, 'tools-create',
@@ -554,8 +594,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_create_lambda)
         tools_create_lambda.add_to_role_policy(
@@ -597,17 +637,6 @@ class API(Stack):
                 resources=['*']
             )
         )
-        # tools_create_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             's3:GetObject'
-        #         ],
-        #         resources=[
-        #             template_bucket.bucket_arn,
-        #             f"{template_bucket.bucket_arn}/*"
-        #         ]
-        #     )
-        # )
 
         tools_list_lambda = _lambda.Function(
             self, 'tools-list',
@@ -635,8 +664,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_list_lambda)
 
@@ -666,8 +695,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_delete_lambda)
         tools_delete_lambda.add_to_role_policy(
@@ -700,7 +729,6 @@ class API(Stack):
         )
 
 
-
         tools_id = tools.add_resource("{toolID}")
         tools_upload_lambda = _lambda.Function(
             self, 'tools-upload',
@@ -728,8 +756,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_upload_lambda)
         tools_upload_lambda.add_to_role_policy(
@@ -767,8 +795,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_execute_lambda)
         tools_execute_lambda.add_to_role_policy(
@@ -808,8 +836,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_describe_lambda)
         
@@ -841,8 +869,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_code_get_lambda)
         tools_code_get_lambda.add_to_role_policy(
@@ -881,8 +909,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_build_get_lambda)
         tools_build_get_lambda.add_to_role_policy(
@@ -922,8 +950,8 @@ class API(Stack):
                     'application/json': apigateway.Model.EMPTY_MODEL,
                 },
             }],
-            authorizer = authorizer,
-            authorization_type = apigateway.AuthorizationType.COGNITO,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_tasks_get_lambda)
         tools_tasks_get_lambda.add_to_role_policy(
