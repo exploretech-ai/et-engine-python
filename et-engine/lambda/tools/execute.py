@@ -9,17 +9,16 @@ def handler(event, context):
 
         # vfsID as a path parameter
         tool_id = event['pathParameters']['toolID']
-        id_token =  event['headers']['Authorization'].split(' ')[1]
-        # return {
-        #         'statusCode': 200,
-        #         'body': json.dumps(event['headers']['Authorization'].split(' ')[1])
-        #     }
+        # id_token =  event['headers']['Authorization'].split(' ')[1]
 
         # check if 'key' exists in the body
-        args = [{
-            'name': 'ET_ENGINE_TOKEN',
-            'value': id_token
-        }]
+        args = []
+        if "apiKey" in event['requestContext']['authorizer'].keys():
+            args.append({
+                'name': 'ET_ENGINE_API_KEY',
+                'value': event['requestContext']['authorizer']['apiKey']
+            })
+
         if 'body' in event:
             if event['body'] is not None:
                 body = json.loads(event['body'])
@@ -28,18 +27,6 @@ def handler(event, context):
                         'name': key,
                         'value': body[key]
                     })
- 
-
-
-        # check if vfsID exists under user
-        available_tools = lambda_utils.list_tools(user)
-        tool_name = lambda_utils.get_tool_name(user, tool_id)
-        if tool_name not in available_tools:
-            return {
-                'statusCode': 403,
-                'body': json.dumps('Tool unavailable')
-            }
-
 
         components = lambda_utils.get_tool_components(tool_id, 
             [

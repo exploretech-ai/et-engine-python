@@ -296,7 +296,8 @@ class API(Stack):
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
-            security_groups=[database.sg]
+            security_groups=[database.sg],
+            timeout = Duration.seconds(30)            
         )
         database.grant_access(key_authorizer_lambda)
         key_authorizer = apigateway.TokenAuthorizer(

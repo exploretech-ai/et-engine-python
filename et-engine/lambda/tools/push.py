@@ -1,6 +1,5 @@
 import json
 import boto3
-import lambda_utils
 
 
 def handler(event, context):
@@ -10,15 +9,6 @@ def handler(event, context):
 
         # vfsID as a path parameter
         tool_id = event['pathParameters']['toolID'] 
-
-        # check if vfsID exists under user
-        available_tools = lambda_utils.list_tools(user)
-        tool_name = lambda_utils.get_tool_name(user, tool_id)
-        if tool_name not in available_tools:
-            return {
-                'statusCode': 403,
-                'body': json.dumps('Tool unavailable')
-            }
 
         # Create presigned post
         s3 = boto3.client('s3')

@@ -21,53 +21,116 @@ keysUrl = 'https://cognito-idp.{}.amazonaws.com/{}/.well-known/jwks.json'.format
 fernet_key = b'IGE3pGK7ih1vDm4na0EmW-rYCqfnZKMaNR7ea1ose2s='
 
 def handler(event, context):
-    token = event['authorizationToken']
-    methodArn = event['methodArn']
 
-
-    if "Bearer " in token:
-        user = None
-
-        response = urllib.request.urlopen(keysUrl)
-        keys = json.loads(response.read())['keys']
-
-        jwtToken = token.split(' ')[-1]
-        header = jwt.get_unverified_header(jwtToken)
-        kid = header['kid']
-
-        jwkValue = findJwkValue(keys, kid)
-        publicKey = RSAAlgorithm.from_jwk(json.dumps(jwkValue))
-
-        decoded = decodeJwtToken(jwtToken, publicKey)
-        user_id = decoded['cognito:username']
+    # VALIDATE REQUEST
+    try:
+        token = event['authorizationToken']
 
         methodArn = event['methodArn'].split(':')
         apiGatewayArnTmp = methodArn[5].split('/')
         awsAccountId = methodArn[4]
-        
-        # print(methodArn)
         resource = apiGatewayArnTmp[-1]
+
         print("Resource Requested: " + resource)
-        print("User ID: " + user_id)
         print(f"Method ARN: {event['methodArn']}")
-        print(f"Method ARN: {':'.join(methodArn)}")
 
-
-        
-
-        
-
-
-        
-        # >>>>>
-        # policy = AuthPolicy(user_id, awsAccountId)
-        # =====
-        # The tool list is needed to say whether a {toolID} is allowed given the user's authorization
-        # 
-        #      
+    except Exception as e:
+        print(e)
+        return {
+            'statusCode': 501,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps('Could not validate request')
+        }
+ 
+    try:
         connection = db.connect()
         cursor = connection.cursor()
+    except Exception as e:
+        return {
+            'statusCode': 501,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps('Could not connect to database')
+        }
+    
+    # VALIDATE USER EXISTS
+    try:
+            
+        if "Bearer " in token:
+            user = None
 
+            response = urllib.request.urlopen(keysUrl)
+            keys = json.loads(response.read())['keys']
+
+            jwtToken = token.split(' ')[-1]
+            header = jwt.get_unverified_header(jwtToken)
+            kid = header['kid']
+
+            jwkValue = findJwkValue(keys, kid)
+            publicKey = RSAAlgorithm.from_jwk(json.dumps(jwkValue))
+
+            decoded = decodeJwtToken(jwtToken, publicKey)
+            user_id = decoded['cognito:username']
+
+            source = "web"
+            api_key = None
+
+            # >>>>> MORE VALIDATION HERE?
+            # <<<<<
+  
+        else:
+            f = Fernet(fernet_key)
+            key_id = f.decrypt(token).decode()
+
+            source = "api"
+            api_key = token
+
+            cursor.execute(f"""
+                SELECT userID FROM APIKeys WHERE keyID = '{key_id}'
+            """)
+
+            user_id = cursor.fetchall()[0][0]
+            if user_id is None:
+                raise NameError(f'no user not associated with key {key_id}')
+            
+        print("User ID: " + user_id)
+
+    except NameError as e:
+        print(e)
+        cursor.close()
+        connection.close()
+        return {
+            'statusCode': 401,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps('Could not authorize userID exists in the database')
+        }
+    
+    except Exception as e:
+        print(e)
+        cursor.close()
+        connection.close()
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps('Error validating userID')
+        }
+
+
+    # VALIDATE WHETHER USER HAS ACCESS TO REQUESTED RESOURCE (e.g. build policy)
+    try:
+        auth_policy = AuthPolicy(user_id, awsAccountId)
+        auth_policy.restApiId = apiGatewayArnTmp[0]
+        auth_policy.region = methodArn[3]
+        auth_policy.stage = apiGatewayArnTmp[1]
+
+        # >>>>> PREPARE AUTH POLICY (THIS WILL NEED TO CHANGE)
         cursor.execute(f"""
             SELECT allow_tools, allow_vfs FROM Policies WHERE userID = '{user_id}'
         """)
@@ -75,10 +138,6 @@ def handler(event, context):
         allow_tools, allow_vfs = cursor.fetchall()[0]
         print(f"allow_tools: {allow_tools}")
         print(f"allow_vfs: {allow_vfs}")
-
-        cursor.close()
-        connection.close()
-
 
         policy = {
             'keys': {
@@ -94,115 +153,39 @@ def handler(event, context):
                 'api': allow_vfs
             }
         }
-        auth_policy = AuthPolicy(user_id, awsAccountId)
-        auth_policy.restApiId = apiGatewayArnTmp[0]
-        auth_policy.region = methodArn[3]
-        auth_policy.stage = apiGatewayArnTmp[1]
-
-        # if policy[resource]["web"]:
-        #     auth_policy.allowMethod(apiGatewayArnTmp[3], resource)
-
-
         
-        # request_source = "web"
-        # for r in policy.keys():
-            
-        #     # See if requested resources is valid from this destination (web or api)
-        #     if policy[r][request_source]:
-
-        #         if r == resource:
-
-        #             # If policy allows access from the source, then I'll loop through all the verbs and assign access
-        #             for verb in HttpVerb.list:
-
-        #                 # These are the verbs I want to be valid
-        #                 if verb in [HttpVerb.GET, HttpVerb.DELETE, HttpVerb.POST, HttpVerb.PUT, HttpVerb.OPTIONS]:
-        #                     print(f" >>>> ALLOWING {r}.{verb}")
-        #                     auth_policy.allowMethod(verb, f'{r}/*')
-        #                     auth_policy.allowMethod(verb, f'{r}')
-        #                 else:
-        #                     print(f" >>>> DENYING {r}.{verb}")
-        #                     auth_policy.denyMethod(verb, f'{r}/*')
-        #                     auth_policy.denyMethod(verb, f'{r}')
-
-        #         else:
-        #             for verb in HttpVerb.list:
-        #                 print(f" >>>> DENYING {r}.{verb}")
-        #                 auth_policy.denyMethod(verb, f'{r}/*')
-        #                 auth_policy.denyMethod(verb, f'{r}')
-
-        #     # If requested resources are invalid just deny everything
-        #     else: 
-        #         for verb in HttpVerb.list:
-        #             print(f" >>>> DENYING {r}.{verb}")
-        #             auth_policy.denyMethod(verb, f'{r}/*')
-        #             auth_policy.denyMethod(verb, f'{r}')
-
-
-        
-
-        
-
-        
-        # pull userID -> policyID -> policy params
-        # if userID not found, return 401
-        # use policy params and userID to generate the AuthPolicy
-        # use AuthPolicy to check if the requested 
-        # <<<<<
-        # policy = BasicAuthPolicy(user_id, resource, "web", awsAccountId, allow_vfs, allow_tools)
-        
-
-        # ========================================
-        # Right now, this gives you access to every API method
-        # Here's where you would mess with permissions
-
-        #policy.denyAllMethods()
+        # >>>>> MODIFY POLICY HERE
         auth_policy.allowAllMethods()
-        # =======================================
+        # <<<<<
 
         response = auth_policy.build()
-
-        # These can be accessed in the downstream lambda via event['requestContext']['authorizer'](?)
-        context = {
-            'userID': user_id
+        response['context'] = {
+            'userID': user_id,
+            'source': source
         }
-
-        response['context'] = context
-        print(response)
-
-
-
-    else:
-        f = Fernet(fernet_key)
-        key_id = f.decrypt(token).decode()
+        if api_key is not None:
+            response['context']['apiKey'] = api_key
         
-    # check if token contains the "Bearer" prefix
-    #     If so, get user_id from the token
-    #     If not, check if key_id is in the database and then get user_id using key_id 
-
-    # Decrypt to get my database primary key
-    
-
-
-    # User user_id to get policy_id
-
-    # Check policy_id to see if the user is allowed to access VFS
-
-    # If specific Tool or VFS is requested, then check if the toolID is owned by the userID
-
-    # If everything looks good, generate policy and authorize
-
-    try:
+        print(response)
         return response
-    except BaseException as e:
+
+
+    except Exception as e:
         print(e)
         return {
-            'statusCode': 401,
+            'statusCode': 501,
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
+            'body': json.dumps('Could not build policy')
         }
+    
+    finally:
+        cursor.close()
+        connection.close()
 
+                
+    
 
 
 def findJwkValue(keys, kid):

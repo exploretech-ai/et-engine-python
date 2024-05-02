@@ -17,7 +17,7 @@ def handler(event, context):
                 tool_name = event['queryStringParameters']['name']
 
                 query = f"""
-                    SELECT toolID FROM Tools WHERE userID = '{user}' AND name = '{tool_name}'
+                    SELECT name, toolID FROM Tools WHERE userID = '{user}' AND name = '{tool_name}'
                 """
                 
             else:

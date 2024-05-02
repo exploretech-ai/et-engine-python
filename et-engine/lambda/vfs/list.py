@@ -14,7 +14,7 @@ def handler(event, context):
             if 'name' in event['queryStringParameters']:
                 vfs_name = event['queryStringParameters']['name']
                 query = f"""
-                    SELECT vfsID FROM VirtualFileSystems WHERE userID = '{user}' AND name = '{vfs_name}'
+                    SELECT name, vfsID FROM VirtualFileSystems WHERE userID = '{user}' AND name = '{vfs_name}'
                 """
             else:
                 return {
@@ -28,6 +28,7 @@ def handler(event, context):
             query = f"""
                 SELECT name, vfsID FROM VirtualFilesystems WHERE userID = '{user}'
             """
+
         cursor.execute(query)
         available_vfs = cursor.fetchall()
         return {
@@ -45,4 +46,8 @@ def handler(event, context):
             },
             'body': json.dumps(f'Error: {e}')
         }
+    finally:
+        cursor.close()
+        connection.close()
+        
     
