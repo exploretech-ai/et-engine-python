@@ -27,7 +27,7 @@ const Tools = () => {
           console.log(err);
         }
 
-        const result = await fetch(
+        await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools", {
                 method: "GET",
                 headers: {
@@ -35,29 +35,18 @@ const Tools = () => {
                 }
             }
         ).then(response => {
-            return response.json()
-        });
-
-        if (result) {
+            if (response.ok) {return response.json()}
+            else {throw Error('error retrieving key IDs')}
+        }).then(response => {
             const tools = []
-            for (const name of result) {
-                // Get the VFS ID's for each VFS
-                const id = await fetch(
-                    "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools?" + new URLSearchParams({name: name}), {
-                        method: "GET",
-                        headers: {
-                            "Authorization": "Bearer " + session.tokens.idToken.toString()
-                        }
-                    }
-                )
-                .then(response => response.json())
-
+            for (const [name, id] of response) {
                 tools.push(new Tool(name, id))
             }
             setToolData(tools)
             setActiveTool(tools[0])
             setIdToken(session.tokens.idToken.toString())
-        }
+        }).catch(error => console.log(error))
+        
     };
 
 

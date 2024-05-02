@@ -1,26 +1,21 @@
-import lambda_utils
+import db
 import json
 
 def handler(event, context):
 
-    try:
-        # user = "ed6bdfdb-28c9-41f3-8c73-0ad31c6aa2aa"
-        print(event, context)
+    connection = db.connect()
+    cursor = connection.cursor()
+    try:        
         user = event['requestContext']['authorizer']['userID']
         
-        
+        query = None
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
 
             if 'name' in event['queryStringParameters']:
                 vfs_name = event['queryStringParameters']['name']
-                vfs_id = lambda_utils.get_vfs_id(user, vfs_name)
-                return {
-                    'statusCode': 200,
-                    'headers': {
-                        'Access-Control-Allow-Origin': '*'
-                    },
-                    'body': json.dumps(vfs_id)
-                }
+                query = f"""
+                    SELECT vfsID FROM VirtualFileSystems WHERE userID = '{user}' AND name = '{vfs_name}'
+                """
             else:
                 return {
                     'statusCode': 500,
@@ -30,15 +25,18 @@ def handler(event, context):
                     'body': json.dumps("Error: Invalid query string")
                 }
         else:
-            available_vfs = lambda_utils.list_vfs(user)
-            return {
+            query = f"""
+                SELECT name, vfsID FROM VirtualFilesystems WHERE userID = '{user}'
+            """
+        cursor.execute(query)
+        available_vfs = cursor.fetchall()
+        return {
                 'statusCode': 200,
                 'headers': {
                     'Access-Control-Allow-Origin': '*'
                 },
                 'body': json.dumps(available_vfs)
             }
-        
     except Exception as e:
         return {
             'statusCode': 500,

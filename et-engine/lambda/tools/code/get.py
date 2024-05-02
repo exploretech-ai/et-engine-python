@@ -12,16 +12,16 @@ def handler(event, context):
         user = event['requestContext']['authorizer']['userID']
         tool_id = event['pathParameters']['toolID']
 
-        tool_name = lambda_utils.get_tool_name(user, tool_id)
-        available_tools = lambda_utils.list_tools(user)
-        if tool_name not in available_tools:
-            return {
-                'statusCode': 403,
-                'headers': {
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'body': json.dumps('Tool unavailable')
-            }
+        # tool_name = lambda_utils.get_tool_name(user, tool_id)
+        # available_tools = lambda_utils.list_tools(user)
+        # if tool_name not in available_tools:
+        #     return {
+        #         'statusCode': 403,
+        #         'headers': {
+        #             'Access-Control-Allow-Origin': '*'
+        #         },
+        #         'body': json.dumps('Tool unavailable')
+        #     }
 
         s3 = boto3.client('s3')
         bucket_name = "tool-" + tool_id

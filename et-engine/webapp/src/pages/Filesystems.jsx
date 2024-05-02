@@ -31,7 +31,7 @@ const Filesystems = () => {
         setIdToken(session.tokens.idToken.toString())
 
 
-        const result = await fetch(
+        await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
                 method: "GET",
                 headers: {
@@ -39,42 +39,19 @@ const Filesystems = () => {
                 }
             }
         ).then(response => {
-            if (response.ok) {
-                return response.json()
-            } else {
-                throw Error('could not fetch VFS list')
-                // return response.json()
-            }
-        }).catch(error => {
-            console.log(error)
-            return false
-        })
-
-        if (result) {
+            if (response.ok) {return response.json()}
+            else {throw Error('error retrieving key IDs')}
+        }).then(response => {
             const vfsIds = []
-            for (const name of result) {
-                // Get the VFS ID's for each VFS
-                const id = await fetch(
-                    "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs?" + new URLSearchParams({name: name}), {
-                        method: "GET",
-                        headers: {
-                            "Authorization": "Bearer " + session.tokens.idToken.toString()
-                        }
-                    }
-                )
-                .then(response => {
-                    if (response.ok) {return response.json()}
-                    else {throw Error('could not fetch vfs')}
-                }).catch(error => {
-                    console.log(error)
-                })
-
+            for (const [name, id] of response) {
                 vfsIds.push(new VFS(name, id))
             }
             setVfsData(vfsIds)
             setActiveVFS(vfsIds[0])
-        }
-        
+        }).catch(error => {
+            console.log(error)
+            return false
+        })
         
     };
 
