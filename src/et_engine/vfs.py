@@ -1,5 +1,31 @@
 import requests
 import json
+import os
+
+API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+
+
+def connect(vfs_name):
+    # Make API call to GET vfs?name={vfs_name}
+    #     - NOTE: Use ToolID to call vfs/{vfsID} to build, etc.
+    # Create vfs object by preparing the API endpoint
+
+    status = requests.get(
+            API_ENDPOINT + "vfs", 
+            params={'name':vfs_name},
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
+    if status.ok:
+
+        vfs_id = status.json()[0][1]
+        return VirtualFileSystem(vfs_id)
+    
+    else:
+        raise NameError(f'Filesystem "{vfs_name}" does not exist')
+    
+
+def list():
+    pass
 
 
 class VirtualFileSystem:
@@ -13,18 +39,15 @@ class VirtualFileSystem:
         VFS API endpoint
     """
 
-    def __init__(self, vfs_id, client):
+    def __init__(self, vfs_id):
         """Creates a new object connected to the VFS
         
         Parameters
         ----------
         vfs_id : string
             id associated with the VFS of interest
-        client : Client
-            base authenticated client containing the active session
         """
-        self.session = client.session
-        self.url = client.API_ENDPOINT + f"vfs/{vfs_id}"
+        self.url = API_ENDPOINT + f"vfs/{vfs_id}"
 
     def file_exists(self):
         pass
@@ -44,7 +67,7 @@ class VirtualFileSystem:
         response = requests.post(
             self.url, 
             data=json.dumps({"key": remote_file}),
-            headers={"Authorization": f"Bearer {self.session.id_token}"}
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
         response.raise_for_status()
         presigned_post = json.loads(response.text)
@@ -74,7 +97,7 @@ class VirtualFileSystem:
         response = requests.get(
             self.url, 
             params={"key": remote_file},
-            headers={"Authorization": f"Bearer {self.session.id_token}"}
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
         presigned_url = json.loads(response.text)
         

@@ -1,6 +1,29 @@
 import shutil
 import requests
 import json
+import os
+
+API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+
+def connect(tool_name):
+    # Make API call to GET vfs?name={vfs_name}
+    #     - NOTE: Use ToolID to call vfs/{vfsID} to build, etc.
+    # Create vfs object by preparing the API endpoint
+
+    status = requests.get(
+            API_ENDPOINT + "tools", 
+            params={'name':tool_name},
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
+    if status.ok:
+
+        tool_id = status.json()[0][1]
+        return Tool(tool_id)
+    
+    else:
+        raise Exception(f'Tool "{tool_name}" could not be created')
+    
+
 
 class Tool:
     """Class for interacting with a Tool
@@ -14,7 +37,7 @@ class Tool:
     """
 
 
-    def __init__(self, tool_id, client) -> None:
+    def __init__(self, tool_id) -> None:
         """Creates a new tool object from an existing tool ID
 
         Parameters
@@ -24,8 +47,7 @@ class Tool:
         client : Client
             base authenticated client containing the active session
         """
-        self.session = client.session
-        self.url = client.API_ENDPOINT + f"tools/{tool_id}"
+        self.url = API_ENDPOINT + f"tools/{tool_id}"
 
 
     def __call__(self, **kwargs):
@@ -39,10 +61,11 @@ class Tool:
         else:
             data = None
 
+        # NOTE: see here for asynchronous request sending https://stackoverflow.com/questions/74567219/how-do-i-get-python-to-send-as-many-concurrent-http-requests-as-possible
         response = requests.post(
             self.url, 
             data=data,
-            headers={"Authorization": f"Bearer {self.session.id_token}"}
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
         return response
 
@@ -68,7 +91,7 @@ class Tool:
 
         response = requests.put(
             self.url, 
-            headers={"Authorization": f"Bearer {self.session.id_token}"}
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
         presigned_post = json.loads(response.text)
         
