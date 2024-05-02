@@ -1,12 +1,7 @@
 import psycopg2
 import json
 import db
-# from aws_cdk import core
-# from aws_secretsmanager import Secret
 
-# If you need more information about configurations
-# or implementing the sample code, visit the AWS docs:
-# https://aws.amazon.com/developer/language/python/
 
 import boto3
 from botocore.exceptions import ClientError
@@ -66,6 +61,7 @@ def handler(event, context):
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS Policies (
                 policyID UUID PRIMARY KEY,
+                userID UUID NOT NULL,
                 allow_tools BOOLEAN NOT NULL,
                 allow_vfs BOOLEAN NOT NULL
             );
@@ -75,18 +71,39 @@ def handler(event, context):
         print('Table "Policies" created successfully')
 
 
-        cursor = connection.cursor()
-        create_table_sql = """
-            CREATE TABLE IF NOT EXISTS Users (
-                userID UUID PRIMARY KEY,
-                policyID UUID NOT NULL
-            );
-        """
-        cursor.execute(create_table_sql)
-        connection.commit()
-        print('Table "Users" created successfully')
+        # cursor = connection.cursor()
+        # create_table_sql = """
+        #     CREATE TABLE IF NOT EXISTS Users (
+        #         userID UUID PRIMARY KEY,
+        #         policyID UUID NOT NULL
+        #     );
+        # """
+        # cursor.execute(create_table_sql)
+        # connection.commit()
+        # print('Table "Users" created successfully')
 
- 
+
+        # =========================== TEMP ==============================
+        # import uuid
+        # policy_1 = str(uuid.uuid4())
+        # policy_2 = str(uuid.uuid4())
+
+        # cursor = connection.cursor()
+
+        # cursor.execute(f"""
+        #     INSERT INTO Policies (policyID, userID, allow_tools, allow_vfs)
+        #     VALUES ('{policy_1}', 'a9ae7c0d-8c5f-4bcf-8cb0-119a1fa8ca79', 'true', 'true')
+        # """)
+
+        # cursor.execute(f"""
+        #     INSERT INTO Policies (policyID, userID, allow_tools, allow_vfs)
+        #     VALUES ('{policy_2}', 'ed6bdfdb-28c9-41f3-8c73-0ad31c6aa2aa', 'true', 'true')
+        # """)
+        # print("policy initialization successful. changes not committed.")
+
+        # connection.commit()
+        # print("policy changes committed.")
+        # =========================== TEMP ==============================
 
 
         # sql_query = "select * from information_schema.columns where table_schema = 'public'"

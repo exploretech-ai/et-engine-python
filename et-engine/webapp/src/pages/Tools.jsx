@@ -27,15 +27,16 @@ const Tools = () => {
           console.log(err);
         }
 
-        const response = await fetch(
+        const result = await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools", {
                 method: "GET",
                 headers: {
                     "Authorization": "Bearer " + session.tokens.idToken.toString()
                 }
             }
-        );
-        const result = await response.json();
+        ).then(response => {
+            return response.json()
+        });
 
         if (result) {
             const tools = []

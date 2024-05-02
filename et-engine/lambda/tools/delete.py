@@ -21,7 +21,7 @@ def delete_workflow(tool_id):
 def handler(event, context):
 
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
+        user = event['requestContext']['authorizer']['userID']
         
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
 

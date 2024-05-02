@@ -4,8 +4,9 @@ import json
 def handler(event, context):
 
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
-        
+        user = event['requestContext']['authorizer']['userID']
+        print(user)
+
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
 
             if 'name' in event['queryStringParameters']:

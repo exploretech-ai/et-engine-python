@@ -31,16 +31,24 @@ const Filesystems = () => {
         setIdToken(session.tokens.idToken.toString())
 
 
-        const response = await fetch(
+        const result = await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
                 method: "GET",
                 headers: {
                     "Authorization": "Bearer " + session.tokens.idToken.toString()
                 }
             }
-        );
-        const result = await response.json();
-        // console.log(result)
+        ).then(response => {
+            if (response.ok) {
+                return response.json()
+            } else {
+                throw Error('could not fetch VFS list')
+                // return response.json()
+            }
+        }).catch(error => {
+            console.log(error)
+            return false
+        })
 
         if (result) {
             const vfsIds = []
@@ -54,7 +62,12 @@ const Filesystems = () => {
                         }
                     }
                 )
-                .then(response => response.json())
+                .then(response => {
+                    if (response.ok) {return response.json()}
+                    else {throw Error('could not fetch vfs')}
+                }).catch(error => {
+                    console.log(error)
+                })
 
                 vfsIds.push(new VFS(name, id))
             }

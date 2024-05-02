@@ -9,7 +9,7 @@ def handler(event, context):
     # > ECR client
     # > 
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
+        user = event['requestContext']['authorizer']['userID']
         tool_id = event['pathParameters']['toolID']
         
         ecr = boto3.client('ecr')

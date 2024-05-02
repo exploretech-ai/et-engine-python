@@ -36,9 +36,6 @@ def handler(event, context):
     
         key_id = str(uuid.uuid4())
         
-
-        
-        
         create_time = datetime.datetime.now()
         expired_time = create_time + datetime.timedelta(days=30)
 

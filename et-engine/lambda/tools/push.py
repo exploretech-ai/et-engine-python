@@ -6,7 +6,7 @@ import lambda_utils
 def handler(event, context):
 
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
+        user = event['requestContext']['authorizer']['userID']
 
         # vfsID as a path parameter
         tool_id = event['pathParameters']['toolID'] 

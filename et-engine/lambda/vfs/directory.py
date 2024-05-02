@@ -9,7 +9,7 @@ import boto3
 def handler(event, context):
 
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
+        user = event['requestContext']['authorizer']['userID']
         vfs_id = event['pathParameters']['vfsID']
 
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:

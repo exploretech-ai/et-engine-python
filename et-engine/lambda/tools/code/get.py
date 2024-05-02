@@ -9,7 +9,7 @@ import boto3
 def handler(event, context):
 
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
+        user = event['requestContext']['authorizer']['userID']
         tool_id = event['pathParameters']['toolID']
 
         tool_name = lambda_utils.get_tool_name(user, tool_id)

@@ -18,7 +18,7 @@ def handler(event, context):
 
     # Get user
     try:
-        user = event['requestContext']['authorizer']['claims']['cognito:username']
+        user = event['requestContext']['authorizer']['userID']
         body = json.loads(event['body'])
         tool_name = body['name']
         tool_description = body['description']
