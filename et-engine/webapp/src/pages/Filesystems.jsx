@@ -31,7 +31,6 @@ const Filesystems = () => {
         }
         setIdToken(session.tokens.idToken.toString())
 
-
         await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
                 method: "GET",

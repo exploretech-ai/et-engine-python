@@ -8,7 +8,7 @@ import Filesystems from './pages/Filesystems'
 import Tools from './pages/Tools'
 import Keys from './pages/Keys'
 import Jobs from './pages/Jobs'
-import Store from './pages/Store'
+import Share from './pages/Share'
 
 import {
   createBrowserRouter,
@@ -45,8 +45,8 @@ const router = createBrowserRouter([
         element: <Jobs/>
       },
       {
-        path: "store",
-        element: <Store/>
+        path: "share",
+        element: <Share/>
       }
     ]
   }

@@ -2,12 +2,12 @@ import React from "react"
 import Page from "./Page"
 
 
-const Store = () => {
+const Share = () => {
     return(
         <Page name="Explore">
-            Browse and purchase computing tools.
+            Browse and share computing tools.
         </Page>
     )
 }
 
-export default Store
+export default Share

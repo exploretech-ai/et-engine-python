@@ -92,9 +92,13 @@ def handler(event, context):
                 SELECT userID FROM APIKeys WHERE keyID = '{key_id}'
             """)
 
-            user_id = cursor.fetchall()[0][0]
-            if user_id is None:
-                raise NameError(f'no user not associated with key {key_id}')
+            print(cursor)
+            print(cursor.rowcount)
+
+            if cursor.rowcount == 0:
+                raise NameError(f'no user not associated with key {key_id}')      
+            else:
+                user_id = cursor.fetchall()        
             
         print("User ID: " + user_id)
 
