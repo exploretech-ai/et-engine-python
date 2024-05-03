@@ -31,7 +31,7 @@ const DirectoryView = ({currentDirectory, setCurrentDirectory, currentDirectoryP
     for(const dir in currentDirectory) {
 
         if (currentDirectory[dir] === null) {
-            components.push(<FileComponent name={dir}/>)
+            components.push(<FileComponent name={dir} key={dir}/>)
         } else {
             components.push(
                 <FolderComponent 
@@ -85,7 +85,7 @@ const CurrentDirectoryPath = ({path, setPath, directory, setDirectory}) => {
     )
 }
 
-const Directory = ({style, activeVFS, idToken}) => {
+const Directory = ({style, resource, command, idToken}) => {
 
     const [directory, setDirectory] = useState(null)
     const [currentDirectory, setCurrentDirectory] = useState(null)
@@ -93,10 +93,9 @@ const Directory = ({style, activeVFS, idToken}) => {
 
     useEffect(async () => {
         
-        // Fetch directory structure here
-        if (activeVFS && idToken) {
+        if (resource && idToken) {
             const files = await fetch(
-                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + activeVFS.id + "/list", {
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/" + resource.resource + "/" + resource.id + command, {
                     method: "GET",
                     headers: {
                         "Authorization": "Bearer " + idToken
@@ -124,7 +123,7 @@ const Directory = ({style, activeVFS, idToken}) => {
             
 
         }
-    }, [activeVFS])
+    }, [resource])
 
 
 

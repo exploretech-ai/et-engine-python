@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
-import VFSNavbar from "./Filesystems/Navbar";
-import Directory from "./Filesystems/Directory";
+import Navbar from "../components/Navbar";
+import Directory from "../components/Directory";
 import './Filesystems.css'
 import Page from "./Page";
 
@@ -9,6 +9,7 @@ class VFS {
     constructor(name, id) {
         this.name = name
         this.id = id
+        this.resource = "vfs"
     }
 }
 
@@ -16,8 +17,8 @@ class VFS {
 
 const Filesystems = () => {
     const [idToken, setIdToken] = useState(null)
-    const [activeVFS, setActiveVFS] = useState(null)
-    const [vfsData, setVfsData] = useState(null)
+    const [activeVFS, setActiveVFS] = useState(new VFS(null, null))
+    const [vfsData, setVfsData] = useState([])
 
 
     const fetchData = async () => {
@@ -61,13 +62,13 @@ const Filesystems = () => {
         await fetchData()
     }, [])
 
-
-
+    // const map1 = 
+    // console.log(vfsData.map(element => element.name))
     return (
         <Page name="Filesystems">
             <div className="vfs-panel">
-                <VFSNavbar vfsData={vfsData} activeVFS={activeVFS} setActiveVFS={setActiveVFS} style={{flex: 1}}/>
-                <Directory style={{flex: 5}} idToken={idToken} activeVFS={activeVFS}/>
+                <Navbar resourceList={vfsData} activeResource={activeVFS} setActiveResource={setActiveVFS} style={{flex: 1}}/>
+                <Directory style={{flex: 5}} idToken={idToken} resource={activeVFS} command={"/list"}/>
             </div>
         </Page>
     )

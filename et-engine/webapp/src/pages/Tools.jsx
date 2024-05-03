@@ -1,16 +1,57 @@
 import React, {useState, useEffect} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
-import ToolNavbar from "./Tools/Navbar";
-import ToolContent from "./Tools/ToolContent";
+import Navbar from "../components/Navbar";
 import './Tools.css'
 import Page from "./Page";
+
+import CodeTab from "../components/CodeTab"; 
+import BuildTab from "../components/BuildTab"
+import TaskTab from "../components/TaskTab";
+// import ToolTabs from "../components/ToolTabs"
 
 class Tool {
     constructor(name, id, description) {
         this.name = name
         this.id = id
         this.description = description
+        this.resource = "tools"
     }
+}
+
+class Tab {
+    constructor(name, resource) {
+        this.name = name
+        this.resource = resource
+    }
+}
+
+
+const ToolContent = ({idToken, activeTool, style}) => {
+    
+    const [activeTab, setActiveTab] = useState(new Tab('Code', {...activeTool}))
+
+    useEffect(() => {
+        setActiveTab(new Tab(activeTab.name, {...activeTool}))
+    }, [activeTool])
+
+    return (
+            <div style={style}>
+                <div className="tool-tab" style={style}>
+                    <div onClick={() => setActiveTab(new Tab('Code', {...activeTool}))} className={activeTab.name === 'Code' ? 'active' : ''}>
+                        Code
+                    </div>
+                    <div onClick={() => setActiveTab(new Tab('Build', {...activeTool}))} className={activeTab.name === 'Build' ? 'active' : ''}>
+                        Build
+                    </div>
+                    <div onClick={() => setActiveTab(new Tab('Tasks', {...activeTool}))} className={activeTab.name === 'Tasks' ? 'active' : ''}>
+                        Tasks
+                    </div>
+                </div>
+                {activeTab.name === 'Code' && <CodeTab idToken={idToken} activeTool={activeTool}/>}
+                {activeTab.name === 'Build' && <BuildTab idToken={idToken} activeTool={activeTool}/>}
+                {activeTab.name === 'Tasks' && <TaskTab idToken={idToken} activeTool={activeTool}/>}
+            </div>
+    )
 }
 
 const Tools = () => {
@@ -53,12 +94,12 @@ const Tools = () => {
 
     useEffect(async () => {
         await fetchData()
-    }, [])
+    }, [idToken])
 
     return (
         <Page name="Tools">
             <div className="tool-panel">
-                <ToolNavbar toolData={toolData} activeTool={activeTool} setActiveTool={setActiveTool} style={{flex: 1}}/>
+                <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} style={{flex: 1}}/>
                 <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
             </div>
         </Page>
