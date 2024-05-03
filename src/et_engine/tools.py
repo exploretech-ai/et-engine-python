@@ -20,8 +20,17 @@ def connect(tool_name):
         tool_id = status.json()[0][1]
         return Tool(tool_id)
     
+    elif status.status_code == 403:
+        raise Exception(f'Access to tool "{tool_name}" is forbidden')
+    
+    elif status.status_code == 401:
+        raise Exception(f'Authorization failed')
+    
+    elif status.status_code == 500:
+        raise Exception(f'Something went wrong - check your API key')
+    
     else:
-        raise Exception(f'Tool "{tool_name}" could not be created')
+        raise Exception(f'Tool "{tool_name}" could not be accessed')
     
 
 
