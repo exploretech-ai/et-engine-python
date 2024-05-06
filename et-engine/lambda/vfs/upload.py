@@ -22,17 +22,6 @@ def handler(event, context):
         else:
             raise Exception
 
-        # check if vfsID exists under user
-        available_vfs = lambda_utils.list_vfs(user)
-        vfs_name = lambda_utils.get_vfs_name(user, vfs_id)
-        if vfs_name not in available_vfs:
-            return {
-                'statusCode': 403,
-                'headers': {
-                        'Access-Control-Allow-Origin': '*'
-                    },
-                'body': json.dumps('VFS unavailable')
-            }
 
         # Create presigned post
         s3 = boto3.client('s3', region_name="us-east-2")
@@ -54,7 +43,7 @@ def handler(event, context):
 
     except Exception as e:
         return {
-            'statusCode': 500,
+            'statusCode': 501,
             'headers': {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*'

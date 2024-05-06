@@ -98,7 +98,7 @@ def handler(event, context):
             if cursor.rowcount == 0:
                 raise NameError(f'no user not associated with key {key_id}')      
             else:
-                user_id = cursor.fetchall()        
+                user_id = cursor.fetchall()[0][0]     
             
         print("User ID: " + user_id)
 
