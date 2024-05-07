@@ -43,7 +43,26 @@ def connect(vfs_name):
     # ============================= IF DEVICE IS TOOL ================================
     # ================================================================================
     
+def delete(name):	
+        """deletes the specified VFS	
+        	
+        Parameters	
+        ----------	
+        name : string	
+            Name of the VFS to delete	
+        """	
+        status = requests.delete(	
+            API_ENDPOINT + "vfs", 
+            params={'name':name},	
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+        )	
 
+        if status.ok:
+            return status
+        else:
+            raise Exception('Delete failed')
+        
+        
 def list():
     pass
 
