@@ -45,7 +45,11 @@ def delete(name):
             params={'name':name},	
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
         )	
-        return status
+
+        if status.ok:
+            return status
+        else:
+            raise Exception('Delete failed')
 
 class Tool:
     """Class for interacting with a Tool
