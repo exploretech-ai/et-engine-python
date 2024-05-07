@@ -32,7 +32,20 @@ def connect(tool_name):
     else:
         raise Exception(f'Tool "{tool_name}" could not be accessed')
     
-
+def delete(name):	
+        """deletes the specified VFS	
+        	
+        Parameters	
+        ----------	
+        name : string	
+            Name of the VFS to delete	
+        """	
+        status = requests.delete(	
+            API_ENDPOINT + "tools", 
+            params={'name':name},	
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+        )	
+        return status
 
 class Tool:
     """Class for interacting with a Tool
@@ -63,7 +76,33 @@ class Tool:
         """Makes the object callable like a function
         
         Keyword arguments are passed to the Tool as environment variables
+
+        This API call triggers a SSM command that does:
+            1. docker pull <TOOL_IMAGE>     // from ECR
+            2. docker run ...
+
+        To trigger the API call, I need to know the instance-id to run something like this
+
+            ssm_client = boto3.client('ssm')
+            instance_id = 'your-instance-id'
+            docker_command = 'docker run -d your-docker-image'
+            
+            # Send command to EC2 instance
+            response = ssm_client.send_command(
+                InstanceIds=[instance_id],
+                DocumentName="AWS-RunShellScript",
+                Parameters={'commands': [docker_command]},
+            )
+
+        The instance_id is provided in the path
+
+        If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so 
+            
+
+        
         """
+
+
 
         if kwargs:
             data = json.dumps(kwargs)
@@ -87,6 +126,10 @@ class Tool:
             2. a buildspec.yml file
 
         When pushed, the folder will be zipped and sent to the ET Engine. There, the tool will be built and run in a container.
+
+        Inside the API, we are:
+            1. Triggering codebuild
+            2. Codebuild is combined with the pre-installations and clean-up commands, and built inside Engine 
 
         Parameters
         ----------
