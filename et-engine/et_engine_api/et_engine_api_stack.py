@@ -15,7 +15,8 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_cognito as cognito,
-    aws_ecs as ecs
+    aws_ecs as ecs,
+    aws_ecr as ecr
 )
 import aws_cdk as cdk
 from constructs import Construct
@@ -188,59 +189,112 @@ class API(Stack):
         )
 
         # COMPUTE CLUSTER CONFIG
-        self.vpc = ec2.CfnVPC(
+        # self.vpc = ec2.Vpc(
+        #     self,
+        #     "ClusterVPC",
+        #     enable_dns_hostnames=True,
+        #     enable_dns_support=True,
+        #     cidr_block="10.0.0.0/16"
+        # )
+        # self.public_subnet = ec2.CfnSubnet(
+        #     self,
+        #     "PublicSubnet",
+        #     vpc_id=self.vpc.attr_vpc_id,
+        #     availability_zone="us-east-2a",
+        #     cidr_block="10.0.0.0/18",
+        #     map_public_ip_on_launch=True
+        # )
+        # internet_gateway = ec2.CfnInternetGateway(
+        #     self, 
+        #     "InternetGateway"
+        # )
+        # gateway_attachment = ec2.CfnVPCGatewayAttachment(
+        #     self,
+        #     "GatewayAttachment",
+        #     vpc_id=self.vpc.attr_vpc_id,
+        #     internet_gateway_id=internet_gateway.attr_internet_gateway_id
+        # )
+        # public_route_table = ec2.CfnRouteTable(
+        #     self,
+        #     "PublicRouteTable",
+        #     vpc_id=self.vpc.attr_vpc_id
+        # )
+        # public_route = ec2.CfnRoute(
+        #     self,
+        #     "PublicRoute",
+        #     route_table_id=public_route_table.attr_route_table_id,
+        #     destination_cidr_block="0.0.0.0/0",
+        #     gateway_id=internet_gateway.attr_internet_gateway_id
+        # )
+        # public_subnet_route_table_association = ec2.CfnSubnetRouteTableAssociation(
+        #     self,
+        #     "PublicSubnetRouteTableAssociation",
+        #     subnet_id=self.public_subnet.attr_subnet_id,
+        #     route_table_id=public_route_table.attr_route_table_id
+        # )
+        # self.security_group = ec2.CfnSecurityGroup(
+        #     self,
+        #     "SecurityGroup",
+        #     group_description="Security group for ECS Cluster",
+        #     vpc_id=self.vpc.attr_vpc_id
+        # )
+        # self.ecs_cluster = ecs.CfnCluster(
+        #     self,
+        #     "ECSCluster"
+        # )
+
+        
+        # +++++++++++++++++++++++++++++++++
+        # =================================
+        # +++++++++++++++++++++++++++++++++
+
+
+        self.vpc = ec2.Vpc(
             self,
-            "ClusterVPC",
-            enable_dns_hostnames=True,
-            enable_dns_support=True,
-            cidr_block="10.0.0.0/16"
+            "ClusterVpc"
         )
-        self.public_subnet = ec2.CfnSubnet(
-            self,
-            "PublicSubnet",
-            vpc_id=self.vpc.attr_vpc_id,
-            availability_zone="us-east-2a",
-            cidr_block="10.0.0.0/18",
-            map_public_ip_on_launch=True
-        )
-        internet_gateway = ec2.CfnInternetGateway(
+        # self.public_subnet = ec2.Subnet(
+        #     self,
+        #     "PublicSubnet",
+        #     vpc_id=self.vpc.vpc_id,
+        #     availability_zone="us-east-2a",
+        #     cidr_block="10.0.0.1/18",
+        #     map_public_ip_on_launch=True
+        # )
+        # self.security_group = ec2.SecurityGroup(
+        #     self,
+        #     "SecurityGroup",
+        #     description="Security group for ECS Cluster",
+        #     vpc=self.vpc
+        # )
+        self.ecs_cluster = ecs.Cluster(
             self, 
-            "InternetGateway"
+            "Cluster",
+            vpc=self.vpc
         )
-        gateway_attachment = ec2.CfnVPCGatewayAttachment(
+        self.ecs_cluster.add_capacity("DefaultAutoScalingGroupCapacity",
+            instance_type=ec2.InstanceType("t2.micro"),
+            desired_capacity=3
+        )
+
+        task = ecs.TaskDefinition(
             self,
-            "GatewayAttachment",
-            vpc_id=self.vpc.attr_vpc_id,
-            internet_gateway_id=internet_gateway.attr_internet_gateway_id
+            'HelloWorldTask',
+            compatibility=ecs.Compatibility.EC2
         )
-        public_route_table = ec2.CfnRouteTable(
-            self,
-            "PublicRouteTable",
-            vpc_id=self.vpc.attr_vpc_id
+        task.add_container(
+            'HelloWorldContainer',
+            image=ecs.ContainerImage.from_registry(
+                'public.ecr.aws/docker/library/hello-world:linux'
+            ),
+            memory_limit_mib=512,
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="hello-world",
+                mode=ecs.AwsLogDriverMode.NON_BLOCKING,
+            )
         )
-        public_route = ec2.CfnRoute(
-            self,
-            "PublicRoute",
-            route_table_id=public_route_table.attr_route_table_id,
-            destination_cidr_block="0.0.0.0/0",
-            gateway_id=internet_gateway.attr_internet_gateway_id
-        )
-        public_subnet_route_table_association = ec2.CfnSubnetRouteTableAssociation(
-            self,
-            "PublicSubnetRouteTableAssociation",
-            subnet_id=self.public_subnet.attr_subnet_id,
-            route_table_id=public_route_table.attr_route_table_id
-        )
-        self.security_group = ec2.CfnSecurityGroup(
-            self,
-            "SecurityGroup",
-            group_description="Security group for ECS Cluster",
-            vpc_id=self.vpc.attr_vpc_id
-        )
-        self.ecs_cluster = ecs.CfnCluster(
-            self,
-            "ECSCluster"
-        )
+
+
 
 
         # USER POOL
@@ -696,6 +750,7 @@ class API(Stack):
                     'iam:DeleteRole',
                     'iam:GetRole',
                     'iam:PassRole',
+                    'logs:DescribeLogGroups',
                     'logs:DeleteLogGroup',
                     'codebuild:CreateProject',
                     'codebuild:DeleteProject',
@@ -704,7 +759,7 @@ class API(Stack):
                     'lambda:GetFunction',
                     'lambda:AddPermission',
                     'lambda:RemovePermission',
-                    'lambda:InvokeFunction'
+                    'lambda:InvokeFunction',
                 ],
                 resources=['*']
             )
@@ -1155,21 +1210,21 @@ class ETEngine(Stack):
         CfnOutput(
             self,
             "ComputeClusterVPCID",
-            value=api.vpc.attr_vpc_id
+            value=api.vpc.vpc_id
         )
         CfnOutput(
             self,
             "ClusterName",
-            value=api.ecs_cluster.attr_arn
+            value=api.ecs_cluster.cluster_arn
         )
-        CfnOutput(
-            self,
-            "SecurityGroupID",
-            value=api.security_group.attr_group_id
-        )
-        CfnOutput(
-            self,
-            "PublicSubnetId",
-            value=api.public_subnet.attr_subnet_id
-        )
+        # CfnOutput(
+        #     self,
+        #     "SecurityGroupID",
+        #     value=api.security_group.attr_group_id
+        # )
+        # CfnOutput(
+        #     self,
+        #     "PublicSubnetId",
+        #     value=api.public_subnet.attr_subnet_id
+        # )
 

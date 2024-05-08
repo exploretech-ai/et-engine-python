@@ -1,32 +1,38 @@
 import json
 import lambda_utils
-import boto3
-
-
-
-
+import db
 
 def handler(event, context):
 
+    connection = db.connect()
+    cursor = connection.cursor()
     try:
         user = event['requestContext']['authorizer']['userID']
         
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
 
-            # if 'id' in event['queryStringParameters']:
-            #     vfs_id = event['queryStringParameters']['id']
-            #     lambda_utils.delete_by_id(user, vfs_id)
-            #     return {
-            #         'statusCode': 200,
-            #         'body': json.dumps(f"'{vfs_id}' deleted")
-            #     }
-            
             if 'name' in event['queryStringParameters']:
                 vfs_name = event['queryStringParameters']['name']
-                vfs_id = lambda_utils.get_vfs_id(user, vfs_name)
+
+                sql_query = f"""
+                    SELECT vfsID FROM VirtualFilesystems WHERE userID = '{user}' AND name = '{vfs_name}'
+                """
+                cursor.execute(sql_query)
+                vfs_id = cursor.fetchall()
+                
+                if len(vfs_id) == 0:
+                    raise NameError('no tool id found')
+                else:
+                    vfs_id = vfs_id[0][0]
+                    print(f"VFS ID: {vfs_id}")
                 
                 lambda_utils.empty_bucket("vfs-"+vfs_id)
-                lambda_utils.delete_by_id(user, vfs_id)
+
+                sql_query = f"""
+                    DELETE FROM VirtualFilesystems WHERE userID = '{user}' AND name = '{vfs_name}'
+                """
+                cursor.execute(sql_query)
+                connection.commit()
 
                 return {
                     'statusCode': 200,
@@ -48,4 +54,8 @@ def handler(event, context):
             'statusCode': 500,
             'body': json.dumps(f'Error: {e}')
         }
+    finally:
+        cursor.close()
+        connection.close()
+    
     

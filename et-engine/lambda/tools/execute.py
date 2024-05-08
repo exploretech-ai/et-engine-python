@@ -6,10 +6,7 @@ def handler(event, context):
 
     try:
         user = event['requestContext']['authorizer']['userID']
-
-        # vfsID as a path parameter
         tool_id = event['pathParameters']['toolID']
-        # id_token =  event['headers']['Authorization'].split(' ')[1]
 
         # check if 'key' exists in the body
         args = []
@@ -28,14 +25,8 @@ def handler(event, context):
                         'value': body[key]
                     })
 
-        components = lambda_utils.get_tool_components(tool_id, 
-            [
-                "ClusterName", 
-                "TaskName", 
-                "PublicSubnetId", 
-                "SecurityGroupID"
-            ]
-        )
+        print(f'Arguments: {args}')
+
 
     except Exception as e:
         return {
@@ -46,17 +37,20 @@ def handler(event, context):
     # Executes an ECS task
     try:
         ecs_client = boto3.client('ecs')
+
+        # >>>>>
+        print('Starting Task')
         ecs_response = ecs_client.run_task(
-            cluster=components["ClusterName"],
-            taskDefinition=components["TaskName"].split('/')[-1],
-            launchType='FARGATE',
-            networkConfiguration={
-                'awsvpcConfiguration': {
-                    'subnets': [components["PublicSubnetId"]],
-                    'securityGroups': [components["SecurityGroupID"]],
-                    'assignPublicIp': 'ENABLED'
-                }
-            },
+
+            # This will be determined by the Hardware
+            cluster="ETEngineAPI706397EC-ClusterEB0386A7-M0TrrRi5C32N",
+
+            # This will be determined by the Tool ID
+            taskDefinition="tool-" + tool_id,
+
+            # Seems to be working fine 
+            launchType='EC2',
+
             overrides={
                 'containerOverrides': [
                     {
@@ -65,8 +59,30 @@ def handler(event, context):
                     }
                 ]
             }
-
         )
+        print('SUCCESS!')
+        # =====
+        # ecs_response = ecs_client.run_task(
+        #     cluster=components["ClusterName"],
+        #     taskDefinition=components["TaskName"].split('/')[-1],
+        #     launchType='FARGATE',
+        #     networkConfiguration={
+        #         'awsvpcConfiguration': {
+        #             'subnets': [components["PublicSubnetId"]],
+        #             'securityGroups': [components["SecurityGroupID"]],
+        #             'assignPublicIp': 'ENABLED'
+        #         }
+        #     },
+        #     overrides={
+        #         'containerOverrides': [
+        #             {
+        #                 'name': f"tool-{tool_id}",
+        #                 'environment': args,
+        #             }
+        #         ]
+        #     }
+        # )
+        # <<<<<
         
         task_arn = ecs_response['tasks'][0]['taskArn']
         response = {

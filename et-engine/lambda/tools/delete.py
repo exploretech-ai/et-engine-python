@@ -1,45 +1,58 @@
 import json
 import lambda_utils
-import boto3
+import db
+
 
 def delete_workflow(tool_id):
     tool_name = "tool-"+tool_id
+    print(f'Tool Name: {tool_name}')
     
     # Delete S3 Bucket
+    print(f'Deleting S3 Bucket')
     lambda_utils.empty_bucket(tool_name)
 
     # Delete ECR Image
+    print('Deleting ECR Image')
     lambda_utils.delete_repository(tool_name)
 
     # Delete Stack
+    print('Deleting Stack')
     lambda_utils.delete_stack(tool_name)
-
-
-
 
 
 def handler(event, context):
 
+    connection = db.connect()
+    cursor = connection.cursor()
     try:
         user = event['requestContext']['authorizer']['userID']
+        print(f'User ID: {user}')
         
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
-
-            # if 'id' in event['queryStringParameters']:
-            #     vfs_id = event['queryStringParameters']['id']
-            #     lambda_utils.delete_by_id(user, vfs_id)
-            #     return {
-            #         'statusCode': 200,
-            #         'body': json.dumps(f"'{vfs_id}' deleted")
-            #     }
             
             if 'name' in event['queryStringParameters']:
                 tool_name = event['queryStringParameters']['name']
-                tool_id = lambda_utils.get_tool_id(user, tool_name)
+
+                sql_query = f"""
+                    SELECT toolID FROM Tools WHERE userID = '{user}' AND name = '{tool_name}'
+                """
+                cursor.execute(sql_query)
+                tool_id = cursor.fetchall()
+                
+                if len(tool_id) == 0:
+                    raise NameError('no tool id found')
+                else:
+                    tool_id = tool_id[0][0]
+                    print(f"Tool ID: {tool_id}")
                 
                 delete_workflow(tool_id)
 
-                lambda_utils.delete_tool_by_id(user, tool_id)
+                sql_query = f"""
+                    DELETE FROM Tools WHERE userID = '{user}' AND name = '{tool_name}'
+                """
+                cursor.execute(sql_query)
+                connection.commit()
+                
 
                 return {
                     'statusCode': 200,
@@ -56,9 +69,17 @@ def handler(event, context):
                 'body': json.dumps("Error: must include query string")
             }
         
+    except NameError as e:
+        return {
+            'statusCode': 404,
+            'body': json.dumps(f'Tool not found')
+        }
     except Exception as e:
         return {
             'statusCode': 500,
             'body': json.dumps(f'Error: {e}')
         }
+    finally:
+        cursor.close()
+        connection.close()
     

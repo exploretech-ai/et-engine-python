@@ -98,6 +98,7 @@ const Tools = () => {
 
     return (
         <Page name="Tools">
+            <h2>Available Tools</h2>
             <div className="tool-panel">
                 <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} style={{flex: 1}}/>
                 <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>

@@ -65,6 +65,7 @@ const Filesystems = () => {
     // console.log(vfsData.map(element => element.name))
     return (
         <Page name="Filesystems">
+            <h2>Available Filesystems</h2>
             <div className="vfs-panel">
                 <Navbar resourceList={vfsData} activeResource={activeVFS} setActiveResource={setActiveVFS} style={{flex: 1}}/>
                 <Directory style={{flex: 5}} idToken={idToken} resource={activeVFS} command={"/list"}/>
