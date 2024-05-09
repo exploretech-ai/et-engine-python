@@ -45,11 +45,17 @@ def handler(event, context):
             # This will be determined by the Hardware
             cluster="ETEngineAPI706397EC-ClusterEB0386A7-M0TrrRi5C32N",
 
-            # This will be determined by the Tool ID
             taskDefinition="tool-" + tool_id,
 
             # Seems to be working fine 
-            launchType='EC2',
+            # launchType='EC2',
+
+            capacityProviderStrategy=[
+                {
+                    'capacityProvider': 'AsgCapacityProvider'
+                },
+            ],
+
 
             overrides={
                 'containerOverrides': [
@@ -84,6 +90,10 @@ def handler(event, context):
         # )
         # <<<<<
         
+        if len(ecs_response['tasks']) == 0:
+            print(ecs_response)
+            raise Exception('No task launched')
+        
         task_arn = ecs_response['tasks'][0]['taskArn']
         response = {
             'statusCode': 200,
@@ -91,9 +101,10 @@ def handler(event, context):
         }
 
     except Exception as e:
+        print(f'Error executing task: {e}')
         response = {
             'statusCode': 500,
-            'body': json.dumps(f'Error executing task: {e}')
+            'body': json.dumps('Task failed to launch')
         }
 
 

@@ -100,8 +100,7 @@ Resources:
           - codebuildtrigger9AB2B5F9
           - Arn
       Principal: s3.amazonaws.com
-      SourceAccount:
-        Ref: AWS::AccountId
+      SourceAccount: "734818840861"
       SourceArn:
         Fn::GetAtt:
           - CodeBucketFF4C7AD6
@@ -126,8 +125,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket:
-          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Bucket: cdk-hnb659fds-assets-734818840861-us-east-2
         S3Key: b7f33614a69548d6bafe224d751a7ef238cde19097415e553fe8b63a4c8fd8a6.zip
       Timeout: 900
       MemorySize: 128
@@ -410,8 +408,7 @@ Resources:
                   - ""
                   - - tool-
                     - Ref: toolID
-              awslogs-region:
-                Ref: AWS::Region
+              awslogs-region: us-east-2
               mode: non-blocking
           Memory: 512
           Name:
@@ -419,6 +416,10 @@ Resources:
               - ""
               - - tool-
                 - Ref: toolID
+          PortMappings:
+            - ContainerPort: 8080
+              HostPort: 0
+              Protocol: tcp
       ExecutionRoleArn:
         Fn::GetAtt:
           - ToolTaskExecutionRole22D86916
@@ -517,24 +518,12 @@ Resources:
             Resource:
               - Fn::Join:
                   - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":logs:"
-                    - Ref: AWS::Region
-                    - ":"
-                    - Ref: AWS::AccountId
-                    - :log-group:/aws/codebuild/
+                  - - arn:aws:logs:us-east-2:734818840861:log-group:/aws/codebuild/
                     - Ref: DockerBuilder853C5BC3
                     - :*
               - Fn::Join:
                   - ""
-                  - - "arn:"
-                    - Ref: AWS::Partition
-                    - ":logs:"
-                    - Ref: AWS::Region
-                    - ":"
-                    - Ref: AWS::AccountId
-                    - :log-group:/aws/codebuild/
+                  - - arn:aws:logs:us-east-2:734818840861:log-group:/aws/codebuild/
                     - Ref: DockerBuilder853C5BC3
           - Action:
               - codebuild:BatchPutCodeCoverages
@@ -546,13 +535,7 @@ Resources:
             Resource:
               Fn::Join:
                 - ""
-                - - "arn:"
-                  - Ref: AWS::Partition
-                  - ":codebuild:"
-                  - Ref: AWS::Region
-                  - ":"
-                  - Ref: AWS::AccountId
-                  - :report-group/
+                - - arn:aws:codebuild:us-east-2:734818840861:report-group/
                   - Ref: DockerBuilder853C5BC3
                   - -*
           - Action:
@@ -593,8 +576,7 @@ Resources:
             Value: latest
           - Name: AWS_DEFAULT_REGION
             Type: PLAINTEXT
-            Value:
-              Ref: AWS::Region
+            Value: us-east-2
           - Name: ECR_REPO_URI
             Type: PLAINTEXT
             Value:
@@ -654,10 +636,9 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/11QTU/DMAz9LbungW0SnNkQXJCoCneUpl7ntYmrOAFNUf876RcFTn5+z89+8k5ud3fydqO+ONNVk7VYyvjmlW7E8WRz5ZQBD04k/SPyXsZD0A34QZzRVHJqUV9Xeup70SpTVkrGYRk4g8xIVjwFq/0AEr3gXqAyMhbUwkCPdd267APt0gx0xOjJjdLaDTLL+K64eYQTWlxu/GfIeoUW3MqlpFQn7wvVz45CN7gW3AtNFZQB20rG3NEF9PiAGfa9OAb2ZApgCk5P8X/wHylZPrECd1AM4oEZfPp1jbYWv82vwXdhPJGSVnO+/OrPZG/2cruV95sLI2YuWI8GZDHVby0/exPMAQAA
+      Analytics: v2:deflate64:H4sIAAAAAAAA/11Qy07DMBD8lt4dQ1MJzrQ8LkhEgTtynG3YJvZGXhtUWfl3nKQhwGlmZzxje3O5zW/k9UZ9cabrNuuwkvHVK92Kw9EWyikDHpxI/nvknYz7oFvwo3lhMxTUoT6v8jwPolOmqpWMYxk4g8xIVjwGq/1IkrzwQaAyMpbUwShPuLYufaBdOgM9MXpyk7VOo80yPuj8TXF7D0e0uFzzXyHrFVpwq5YeS02KP1Pz5Cj0Y2rhg9BUQxWwq2UsHJ1ATzu40GEQh8CeTAlMwen5Bz/8j5Uin1iD2ysGcccMPq27QduI3+GX4PvgB1Gc/QfZq53cbuXt5sSImQvWowFZzvgNNiP+8MIBAAA=
     Metadata:
       aws:cdk:path: ComputeBasicStack/CDKMetadata/Default
-    Condition: CDKMetadataAvailable
 Outputs:
   ClusterName:
     Value:
@@ -665,84 +646,6 @@ Outputs:
   TaskName:
     Value:
       Ref: ToolTask8631AE6A
-Conditions:
-  CDKMetadataAvailable:
-    Fn::Or:
-      - Fn::Or:
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - af-south-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ap-east-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ap-northeast-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ap-northeast-2
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ap-south-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ap-southeast-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ap-southeast-2
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - ca-central-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - cn-north-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - cn-northwest-1
-      - Fn::Or:
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - eu-central-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - eu-north-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - eu-south-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - eu-west-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - eu-west-2
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - eu-west-3
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - il-central-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - me-central-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - me-south-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - sa-east-1
-      - Fn::Or:
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - us-east-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - us-east-2
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - us-west-1
-          - Fn::Equals:
-              - Ref: AWS::Region
-              - us-west-2
 Rules:
   CheckBootstrapVersion:
     Assertions:

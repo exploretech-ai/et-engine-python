@@ -16,7 +16,9 @@ from aws_cdk import (
     aws_iam as iam,
     aws_cognito as cognito,
     aws_ecs as ecs,
-    aws_ecr as ecr
+    aws_ecr as ecr,
+    aws_autoscaling as autoscaling,
+    aws_ecs_patterns as ecs_patterns
 )
 import aws_cdk as cdk
 from constructs import Construct
@@ -188,111 +190,39 @@ class API(Stack):
             s3n.LambdaDestination(tools_update_lambda)
         )
 
-        # COMPUTE CLUSTER CONFIG
-        # self.vpc = ec2.Vpc(
-        #     self,
-        #     "ClusterVPC",
-        #     enable_dns_hostnames=True,
-        #     enable_dns_support=True,
-        #     cidr_block="10.0.0.0/16"
-        # )
-        # self.public_subnet = ec2.CfnSubnet(
-        #     self,
-        #     "PublicSubnet",
-        #     vpc_id=self.vpc.attr_vpc_id,
-        #     availability_zone="us-east-2a",
-        #     cidr_block="10.0.0.0/18",
-        #     map_public_ip_on_launch=True
-        # )
-        # internet_gateway = ec2.CfnInternetGateway(
-        #     self, 
-        #     "InternetGateway"
-        # )
-        # gateway_attachment = ec2.CfnVPCGatewayAttachment(
-        #     self,
-        #     "GatewayAttachment",
-        #     vpc_id=self.vpc.attr_vpc_id,
-        #     internet_gateway_id=internet_gateway.attr_internet_gateway_id
-        # )
-        # public_route_table = ec2.CfnRouteTable(
-        #     self,
-        #     "PublicRouteTable",
-        #     vpc_id=self.vpc.attr_vpc_id
-        # )
-        # public_route = ec2.CfnRoute(
-        #     self,
-        #     "PublicRoute",
-        #     route_table_id=public_route_table.attr_route_table_id,
-        #     destination_cidr_block="0.0.0.0/0",
-        #     gateway_id=internet_gateway.attr_internet_gateway_id
-        # )
-        # public_subnet_route_table_association = ec2.CfnSubnetRouteTableAssociation(
-        #     self,
-        #     "PublicSubnetRouteTableAssociation",
-        #     subnet_id=self.public_subnet.attr_subnet_id,
-        #     route_table_id=public_route_table.attr_route_table_id
-        # )
-        # self.security_group = ec2.CfnSecurityGroup(
-        #     self,
-        #     "SecurityGroup",
-        #     group_description="Security group for ECS Cluster",
-        #     vpc_id=self.vpc.attr_vpc_id
-        # )
-        # self.ecs_cluster = ecs.CfnCluster(
-        #     self,
-        #     "ECSCluster"
-        # )
-
-        
-        # +++++++++++++++++++++++++++++++++
-        # =================================
-        # +++++++++++++++++++++++++++++++++
-
 
         self.vpc = ec2.Vpc(
             self,
-            "ClusterVpc"
+            "ClusterVpc",
+            vpc_name='ClusterVpc'
         )
-        # self.public_subnet = ec2.Subnet(
-        #     self,
-        #     "PublicSubnet",
-        #     vpc_id=self.vpc.vpc_id,
-        #     availability_zone="us-east-2a",
-        #     cidr_block="10.0.0.1/18",
-        #     map_public_ip_on_launch=True
-        # )
-        # self.security_group = ec2.SecurityGroup(
-        #     self,
-        #     "SecurityGroup",
-        #     description="Security group for ECS Cluster",
-        #     vpc=self.vpc
-        # )
         self.ecs_cluster = ecs.Cluster(
             self, 
             "Cluster",
             vpc=self.vpc
         )
-        self.ecs_cluster.add_capacity("DefaultAutoScalingGroupCapacity",
-            instance_type=ec2.InstanceType("t2.micro"),
-            desired_capacity=3
-        )
 
-        task = ecs.TaskDefinition(
-            self,
-            'HelloWorldTask',
-            compatibility=ecs.Compatibility.EC2
+        auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
+            vpc=self.vpc,
+            instance_type=ec2.InstanceType("t2.micro"),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux(),
+            min_capacity=1,
+            max_capacity=10,
+            group_metrics=ecs.GroupMetrics.all()
         )
-        task.add_container(
-            'HelloWorldContainer',
-            image=ecs.ContainerImage.from_registry(
-                'public.ecr.aws/docker/library/hello-world:linux'
-            ),
-            memory_limit_mib=512,
-            logging=ecs.LogDrivers.aws_logs(
-                stream_prefix="hello-world",
-                mode=ecs.AwsLogDriverMode.NON_BLOCKING,
+        auto_scaling_group.protect_new_instances_from_scale_in()
+        capacity_provider = ecs.AsgCapacityProvider(self, "AsgCapacityProvider",
+            auto_scaling_group=auto_scaling_group,
+            capacity_provider_name="AsgCapacityProvider"
+        )
+        self.ecs_cluster.add_asg_capacity_provider(capacity_provider)
+        self.ecs_cluster.add_default_capacity_provider_strategy([
+            ecs.CapacityProviderStrategy(
+                capacity_provider=capacity_provider.capacity_provider_name
             )
-        )
+        ])
+        
+
 
 
 
@@ -735,21 +665,9 @@ class API(Stack):
                     'ecr:CreateRepository',
                     'ecr:DeleteRepository',
                     'ecr:DescribeRepositories',
-                    'ecs:CreateCluster',
-                    'ecs:DeleteCluster',
-                    'ecs:DescribeClusters',
-                    'ecs:RegisterTaskDefinition',
-                    'ecs:DeregisterTaskDefinition',
-                    'ecs:DescribeTaskDefinition',
-                    'iam:PutRolePolicy',
-                    'iam:GetRolePolicy',
-                    'iam:DeleteRolePolicy',
-                    'iam:AttachRolePolicy',
-                    'iam:DetachRolePolicy',
-                    'iam:CreateRole',
-                    'iam:DeleteRole',
-                    'iam:GetRole',
-                    'iam:PassRole',
+                    'ecs:*',
+                    'elasticloadbalancing:*',
+                    'iam:*',
                     'logs:DescribeLogGroups',
                     'logs:DeleteLogGroup',
                     'codebuild:CreateProject',
@@ -833,7 +751,7 @@ class API(Stack):
                     's3:DeleteObject',
                     's3:DeleteBucket',
                     's3:*',
-                    'ecs:DeregisterTaskDefinition',
+                    'ecs:*',
                     'ecr:ListImages',
                     'ecr:DeleteImage',
                     'ecr:BatchDeleteImage',

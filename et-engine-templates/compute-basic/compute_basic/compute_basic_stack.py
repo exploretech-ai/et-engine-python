@@ -10,7 +10,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_codebuild as codebuild,
     aws_lambda as _lambda,
-    aws_s3_notifications as s3n
+    aws_s3_notifications as s3n,
+    aws_ecs_patterns as ecs_patterns
 )
 from constructs import Construct
 import aws_cdk as cdk
@@ -25,7 +26,7 @@ class ComputeBasicStack(Stack):
             self,
             "toolID"
         ).value_as_string
-        cluster_name = CfnParameter(
+        cluster_arn = CfnParameter(
             self,
             "clusterARN"
         ).value_as_string
@@ -71,10 +72,10 @@ def handler(event, context):
             "ContainerRepo",
             repository_name="tool-" + tool_id
         )
-        ecs_task_definition = ecs.TaskDefinition(
+
+        ecs_task_definition = ecs.Ec2TaskDefinition(
             self,
             "ToolTask",
-            compatibility=ecs.Compatibility.EC2,
             family="tool-" + tool_id
         )
         ecs_task_definition.add_container(
@@ -97,6 +98,7 @@ def handler(event, context):
                 resources=['*']
             )
         )
+
 
         # Codebuild Project
         docker_builder = codebuild.Project(
@@ -142,7 +144,7 @@ def handler(event, context):
         CfnOutput(
             self,
             "ClusterName",
-            value=cluster_name
+            value=cluster_arn
         )
         CfnOutput(
             self,
