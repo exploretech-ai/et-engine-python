@@ -62,7 +62,8 @@ def delete(name):
         else:
             raise Exception('Delete failed')
         
-        
+
+
 def list():
     pass
 
@@ -145,4 +146,8 @@ class VirtualFileSystem:
             with open(local_file, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=None):
                     f.write(chunk)
+
+    def file(self, file_name):
+        """Returns the path of the file"""
+        pass
 

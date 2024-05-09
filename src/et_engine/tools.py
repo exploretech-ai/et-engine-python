@@ -31,25 +31,63 @@ def connect(tool_name):
     
     else:
         raise Exception(f'Tool "{tool_name}" could not be accessed')
-    
-def delete(name):	
-        """deletes the specified VFS	
-        	
-        Parameters	
-        ----------	
-        name : string	
-            Name of the VFS to delete	
-        """	
-        status = requests.delete(	
-            API_ENDPOINT + "tools", 
-            params={'name':name},	
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
-        )	
 
-        if status.ok:
-            return status
-        else:
-            raise Exception('Delete failed')
+
+def delete(name):	
+    """deletes the specified VFS	
+        
+    Parameters	
+    ----------	
+    name : string	
+        Name of the VFS to delete	
+    """	
+    status = requests.delete(	
+        API_ENDPOINT + "tools", 
+        params={'name':name},	
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+    )	
+
+    if status.ok:
+        return status
+    else:
+        raise Exception('Delete failed')
+
+def create(name, description):	
+    """Creates a new Tool	
+        
+    Parameters	
+    ----------	
+    name : string	
+        Name of the tool	
+    description : string	
+        Plain text description of the tool	
+    Returns	
+    -------	
+    Tool	
+        A Tool object connected to the newly-created tool	
+    Raises	
+    ------	
+    Warnings	
+    --------	
+    The API works, but the method does not yet return a connected "Tool" object	
+    """	
+
+    # API Request	
+    status = requests.post(	
+        API_ENDPOINT + "tools",
+        data=json.dumps({	
+            "name": name,	
+            "description": description	
+        }), 	
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+    )
+
+    if status.ok:
+        return status
+    else:
+        raise Exception('Create failed')
+
+
 
 class Tool:
     """Class for interacting with a Tool
@@ -101,12 +139,10 @@ class Tool:
         The instance_id is provided in the path
 
         If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so 
-            
 
-        
         """
 
-
+        # If hardware is in kwargs:
 
         if kwargs:
             data = json.dumps(kwargs)
@@ -114,12 +150,17 @@ class Tool:
             data = None
 
         # NOTE: see here for asynchronous request sending https://stackoverflow.com/questions/74567219/how-do-i-get-python-to-send-as-many-concurrent-http-requests-as-possible
-        response = requests.post(
+        status = requests.post(
             self.url, 
             data=data,
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
-        return response
+
+        if status.ok:
+            return status
+        else:
+            print(status.text)
+            raise Exception('Execute failed')
 
 
     def push(self, folder):
