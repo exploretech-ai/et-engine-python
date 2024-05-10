@@ -9,15 +9,12 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-class EfsBasicStack_OLD(Stack):
+class EfsBasicStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        vpc = ec2.Vpc(
-            self,
-            "DevVPC"
-        )
+        vpc = None # FROM LOOKUP
 
         file_system = efs.FileSystem(
             self,
@@ -79,28 +76,28 @@ class EfsBasicStack_OLD(Stack):
 
 
 
-class EfsBasicStack(Stack):
+# class EfsBasicStack(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)
+#     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+#         super().__init__(scope, construct_id, **kwargs)
 
 
-        # ============ These will go in the bigger API ============
-        vpc = ec2.Vpc(
-            self,
-            "DevVPC"
-        )
+#         # ============ These will go in the bigger API ============
+#         vpc = ec2.Vpc(
+#             self,
+#             "DevVPC"
+#         )
 
-        cluster = ecs.Cluster(
-            self, 
-            "Cluster",
-            vpc=vpc
-        )
+#         cluster = ecs.Cluster(
+#             self, 
+#             "Cluster",
+#             vpc=vpc
+#         )
 
-        cluster.add_capacity("DefaultAutoScalingGroupCapacity",
-            instance_type=ec2.InstanceType("t2.micro"),
-            desired_capacity=3
-        )
+#         cluster.add_capacity("DefaultAutoScalingGroupCapacity",
+#             instance_type=ec2.InstanceType("t2.micro"),
+#             desired_capacity=3
+#         )
 
         # TODO
         # ecs task execution role

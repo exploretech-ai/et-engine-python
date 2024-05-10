@@ -416,10 +416,6 @@ Resources:
               - ""
               - - tool-
                 - Ref: toolID
-          PortMappings:
-            - ContainerPort: 8080
-              HostPort: 0
-              Protocol: tcp
       ExecutionRoleArn:
         Fn::GetAtt:
           - ToolTaskExecutionRole22D86916

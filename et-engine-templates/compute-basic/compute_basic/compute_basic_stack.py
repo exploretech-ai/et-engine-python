@@ -129,6 +129,9 @@ def handler(event, context):
                     )
                 }
             ),
+            # subnet_selection=ec2.SubnetSelection(
+            #     subnet_type=ec2.SubnetType.PUBLIC
+            # ),
         )
         docker_builder.add_to_role_policy(
             iam.PolicyStatement(

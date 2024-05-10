@@ -8,6 +8,8 @@ def handler(event, context):
         user = event['requestContext']['authorizer']['userID']
         tool_id = event['pathParameters']['toolID']
 
+        capacity_provider_name = "AsgCapacityProvider"
+
         # check if 'key' exists in the body
         args = []
         if "apiKey" in event['requestContext']['authorizer'].keys():
@@ -19,12 +21,18 @@ def handler(event, context):
         if 'body' in event:
             if event['body'] is not None:
                 body = json.loads(event['body'])
+
+                if 'hardware' in body:
+                    capacity_provider_name = body.pop('hardware')
+
+
                 for key in body.keys():
                     args.append({
                         'name': key,
                         'value': body[key]
                     })
 
+        print(f'Capacity Provider: {capacity_provider_name}')
         print(f'Arguments: {args}')
 
 
@@ -52,7 +60,7 @@ def handler(event, context):
 
             capacityProviderStrategy=[
                 {
-                    'capacityProvider': 'AsgCapacityProvider'
+                    'capacityProvider': capacity_provider_name
                 },
             ],
 
