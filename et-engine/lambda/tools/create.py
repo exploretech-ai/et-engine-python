@@ -80,16 +80,11 @@ def handler(event, context):
             # # Use create_stack to create the codebuild workflow here
             cfn = boto3.client('cloudformation')
 
-            cluster_arn = "arn:aws:ecs:us-east-2:734818840861:cluster/ETEngineAPI706397EC-ClusterEB0386A7-M0TrrRi5C32N"
             parameters = [
                 {
                     'ParameterKey': 'toolID',
                     'ParameterValue': tool_id
                 },
-                # {
-                #     'ParameterKey': 'clusterARN',
-                #     'ParameterValue': cluster_arn
-                # }
             ]
             
             cfn.create_stack(

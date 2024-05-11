@@ -601,7 +601,11 @@ class API(Stack):
         vfs_create_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    's3:CreateBucket'
+                    's3:*',
+                    "cloudformation:CreateStack",
+                    "elasticfilesystem:*",
+                    "ec2:*",
+                    "ssm:*"
                 ],
                 resources=['*']
             )

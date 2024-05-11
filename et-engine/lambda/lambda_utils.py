@@ -11,6 +11,14 @@ def get_tool_stack(tool_id):
     
     return cf_outputs
 
+def get_stack_outputs(stack_name):
+
+    cf_client = boto3.client('cloudformation')
+    cf_response = cf_client.describe_stacks(StackName=stack_name)
+    cf_outputs = cf_response["Stacks"][0]["Outputs"]
+    
+    return cf_outputs
+
 def get_component_from_outputs(outputs, key):
     value = None
     for elem in outputs:

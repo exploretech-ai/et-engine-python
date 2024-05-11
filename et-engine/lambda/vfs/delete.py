@@ -26,7 +26,7 @@ def handler(event, context):
                     vfs_id = vfs_id[0][0]
                     print(f"VFS ID: {vfs_id}")
                 
-                lambda_utils.empty_bucket("vfs-"+vfs_id)
+                # lambda_utils.empty_bucket("vfs-"+vfs_id)
 
                 sql_query = f"""
                     DELETE FROM VirtualFilesystems WHERE userID = '{user}' AND name = '{vfs_name}'

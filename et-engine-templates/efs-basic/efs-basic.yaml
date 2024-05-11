@@ -1,0 +1,98 @@
+Parameters:
+  vfsID:
+    Type: String
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Resources:
+  vfs0804DAB7:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: true
+      FileSystemPolicy:
+        Statement:
+          - Action: elasticfilesystem:*
+            Effect: Allow
+            Principal:
+              AWS: "*"
+          - Action:
+              - elasticfilesystem:ClientRootAccess
+              - elasticfilesystem:ClientWrite
+            Condition:
+              Bool:
+                elasticfilesystem:AccessedViaMountTarget: "true"
+            Effect: Allow
+            Principal:
+              AWS: "*"
+        Version: "2012-10-17"
+      FileSystemTags:
+        - Key: Name
+          Value:
+            Fn::Join:
+              - ""
+              - - vfs-
+                - Ref: vfsID
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: EfsBasicStack/vfs/Resource
+  vfsEfsMountTargetPrivateSubnet12A54EF59:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: vfs0804DAB7
+      SecurityGroups:
+        - sg-0afc14daded6d39d0
+      SubnetId: subnet-0f2aacdfca19331f7
+    Metadata:
+      aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet1
+  vfsEfsMountTargetPrivateSubnet2E813BC5E:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: vfs0804DAB7
+      SecurityGroups:
+        - sg-0afc14daded6d39d0
+      SubnetId: subnet-00eeb19f8c08802bd
+    Metadata:
+      aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet2
+  vfsvfsAccessPointA97EC7A7:
+    Type: AWS::EFS::AccessPoint
+    Properties:
+      AccessPointTags:
+        - Key: Name
+          Value: EfsBasicStack/vfs/vfsAccessPoint
+      FileSystemId:
+        Ref: vfs0804DAB7
+      RootDirectory:
+        Path: /
+    Metadata:
+      aws:cdk:path: EfsBasicStack/vfs/vfsAccessPoint/Resource
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/1WNwQrCMBBEv6X3dLUV9CyCN2lovUuMW41tEslukFL67zaKoKfhMY+ZEopyDctMPSnXly7vzRnGhpXuxK51UgVlkTGIGsnHoFHM4glbgnFvemwGYrTJ/KeDj46PKlyRxVZrJJLeOE7VD06Jq8iP+G6+F5OQA9+8W6ygKGCT3cmYPMyDxiLUn3wBwTx9wbcAAAA=
+    Metadata:
+      aws:cdk:path: EfsBasicStack/CDKMetadata/Default
+Outputs:
+  FileSystemId:
+    Value:
+      Ref: vfs0804DAB7
+  AccessPointId:
+    Value:
+      Ref: vfsvfsAccessPointA97EC7A7
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+

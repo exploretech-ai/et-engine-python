@@ -29,11 +29,23 @@ def handler(event, context):
 
 
     # List all available vfs
+    connection = db.connect()
+    cursor = connection.cursor()
     try:
-        available_vfs = lambda_utils.list_vfs(user)
 
-        # check if name is in available_vfs
+        # TURN TO SQL QUERY
+        print('Fetching Available Tools..')
+
+        sql_query = f"""
+            SELECT name FROM VirtualFilesystems WHERE userID = '{user}'
+        """
+        cursor.execute(sql_query)
+        available_vfs = [row[0] for row in cursor.fetchall()]
+        print(f"Available VFS: {available_vfs}")
+
+
         if vfs_name in available_vfs:
+            print(f"VFS {vfs_name} already exists")
             return {
                 'statusCode': 500,
                 'body': json.dumps(f"Failed: '{vfs_name}' already exists")
@@ -43,27 +55,46 @@ def handler(event, context):
 
             vfs_id = str(uuid.uuid4())
 
-            connection = db.connect()
-            cursor = connection.cursor()
-            sql_query = f"""
+            # >>>>> s3 bucket goes here
+            cfn = boto3.client('cloudformation')
+
+            parameters = [
+                {
+                    'ParameterKey': 'vfsID',
+                    'ParameterValue': vfs_id
+                }
+            ]
+            print(vfs_id, parameters)
+            
+            cfn.create_stack(
+                StackName='vfs-' + vfs_id,
+                TemplateURL='https://et-engine-templates.s3.us-east-2.amazonaws.com/efs-basic.yaml',
+                Parameters=parameters,
+                Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
+            )
+            print('CREATING STACK')
+
+            # =====
+            # bucket_name = "vfs-" + vfs_id
+            # s3 = boto3.client('s3')
+            # s3.create_bucket(
+            #     Bucket = bucket_name,
+            #     CreateBucketConfiguration={
+            #         'LocationConstraint': 'us-east-2'
+            #     },
+            # )
+            # <<<<<
+
+            cursor.execute(
+                f"""
                 INSERT INTO VirtualFileSystems (vfsID, userID, name)
                 VALUES ('{vfs_id}', '{user}', '{vfs_name}')
-            """
-            cursor.execute(sql_query)
-            connection.commit()
-            cursor.close()
-            connection.close()
-
-            # >>>>> s3 bucket goes here
-            bucket_name = "vfs-" + vfs_id
-            s3 = boto3.client('s3')
-            s3.create_bucket(
-                Bucket = bucket_name,
-                CreateBucketConfiguration={
-                    'LocationConstraint': 'us-east-2'
-                },
+                """
             )
-            # <<<<<
+            print("ROW INSERTED. NOT YET COMMITTED")
+            connection.commit()
+            print("ROW COMMITTED")
+
 
             return {
                 'statusCode': 200,
@@ -71,22 +102,14 @@ def handler(event, context):
             }
         
     except Exception as e:
+        print(f"ERROR: {e}")
         return {
             'statusCode': 500,
             'body': json.dumps(f'Creation Error: {e}')
         }
+    finally:
+        cursor.close()
+        connection.close()
 
 
 
-    # Check if "name" is in vfs & return error if so
-
-    # If "name" is not in vfs:
-    #     1. Generate vfsID
-    #     2. Push [vfsID, name, userID] to table
-    #     3. Create new s3 bucket
-    #     4. Return vfsID
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps('hello, world')
-    }
