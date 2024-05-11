@@ -26,10 +26,10 @@ class ComputeBasicStack(Stack):
             self,
             "toolID"
         ).value_as_string
-        cluster_arn = CfnParameter(
-            self,
-            "clusterARN"
-        ).value_as_string
+        # cluster_arn = CfnParameter(
+        #     self,
+        #     "clusterARN"
+        # ).value_as_string
 
         # Bucket & Build Trigger
         code_bucket = s3.Bucket(
@@ -73,33 +73,6 @@ def handler(event, context):
             repository_name="tool-" + tool_id
         )
 
-        ecs_task_definition = ecs.Ec2TaskDefinition(
-            self,
-            "ToolTask",
-            family="tool-" + tool_id
-        )
-        ecs_task_definition.add_container(
-            "ToolImage",
-            image=ecs.ContainerImage.from_registry(
-                container_repo.repository_uri + ':latest'
-            ),
-            memory_limit_mib=512,
-            logging=ecs.LogDrivers.aws_logs(
-                stream_prefix=f"tool-{tool_id}",
-                mode=ecs.AwsLogDriverMode.NON_BLOCKING,
-            ),
-            container_name=f"tool-{tool_id}"
-        )
-        ecs_task_definition.add_to_execution_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'ecr:*'
-                ],
-                resources=['*']
-            )
-        )
-
-
         # Codebuild Project
         docker_builder = codebuild.Project(
             self,
@@ -129,9 +102,9 @@ def handler(event, context):
                     )
                 }
             ),
-            # subnet_selection=ec2.SubnetSelection(
-            #     subnet_type=ec2.SubnetType.PUBLIC
-            # ),
+            subnet_selection=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PUBLIC
+            ),
         )
         docker_builder.add_to_role_policy(
             iam.PolicyStatement(
@@ -143,15 +116,49 @@ def handler(event, context):
         )
         container_repo.grant_push(docker_builder)
 
+
+        # ==================================================================================================================
+        # THESE WILL NEED TO BE REMOVED AND CONFIGURED ON THE FLY ALONG WITH EFS VOLUMES
+
+        # ecs_task_definition = ecs.Ec2TaskDefinition(
+        #     self,
+        #     "ToolTask",
+        #     family="tool-" + tool_id
+        # )
+        # ecs_task_definition.add_container(
+        #     "ToolImage",
+        #     image=ecs.ContainerImage.from_registry(
+        #         container_repo.repository_uri + ':latest'
+        #     ),
+        #     memory_limit_mib=512,
+        #     logging=ecs.LogDrivers.aws_logs(
+        #         stream_prefix=f"tool-{tool_id}",
+        #         mode=ecs.AwsLogDriverMode.NON_BLOCKING,
+        #     ),
+        #     container_name=f"tool-{tool_id}"
+        # )
+        # ecs_task_definition.add_to_execution_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'ecr:*'
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
+        # ==================================================================================================================
+
+
+        
+
         # OUTPUTS
-        CfnOutput(
-            self,
-            "ClusterName",
-            value=cluster_arn
-        )
-        CfnOutput(
-            self,
-            "TaskName",
-            value=ecs_task_definition.task_definition_arn
-        )
+        # CfnOutput(
+        #     self,
+        #     "ClusterName",
+        #     value=cluster_arn
+        # )
+        # CfnOutput(
+        #     self,
+        #     "TaskName",
+        #     value=ecs_task_definition.task_definition_arn
+        # )
        

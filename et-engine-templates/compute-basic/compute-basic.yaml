@@ -1,8 +1,6 @@
 Parameters:
   toolID:
     Type: String
-  clusterARN:
-    Type: String
   BootstrapVersion:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /cdk-bootstrap/hnb659fds/version
@@ -358,122 +356,6 @@ Resources:
     DeletionPolicy: Retain
     Metadata:
       aws:cdk:path: ComputeBasicStack/ContainerRepo/Resource
-  ToolTaskTaskRole222BCCF8:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-        Version: "2012-10-17"
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ToolTask/TaskRole/Resource
-  ToolTask8631AE6A:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      ContainerDefinitions:
-        - Essential: true
-          Image:
-            Fn::Join:
-              - ""
-              - - Fn::Select:
-                    - 4
-                    - Fn::Split:
-                        - ":"
-                        - Fn::GetAtt:
-                            - ContainerRepo0A04718B
-                            - Arn
-                - .dkr.ecr.
-                - Fn::Select:
-                    - 3
-                    - Fn::Split:
-                        - ":"
-                        - Fn::GetAtt:
-                            - ContainerRepo0A04718B
-                            - Arn
-                - "."
-                - Ref: AWS::URLSuffix
-                - /
-                - Ref: ContainerRepo0A04718B
-                - :latest
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group:
-                Ref: ToolTaskToolImageLogGroup0CBD0C3F
-              awslogs-stream-prefix:
-                Fn::Join:
-                  - ""
-                  - - tool-
-                    - Ref: toolID
-              awslogs-region: us-east-2
-              mode: non-blocking
-          Memory: 512
-          Name:
-            Fn::Join:
-              - ""
-              - - tool-
-                - Ref: toolID
-      ExecutionRoleArn:
-        Fn::GetAtt:
-          - ToolTaskExecutionRole22D86916
-          - Arn
-      Family:
-        Fn::Join:
-          - ""
-          - - tool-
-            - Ref: toolID
-      NetworkMode: bridge
-      RequiresCompatibilities:
-        - EC2
-      TaskRoleArn:
-        Fn::GetAtt:
-          - ToolTaskTaskRole222BCCF8
-          - Arn
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ToolTask/Resource
-  ToolTaskToolImageLogGroup0CBD0C3F:
-    Type: AWS::Logs::LogGroup
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ToolTask/ToolImage/LogGroup/Resource
-  ToolTaskExecutionRole22D86916:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-        Version: "2012-10-17"
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ToolTask/ExecutionRole/Resource
-  ToolTaskExecutionRoleDefaultPolicy10BE27B3:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Action:
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Effect: Allow
-            Resource:
-              Fn::GetAtt:
-                - ToolTaskToolImageLogGroup0CBD0C3F
-                - Arn
-          - Action: ecr:*
-            Effect: Allow
-            Resource: "*"
-        Version: "2012-10-17"
-      PolicyName: ToolTaskExecutionRoleDefaultPolicy10BE27B3
-      Roles:
-        - Ref: ToolTaskExecutionRole22D86916
-    Metadata:
-      aws:cdk:path: ComputeBasicStack/ToolTask/ExecutionRole/DefaultPolicy/Resource
   DockerBuilderRole896034E6:
     Type: AWS::IAM::Role
     Properties:
@@ -632,16 +514,9 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/11Qy07DMBD8lt4dQ1MJzrQ8LkhEgTtynG3YJvZGXhtUWfl3nKQhwGlmZzxje3O5zW/k9UZ9cabrNuuwkvHVK92Kw9EWyikDHpxI/nvknYz7oFvwo3lhMxTUoT6v8jwPolOmqpWMYxk4g8xIVjwGq/1IkrzwQaAyMpbUwShPuLYufaBdOgM9MXpyk7VOo80yPuj8TXF7D0e0uFzzXyHrFVpwq5YeS02KP1Pz5Cj0Y2rhg9BUQxWwq2UsHJ1ATzu40GEQh8CeTAlMwen5Bz/8j5Uin1iD2ysGcccMPq27QduI3+GX4PvgB1Gc/QfZq53cbuXt5sSImQvWowFZzvgNNiP+8MIBAAA=
+      Analytics: v2:deflate64:H4sIAAAAAAAA/1WQwW7DIBBEvyV3TOtESs9NpJ4t9wMqDNt0Y2ArFhpFiH8vtuNaPc3bmWVA7GW7P8rnnbpxo83YWBxkfo9Kj+L86TsVlIMIQdT8I/NB5lPSI8QpfNAiHVnU981e5iKscoNRMk9lEBwyI3nxlryOE1R75SJQOZl7sjDZs26tax/oUHfgmxgjhTnapiI0GRgSWiNzF+gKen7pA0sR58SRXA9MKejlnj/+F9UjP2ggnBSDeGWGWD/lgv4i1o0iunv8Iv90kG0rX3ZXRmxC8hEdyH7RX2IdOP5eAQAA
     Metadata:
       aws:cdk:path: ComputeBasicStack/CDKMetadata/Default
-Outputs:
-  ClusterName:
-    Value:
-      Ref: clusterARN
-  TaskName:
-    Value:
-      Ref: ToolTask8631AE6A
 Rules:
   CheckBootstrapVersion:
     Assertions:

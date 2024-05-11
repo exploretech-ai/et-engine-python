@@ -20,6 +20,7 @@ from aws_cdk import (
     aws_autoscaling as autoscaling,
     aws_ecs_patterns as ecs_patterns,
     aws_efs as efs,
+    aws_logs as logs,
 )
 import aws_cdk as cdk
 from constructs import Construct
@@ -207,7 +208,7 @@ class API(Stack):
             vpc=self.vpc,
             instance_type=ec2.InstanceType("t2.micro"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
-            min_capacity=1,
+            min_capacity=0,
             max_capacity=10,
             group_metrics=[autoscaling.GroupMetrics.all()]
         )
@@ -227,7 +228,7 @@ class API(Stack):
             vpc=self.vpc,
             instance_type=ec2.InstanceType("c4.large"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
-            min_capacity=1,
+            min_capacity=0,
             max_capacity=10,
             group_metrics=[autoscaling.GroupMetrics.all()]
         )
@@ -238,8 +239,31 @@ class API(Stack):
         )
         self.ecs_cluster.add_asg_capacity_provider(capacity_provider_gpu)
 
+        # ==================================================================================================================
+        # Engine-Wide resources
+        # TASK ROLE?
+        task_role = iam.Role(
+            self,
+            "ECSTaskRole",
+            assumed_by=iam.ServicePrincipal('ecs-tasks.amazonaws.com')
+        )
+        task_role.add_to_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'ecr:*',
+                    'elasticfilesystem:*',
+                    "sts:*",
+                    "logs:*"
+                ],
+                resources=['*']
+            )
+        )
+        logs.LogGroup(
+            self,
+            "LogGroup",
+            log_group_name="EngineLogGroup"
+        )
 
-        # HERE I WILL PUT A TEST EFS AND TRY TO MOUNT IT TO A TOOL
         security_group = ec2.SecurityGroup(
             self,
             "EFSSG",
@@ -250,6 +274,8 @@ class API(Stack):
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(2049)
         )
+
+        # VFS-specific Resources
         file_system = efs.FileSystem(
             self,
             "TESTEfsFileSystem",
@@ -266,116 +292,102 @@ class API(Stack):
         access_point = file_system.add_access_point(
             "AP",
             path="/",
-            # create_acl=efs.Acl(
-            #     owner_gid="1000",
-            #     owner_uid="1000",
-            #     permissions="777"
-            # ),
-            # posix_user=efs.PosixUser(
-            #     gid="1000",
-            #     uid="1000"
-            # )
         )
 
+        # Tool-Specific Resources (or do these need to be configured on the fly?)
+        # temp_task_definition = ecs.Ec2TaskDefinition(
+        #     self,
+        #     "TempTask",
+        # )
+        # container = temp_task_definition.add_container(
+        #     "TempImage",
+        #     image=ecs.ContainerImage.from_registry(
+        #         "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-c645dc64-2f7d-4971-aab4-d828e15781a5:latest"
+        #     ),
+        #     container_name="HelloWorld",
+        #     memory_limit_mib=512,
+        #     logging=ecs.LogDrivers.aws_logs(
+        #         stream_prefix=f"temp-task",
+        #         mode=ecs.AwsLogDriverMode.NON_BLOCKING,
+        #     ),
+        # )
+        # temp_task_definition.add_to_execution_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'ecr:*',
+        #             'elasticfilesystem:*'
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
+        # temp_task_definition.add_to_task_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'ecr:*',
+        #             'elasticfilesystem:*'
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
+
+        # # Configured before executing
+        # temp_task_definition.add_volume(
+        #     name="EFSVolume",
+        #     efs_volume_configuration=ecs.EfsVolumeConfiguration(
+        #         file_system_id=file_system.file_system_id,
+        #         authorization_config=ecs.AuthorizationConfig(
+        #             access_point_id=access_point.access_point_id,
+        #             iam='ENABLED'
+        #         ),
+        #         root_directory="/",
+        #         transit_encryption='ENABLED'
+        #     )
+        # )
+        # container.add_mount_points(
+        #     ecs.MountPoint(
+        #         read_only=False,
+        #         source_volume="EFSVolume",
+        #         container_path="/data"
+        #     )
+        # )
         
 
-        temp_task_definition = ecs.Ec2TaskDefinition(
-            self,
-            "TempTask",
-        )
-        container = temp_task_definition.add_container(
-            "TempImage",
-            image=ecs.ContainerImage.from_registry(
-                "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-c645dc64-2f7d-4971-aab4-d828e15781a5:latest"
-            ),
-            container_name="HelloWorld",
-            memory_limit_mib=512,
-            logging=ecs.LogDrivers.aws_logs(
-                stream_prefix=f"temp-task",
-                mode=ecs.AwsLogDriverMode.NON_BLOCKING,
-            ),
-        )
-        temp_task_definition.add_to_execution_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'ecr:*',
-                    'elasticfilesystem:*'
-                ],
-                resources=['*']
-            )
-        )
-        temp_task_definition.add_to_task_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    'ecr:*',
-                    'elasticfilesystem:*'
-                ],
-                resources=['*']
-            )
-        )
+        # instance = ec2.Instance(
+        #     scope=self,
+        #     id="ec2Instance",
+        #     instance_name="my_ec2_instance",
+        #     instance_type=ec2.InstanceType.of(
+        #         instance_class=ec2.InstanceClass.BURSTABLE2,
+        #         instance_size=ec2.InstanceSize.MICRO,
+        #     ),
+        #     machine_image=ec2.AmazonLinuxImage(
+        #         generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
+        #     ),
+        #     vpc=self.vpc,
+        #     key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin"),
+        #     vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
+        # )
 
+        # file_system.connections.allow_default_port_from(instance)
+        # instance.connections.allow_from_any_ipv4(ec2.Port.tcp(22))
+        # instance.user_data.add_commands(
+        #     "echo 'STARTING USER COMMANDS'"
+        #     "yum check-update -y",
+        #     "yum upgrade -y",
+        #     "yum install -y amazon-efs-utils",
+        #     "yum install -y nfs-utils",
+        #     "file_system_id_1=" + file_system.file_system_id + ".efs." + self.region + ".amazonaws.com", # <-- THIS NEEDS TO BE THE EFS DNS
+        #     "echo ${file_system_id_1}",
+        #     "efs_mount_point_1=/mnt/efs/fs1",
+        #     "echo 'MAKING DIRECTORY'",
+        #     'mkdir -p "${efs_mount_point_1}"',
+        #     "echo 'MOUNTING'",
+        #     'sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${file_system_id_1}:/ ${efs_mount_point_1}',
+        #     "echo 'SUCCESS!'",
+        #     # See here for commands to install docker on command https://medium.com/appgambit/part-1-running-docker-on-aws-ec2-cbcf0ec7c3f8
+        # )
 
-
-        temp_task_definition.add_volume(
-            name="EFSVolume",
-            efs_volume_configuration=ecs.EfsVolumeConfiguration(
-                file_system_id=file_system.file_system_id,
-                authorization_config=ecs.AuthorizationConfig(
-                    access_point_id=access_point.access_point_id,
-                    iam='ENABLED'
-                ),
-                root_directory="/",
-                transit_encryption='ENABLED'
-            )
-        )
-
-
-        # file_system.connections.allow_default_port_from(
-        #     self.ecs_cluster.connections
-        # )        
-        container.add_mount_points(
-            ecs.MountPoint(
-                read_only=False,
-                source_volume="EFSVolume",
-                container_path="/data"
-            )
-        )
-        
-
-        instance = ec2.Instance(
-            scope=self,
-            id="ec2Instance",
-            instance_name="my_ec2_instance",
-            instance_type=ec2.InstanceType.of(
-                instance_class=ec2.InstanceClass.BURSTABLE2,
-                instance_size=ec2.InstanceSize.MICRO,
-            ),
-            machine_image=ec2.AmazonLinuxImage(
-                generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
-            ),
-            vpc=self.vpc,
-            key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin"),
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
-        )
-
-        file_system.connections.allow_default_port_from(instance)
-        instance.connections.allow_from_any_ipv4(ec2.Port.tcp(22))
-        instance.user_data.add_commands(
-            "echo 'STARTING USER COMMANDS'"
-            "yum check-update -y",
-            "yum upgrade -y",
-            "yum install -y amazon-efs-utils",
-            "yum install -y nfs-utils",
-            "file_system_id_1=" + file_system.file_system_id + ".efs." + self.region + ".amazonaws.com", # <-- THIS NEEDS TO BE THE EFS DNS
-            "echo ${file_system_id_1}",
-            "efs_mount_point_1=/mnt/efs/fs1",
-            "echo 'MAKING DIRECTORY'",
-            'mkdir -p "${efs_mount_point_1}"',
-            "echo 'MOUNTING'",
-            'sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${file_system_id_1}:/ ${efs_mount_point_1}',
-            "echo 'SUCCESS!'",
-            # See here for commands to install docker on command https://medium.com/appgambit/part-1-running-docker-on-aws-ec2-cbcf0ec7c3f8
-        )
+        # ==================================================================================================================
         
 
 
@@ -1015,7 +1027,10 @@ class API(Stack):
                 actions=[
                     'cloudformation:DescribeStacks',
                     'ecs:RunTask',
-                    'iam:PassRole'
+                    'iam:PassRole',
+                    'ecs:RegisterTaskDefinition',
+                    'ecr:*',
+                    'elasticfilesystem:*',
                 ],
                 resources=['*']
             )
@@ -1265,7 +1280,6 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         database = MasterDB(self, "MasterDB")
-        # compute = Compute(self, "Compute", database)
         api = API(self, "API", database)
         webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
         

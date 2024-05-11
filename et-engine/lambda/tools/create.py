@@ -86,10 +86,10 @@ def handler(event, context):
                     'ParameterKey': 'toolID',
                     'ParameterValue': tool_id
                 },
-                {
-                    'ParameterKey': 'clusterARN',
-                    'ParameterValue': cluster_arn
-                }
+                # {
+                #     'ParameterKey': 'clusterARN',
+                #     'ParameterValue': cluster_arn
+                # }
             ]
             
             cfn.create_stack(
