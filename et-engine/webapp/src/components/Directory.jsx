@@ -10,12 +10,12 @@ const FileComponent = ({name}) => {
     )
 }
 
-const FolderComponent = ({name, directory, setCurrentDirectory, currentDirectoryPath, setCurrentDirectoryPath}) => {
+const FolderComponent = ({name, path, setPath}) => {
 
     const handleClick = () => {
-        setCurrentDirectory(directory)
+        // setCurrentDirectory(directory)
         // console.log()
-        setCurrentDirectoryPath([...currentDirectoryPath, name])
+        setPath([...path, name])
     }
 
     return(
@@ -25,25 +25,26 @@ const FolderComponent = ({name, directory, setCurrentDirectory, currentDirectory
     )
 }
 
-const DirectoryView = ({currentDirectory, setCurrentDirectory, currentDirectoryPath, setCurrentDirectoryPath, style}) => {
+const DirectoryView = ({path, setPath, contents, setContents, style}) => {
 
     const components = []
-    for(const dir in currentDirectory) {
 
-        if (currentDirectory[dir] === null) {
-            components.push(<FileComponent name={dir} key={dir}/>)
-        } else {
+    if (contents){
+        for (const dir of contents.directories) {
             components.push(
                 <FolderComponent 
                     name={dir} 
-                    directory={currentDirectory[dir]} 
-                    setCurrentDirectory={setCurrentDirectory} 
-                    currentDirectoryPath={currentDirectoryPath} 
-                    setCurrentDirectoryPath={setCurrentDirectoryPath}
+                    path={path} 
+                    setPath={setPath}
                     key={dir}
                 />)
         }
+        for (const file of contents.files) {
+            components.push(<FileComponent name={file} key={file}/>)
+        }
     }
+
+    
 
     return(
         <div style={style}>
@@ -52,17 +53,19 @@ const DirectoryView = ({currentDirectory, setCurrentDirectory, currentDirectoryP
     )
 }
 
-const CurrentDirectoryPath = ({path, setPath, directory, setDirectory}) => {
+const CurrentDirectoryPath = ({path, setPath}) => {
 
-    const handleClick = () => {
+    const handleClick = (i) => {
+
+        // 
         const newPath = [...path.slice(0, i+1)]
         setPath(newPath);
 
-        let subfolder = {...directory}
-        for (let i = 1; i < newPath.length; i++){
-            subfolder = subfolder[newPath[i]]
-        }
-        setDirectory(subfolder)
+        // let subfolder = {...directory}
+        // for (let i = 1; i < newPath.length; i++){
+        //     subfolder = subfolder[newPath[i]]
+        // }
+        // setDirectory(subfolder)
     }
     const folders = []
     if (path){
@@ -70,14 +73,13 @@ const CurrentDirectoryPath = ({path, setPath, directory, setDirectory}) => {
         for (let i = 0; i < path.length; i++) {
             const component = path[i]
             folders.push(
-                <div key={i} onClick={() => handleClick()}>
+                <div key={i} onClick={() => handleClick(i)}>
                     {component + '/'}
                 </div>)
 
         }
     }
     
-
     return (
         <div className="path">
             {folders}
@@ -87,15 +89,20 @@ const CurrentDirectoryPath = ({path, setPath, directory, setDirectory}) => {
 
 const Directory = ({style, resource, command, idToken}) => {
 
-    const [directory, setDirectory] = useState(null)
-    const [currentDirectory, setCurrentDirectory] = useState(null)
-    const [currentDirectoryPath, setCurrentDirectoryPath] = useState(null)
+    // const [directory, setDirectory] = useState(null)
+    // const [currentDirectory, setCurrentDirectory] = useState(null)
+    // const [currentDirectoryPath, setCurrentDirectoryPath] = useState(null)
+    const [path, setPath] = useState(['.'])
+    const [contents, setContents] = useState(null)
 
     useEffect(async () => {
         
         if (resource && idToken) {
+            const searchPath = path.join('/')
             const files = await fetch(
-                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/" + resource.resource + "/" + resource.id + command, {
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/" + resource.resource + "/" + resource.id + command + "?" + new URLSearchParams({
+                    path: path.join('/')
+                }), {
                     method: "GET",
                     headers: {
                         "Authorization": "Bearer " + idToken
@@ -110,20 +117,20 @@ const Directory = ({style, resource, command, idToken}) => {
                 
             })
             .then( files => {
-                setDirectory(files)
-                setCurrentDirectory(files)
-                setCurrentDirectoryPath(['.'])
+                console.log(files)
+                setContents(files)
+                // setDirectory(files)
+                // setCurrentDirectory(files)
+                // setCurrentDirectoryPath(['.'])
             })
             .catch(err => {
                 console.log(err)
-                setDirectory(null)
-                setCurrentDirectory(null)
-                setCurrentDirectoryPath(['.'])
+                // setDirectory(null)
+                // setCurrentDirectory(null)
+                // setCurrentDirectoryPath(['.'])
             })
-            
-
         }
-    }, [resource])
+    }, [resource, path])
 
 
 
@@ -131,16 +138,16 @@ const Directory = ({style, resource, command, idToken}) => {
         // <div style={style}>Directory will appear here</div>
         <div style={style}>
             <CurrentDirectoryPath 
-                path={currentDirectoryPath} 
-                setPath={setCurrentDirectoryPath}
-                directory={directory}
-                setDirectory={setCurrentDirectory}
+                path={path} 
+                setPath={setPath}
+                contents={contents}
+                setContents={setContents}
             />
             <DirectoryView 
-                currentDirectory={currentDirectory} 
-                setCurrentDirectory={setCurrentDirectory} 
-                currentDirectoryPath={currentDirectoryPath}
-                setCurrentDirectoryPath={setCurrentDirectoryPath}
+                path={path} 
+                setPath={setPath}
+                contents={contents}
+                setContents={setContents}
             />
         </div>
         
