@@ -6,6 +6,20 @@ Parameters:
     Default: /cdk-bootstrap/hnb659fds/version
     Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
 Resources:
+  ClusterSGfromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049F8DB3346:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: from EfsBasicStackVFSLambdaSecurityGroup907B6CFC:2049
+      FromPort: 2049
+      GroupId: sg-0afc14daded6d39d0
+      IpProtocol: tcp
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - VFSLambdaSecurityGroupD84993EA
+          - GroupId
+      ToPort: 2049
+    Metadata:
+      aws:cdk:path: EfsBasicStack/ClusterSG/from EfsBasicStackVFSLambdaSecurityGroup907B6CFC:2049
   vfs0804DAB7:
     Type: AWS::EFS::FileSystem
     Properties:
@@ -69,10 +83,427 @@ Resources:
         Path: /
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/vfsAccessPoint/Resource
+  VFSLambdaServiceRole600D85E0:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+    DependsOn:
+      - vfsEfsMountTargetPrivateSubnet12A54EF59
+      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+    Metadata:
+      aws:cdk:path: EfsBasicStack/VFSLambda/ServiceRole/Resource
+  VFSLambdaServiceRoleDefaultPolicyDCB78257:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: elasticfilesystem:ClientMount
+            Condition:
+              StringEquals:
+                elasticfilesystem:AccessPointArn:
+                  Fn::Join:
+                    - ""
+                    - - arn:aws:elasticfilesystem:us-east-2:734818840861:access-point/
+                      - Ref: vfsvfsAccessPointA97EC7A7
+            Effect: Allow
+            Resource: "*"
+          - Action: elasticfilesystem:ClientWrite
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - arn:aws:elasticfilesystem:us-east-2:734818840861:file-system/
+                  - Ref: vfs0804DAB7
+        Version: "2012-10-17"
+      PolicyName: VFSLambdaServiceRoleDefaultPolicyDCB78257
+      Roles:
+        - Ref: VFSLambdaServiceRole600D85E0
+    DependsOn:
+      - vfsEfsMountTargetPrivateSubnet12A54EF59
+      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+    Metadata:
+      aws:cdk:path: EfsBasicStack/VFSLambda/ServiceRole/DefaultPolicy/Resource
+  VFSLambdaSecurityGroupD84993EA:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Automatic security group for Lambda Function EfsBasicStackVFSLambda7A462EF4
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      VpcId: vpc-007a045e34604d503
+    DependsOn:
+      - vfsEfsMountTargetPrivateSubnet12A54EF59
+      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+    Metadata:
+      aws:cdk:path: EfsBasicStack/VFSLambda/SecurityGroup/Resource
+  VFSLambda5FAABBC2:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: "
+
+          import os
+
+          import base64
+
+          import math
+
+          import json
+
+          # File manager operation events:
+
+          # list: {\"operation\": \"list\", \"path\": \"$dir\"}
+
+          # upload: {\"operation\": \"upload\", \"path\": \"$dir\", \"form_data\": \"$form_data\"}
+
+
+
+          def delete(event):
+
+          \    print(event)
+
+          \    path = event['path']
+
+          \    name = event['name']
+
+
+          \    file_path = path + '/' + name
+
+
+          \    try:
+
+          \        os.remove(file_path)
+
+          \    except OSError:
+
+          \        return {\"message\": \"couldn't delete the file\", \"statusCode\": 500}
+
+          \    else:
+
+          \        return {\"message\": \"file deletion successful\", \"statusCode\": 200}
+
+
+
+          def make_dir(event):
+
+          \    print(event)
+
+          \    path = event['path']
+
+          \    name = event['name']
+
+
+          \    new_dir = path + '/' + name
+
+
+          \    try:
+
+          \        os.mkdir(new_dir)
+
+          \    except OSError:
+
+          \        return {\"message\": \"couldn't create the directory\", \"statusCode\": 500}
+
+          \    else:
+
+          \        return {\"message\": \"directory creation successful\", \"statusCode\": 200}
+
+
+
+          def upload(event):
+
+          \    print(event)
+
+          \    \"{'operation': 'upload', 'path': '/mnt/efs', 'chunk_data': {'dzuuid': '10f726ea-ae1d-4363-9a97-4bf6772cd4df', 'dzchunkindex': '0', 'dzchunksize': '1000000', 'dztotalchunkcount': '1', 'dzchunkbyteoffset': '0', 'filename': 'Log at 2020-08-11 12-17-21 PM.txt', 'content': '(Emitted value instead of an instance of Error)'}}\"
+
+          \    path = event['path']
+
+          \    filename = event['chunk_data']['filename']
+
+          \    file_content_decoded = base64.b64decode(event['chunk_data']['content'])
+
+          \    current_chunk = int(event['chunk_data']['dzchunkindex'])
+
+          \    save_path = os.path.join(path, filename)
+
+
+          \    if os.path.exists(save_path) and current_chunk == 0:
+
+          \        return {\"message\": \"File already exists\", \"statusCode\": 400}
+
+
+          \    try:
+
+          \        with open(save_path, 'ab') as f:
+
+          \            f.seek(int(event['chunk_data']['dzchunkbyteoffset']))
+
+          \            f.write(file_content_decoded)
+
+          \    except OSError as error:
+
+          \        print('Could not write to file: {error}'.format(error=error))
+
+          \        return {\"message\": \"couldn't write the file to disk\", \"statusCode\": 500}
+
+
+          \    total_chunks = int(event['chunk_data']['dztotalchunkcount'])
+
+
+          \    if current_chunk + 1 == total_chunks:
+
+          \        if int(os.path.getsize(save_path)) != int(event['chunk_data']['dztotalfilesize']):
+
+          \            print(\"File {filename} was completed, but there is a size mismatch. Was {size} but expected {total}\".format(filename=filename, size=os.path.getsize(save_path), total=event['chunk_data']['dztotalfilesize']))
+
+          \            return {\"message\": \"Size mismatch\", \"statusCode\": 500}
+
+          \        else:
+
+          \            print(\"file {filename} has been uploaded successfully\".format(filename=filename))
+
+          \            return {\"message\": \"File uploaded successfuly\", \"statusCode\": 200}
+
+          \    else:
+
+          \        print(\"Chunk {current_chunk} of {total_chunks} for file {filename} complete\".format(current_chunk=current_chunk + 1 , total_chunks=total_chunks, filename=filename))
+
+          \        return {\"message\": \"Chunk upload successful\", \"statusCode\": 200}
+
+
+
+          def download(event):
+
+          \    # first call {\"path\": \"./\", \"filename\": \"test.txt\"}
+
+          \    # successive calls
+
+          \    # {\"path\": \"./\", \"filename\": \"test_video.mp4\", \"chunk_data\": {'dzchunkindex': chunk['dzchunkindex'],
+
+          \    # 'dzchunkbyteoffset': chunk['dzchunkbyteoffset']}}
+
+          \    path = event['path']
+
+          \    filename = event['filename']
+
+          \    file_path = os.path.join(path, filename)
+
+          \    chunk_size = 2000000  # bytes
+
+          \    file_size = os.path.getsize(file_path)
+
+          \    chunks = math.ceil(file_size / chunk_size)
+
+
+          \    if \"chunk_data\" in event:
+
+          \        start_index = event['chunk_data']['dzchunkbyteoffset']
+
+          \        current_chunk = event['chunk_data']['dzchunkindex']
+
+          \        try:
+
+          \            with open(file_path, 'rb') as f:
+
+          \                f.seek(start_index)
+
+          \                file_content = f.read(chunk_size)
+
+          \                encoded_chunk_content = str(base64.b64encode(file_content), 'utf-8')
+
+          \                chunk_offset = start_index + chunk_size
+
+          \                chunk_number = current_chunk + 1
+
+
+          \                return {\"dzchunkindex\": chunk_number, \"dztotalchunkcount\": chunks, \"dzchunkbyteoffset\": chunk_offset,
+
+          \                        \"chunk_data\": encoded_chunk_content, \"dztotalfilesize\": file_size}
+
+          \        except OSError as error:
+
+          \            print('Could not read file: {error}'.format(error=error))
+
+          \            return {\"message\": \"couldn't read the file from disk\", \"statusCode\": 500}
+
+
+          \    else:
+
+          \        start_index = 0
+
+          \        try:
+
+          \            with open(file_path, 'rb') as f:
+
+          \                f.seek(start_index)
+
+          \                file_content = f.read(chunk_size)
+
+          \                encoded_chunk_content = str(base64.b64encode(file_content), 'utf-8')
+
+          \                chunk_number = 0
+
+          \                chunk_offset = chunk_size
+
+
+          \                return {\"dzchunkindex\": chunk_number, \"dztotalchunkcount\": chunks, \"dzchunkbyteoffset\": chunk_offset,
+
+          \                        \"chunk_data\": encoded_chunk_content, \"dztotalfilesize\": file_size}
+
+
+          \        except OSError as error:
+
+          \            print('Could not read file: {error}'.format(error=error))
+
+          \            return {\"message\": \"couldn't read the file from disk\", \"statusCode\": 500}
+
+
+
+          def list(path):
+
+          \    # get path to list
+
+          \    # try:
+
+          \    #     path = event['path']
+
+          \    # except KeyError:
+
+          \    #     return {\"message\": \"missing required parameter: path\", \"statusCode\": 400}
+
+
+          \    try:
+
+          \        dir_items = []
+
+          \        file_items = []
+
+          \        for (dirpath, dirnames, filenames) in os.walk(path):
+
+          \            dir_items.extend(dirnames)
+
+          \            file_items.extend(filenames)
+
+          \            break
+
+          \    except Exception as error:
+
+          \        print(error)
+
+          \        return {\"message\": \"unable to list files\", \"statusCode\": 500}
+
+          \    else:
+
+          \        return {\"path\": path, \"directories\": dir_items, \"files\": file_items, \"statusCode\": 200}
+
+
+
+          def handler(event, _context):
+
+          \    # get operation type
+
+          \    try:
+
+          \        operation_type = event['operation']
+
+          \        path = event['path']
+
+          \    except KeyError:
+
+          \        return {\"message\": \"missing required parameter: operation\", \"statusCode\": 400}
+
+          \    else:
+
+          \        if operation_type == 'upload':
+
+          \            upload_result = upload(event)
+
+          \            return upload_result
+
+          \        if operation_type == 'list':
+
+          \            list_result = list(path)
+
+          \            return list_result
+
+          \        if operation_type == 'delete':
+
+          \            delete_result = delete(event)
+
+          \            return delete_result
+
+          \        if operation_type == 'make_dir':
+
+          \            make_dir_result = make_dir(event)
+
+          \            return make_dir_result
+
+          \        if operation_type == 'download':
+
+          \            download_result = download(event)
+
+          \            return download_result
+
+          \       \ 
+
+          \        "
+      FileSystemConfigs:
+        - Arn:
+            Fn::Join:
+              - ""
+              - - arn:aws:elasticfilesystem:us-east-2:734818840861:access-point/
+                - Ref: vfsvfsAccessPointA97EC7A7
+          LocalMountPath: /mnt/efs
+      FunctionName:
+        Fn::Join:
+          - ""
+          - - vfs-
+            - Ref: vfsID
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - VFSLambdaServiceRole600D85E0
+          - Arn
+      Runtime: python3.8
+      Timeout: 30
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::GetAtt:
+              - VFSLambdaSecurityGroupD84993EA
+              - GroupId
+        SubnetIds:
+          - subnet-0f2aacdfca19331f7
+          - subnet-00eeb19f8c08802bd
+    DependsOn:
+      - ClusterSGfromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049F8DB3346
+      - vfsEfsMountTargetPrivateSubnet12A54EF59
+      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+      - VFSLambdaServiceRoleDefaultPolicyDCB78257
+      - VFSLambdaServiceRole600D85E0
+    Metadata:
+      aws:cdk:path: EfsBasicStack/VFSLambda/Resource
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/1WNwQrCMBBEv6X3dLUV9CyCN2lovUuMW41tEslukFL67zaKoKfhMY+ZEopyDctMPSnXly7vzRnGhpXuxK51UgVlkTGIGsnHoFHM4glbgnFvemwGYrTJ/KeDj46PKlyRxVZrJJLeOE7VD06Jq8iP+G6+F5OQA9+8W6ygKGCT3cmYPMyDxiLUn3wBwTx9wbcAAAA=
+      Analytics: v2:deflate64:H4sIAAAAAAAA/11PXUsDMRD8LX3fi94J+iyC4oN43Pku6XZbt81HSTbIEfLfzUUF69PMzgzDzqD64VZdb/Rn7HB36gxvVZ5F4wke9m7UQVsSCjBR9CkgQQ2+Z8JB5erPhCmwLE/Bp/OzOwSKES5E+J8qQPuo8iMbmpcoZNfE5fXik5M3HQ4kcI9YO0fPTlbrz1nAaLvd6dqVHAp715p+eAHWVuXJG1rlhqM3jEvb1VgpK39Nck6t/HdjgXGRD++ublTfq7vNMTJ3of7EltT0jV92cEpfOAEAAA==
     Metadata:
       aws:cdk:path: EfsBasicStack/CDKMetadata/Default
 Outputs:

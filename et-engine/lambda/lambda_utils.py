@@ -41,6 +41,7 @@ def get_tool_components(tool_id, keys):
     
 
 def to_hierarchy(directory_contents):
+    """Takes an s3-style list of keys and turns it into a hierarchical dict-based directory structure"""
     files = []
     for obj in directory_contents['Contents']:
         files.append(obj['Key'])

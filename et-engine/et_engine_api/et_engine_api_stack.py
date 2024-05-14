@@ -276,23 +276,23 @@ class API(Stack):
         )
 
         # VFS-specific Resources
-        file_system = efs.FileSystem(
-            self,
-            "TESTEfsFileSystem",
-            vpc = self.vpc,
-            security_group=security_group
-        )
-        file_system.add_to_resource_policy(
-            iam.PolicyStatement(
-                actions = ["elasticfilesystem:*"],
-                effect=iam.Effect.ALLOW,
-                principals=[iam.AnyPrincipal()]
-            )
-        )
-        access_point = file_system.add_access_point(
-            "AP",
-            path="/",
-        )
+        # file_system = efs.FileSystem(
+        #     self,
+        #     "TESTEfsFileSystem",
+        #     vpc = self.vpc,
+        #     security_group=security_group
+        # )
+        # file_system.add_to_resource_policy(
+        #     iam.PolicyStatement(
+        #         actions = ["elasticfilesystem:*"],
+        #         effect=iam.Effect.ALLOW,
+        #         principals=[iam.AnyPrincipal()]
+        #     )
+        # )
+        # access_point = file_system.add_access_point(
+        #     "AP",
+        #     path="/",
+        # )
 
         # Tool-Specific Resources (or do these need to be configured on the fly?)
         # temp_task_definition = ecs.Ec2TaskDefinition(
@@ -367,8 +367,8 @@ class API(Stack):
         #     key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin"),
         #     vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
         # )
-
         # file_system.connections.allow_default_port_from(instance)
+        # file_system.grant_read_write(instance)
         # instance.connections.allow_from_any_ipv4(ec2.Port.tcp(22))
         # instance.user_data.add_commands(
         #     "echo 'STARTING USER COMMANDS'"
@@ -383,6 +383,7 @@ class API(Stack):
         #     'mkdir -p "${efs_mount_point_1}"',
         #     "echo 'MOUNTING'",
         #     'sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${file_system_id_1}:/ ${efs_mount_point_1}',
+        #     "sudo chmod go+rw ${efs_mount_point_1}",
         #     "echo 'SUCCESS!'",
         #     # See here for commands to install docker on command https://medium.com/appgambit/part-1-running-docker-on-aws-ec2-cbcf0ec7c3f8
         # )
@@ -605,7 +606,9 @@ class API(Stack):
                     "cloudformation:CreateStack",
                     "elasticfilesystem:*",
                     "ec2:*",
-                    "ssm:*"
+                    "ssm:*",
+                    'iam:*',
+                    'lambda:*'
                 ],
                 resources=['*']
             )
@@ -797,7 +800,8 @@ class API(Stack):
         vfs_id_list_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    's3:ListBucket'
+                    's3:ListBucket',
+                    'lambda:InvokeFunction'
                 ],
                 resources=['*']
             )

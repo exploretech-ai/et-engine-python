@@ -55,7 +55,7 @@ def handler(event, context):
 
         # >>>>>
         print('Registering Task')
-        container_mount_point = "/data"
+        container_mount_point = "/mnt/efs"
         container_name = "tool-" + tool_id + "-TEST"
 
         mount_points = []
@@ -111,12 +111,6 @@ def handler(event, context):
             )
             volume_number += 1
         print(mount_points, volumes)
-
-
-        # volume_name = "efs"
-        # file_system_id = "fs-055040c5bf7d34d30"
-        # access_point_id = "fsap-0c130b5a9e4235026"
-        
 
         role_arn = "arn:aws:iam::734818840861:role/ETEngineAPI706397EC-ECSTaskRoleF2ADB362-6bXEZofBdhmg"
         memory = "512"
