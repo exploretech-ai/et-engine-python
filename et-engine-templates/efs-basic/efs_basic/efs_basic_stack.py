@@ -3,12 +3,15 @@ from aws_cdk import (
     CfnOutput,
     CfnParameter,
     Duration,
+    RemovalPolicy,
     aws_efs as efs,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_autoscaling as autoscaling,
     aws_ecs as ecs,
-    aws_lambda as _lambda
+    aws_lambda as _lambda,
+    aws_s3 as s3,
+    aws_s3_notifications as s3n,
 )
 from constructs import Construct
 
@@ -53,6 +56,15 @@ class EfsBasicStack(Stack):
         access_point = file_system.add_access_point(
             "vfsAccessPoint",
             path="/",
+            create_acl=efs.Acl(
+                owner_gid="0",
+                owner_uid="0",
+                permissions="777"
+            ),
+            posix_user=efs.PosixUser(
+                uid="0",
+                gid="0"
+            )
         )
 
         
@@ -125,6 +137,9 @@ import os
 import base64
 import math
 import json
+import boto3
+import shutil
+
 # File manager operation events:
 # list: {"operation": "list", "path": "$dir"}
 # upload: {"operation": "upload", "path": "$dir", "form_data": "$form_data"}
@@ -161,37 +176,81 @@ def make_dir(event):
 
 
 def upload(event):
+    print("UPLOAD REQUESTED")
     print(event)
-    "{'operation': 'upload', 'path': '/mnt/efs', 'chunk_data': {'dzuuid': '10f726ea-ae1d-4363-9a97-4bf6772cd4df', 'dzchunkindex': '0', 'dzchunksize': '1000000', 'dztotalchunkcount': '1', 'dzchunkbyteoffset': '0', 'filename': 'Log at 2020-08-11 12-17-21 PM.txt', 'content': '(Emitted value instead of an instance of Error)'}}"
-    path = event['path']
-    filename = event['chunk_data']['filename']
-    file_content_decoded = base64.b64decode(event['chunk_data']['content'])
-    current_chunk = int(event['chunk_data']['dzchunkindex'])
-    save_path = os.path.join(path, filename)
 
-    if os.path.exists(save_path) and current_chunk == 0:
-        return {"message": "File already exists", "statusCode": 400}
+    s3_bucket = event['Records'][0]['s3']['bucket']['name']
+    s3_key = event['Records'][0]['s3']['object']['key']
+
+    # Set the download path in the /tmp directory
+    download_path = '/tmp/' + os.path.basename(s3_key)
+
+    # Create an S3 client
+    s3_client = boto3.client('s3')
 
     try:
-        with open(save_path, 'ab') as f:
-            f.seek(int(event['chunk_data']['dzchunkbyteoffset']))
-            f.write(file_content_decoded)
-    except OSError as error:
-        print('Could not write to file: {error}'.format(error=error))
-        return {"message": "couldn't write the file to disk", "statusCode": 500}
+        # Download the file from S3
+        s3_client.download_file(s3_bucket, s3_key, download_path)
+        print(f"File downloaded: {download_path}")
+    except Exception as e:
+        print(f"Error downloading file: {str(e)}")
 
-    total_chunks = int(event['chunk_data']['dztotalchunkcount'])
+    # # Additional logic
+    # with open(download_path, 'r') as file:
+    #     file_content = file.read()
+    #     print(f"File content: {file_content}")
 
-    if current_chunk + 1 == total_chunks:
-        if int(os.path.getsize(save_path)) != int(event['chunk_data']['dztotalfilesize']):
-            print("File {filename} was completed, but there is a size mismatch. Was {size} but expected {total}".format(filename=filename, size=os.path.getsize(save_path), total=event['chunk_data']['dztotalfilesize']))
-            return {"message": "Size mismatch", "statusCode": 500}
-        else:
-            print("file {filename} has been uploaded successfully".format(filename=filename))
-            return {"message": "File uploaded successfuly", "statusCode": 200}
-    else:
-        print("Chunk {current_chunk} of {total_chunks} for file {filename} complete".format(current_chunk=current_chunk + 1 , total_chunks=total_chunks, filename=filename))
-        return {"message": "Chunk upload successful", "statusCode": 200}
+    # Move the file to the /mnt/efs directory
+    destination_path = '/mnt/efs/' + os.path.basename(s3_key)
+    try:
+        print(download_path, destination_path)
+        print(os.listdir('/tmp/'))
+        print(os.listdir('/mnt/efs/'))
+        shutil.move(download_path, destination_path)
+        print(f"File moved to: {destination_path}")
+    except Exception as e:
+        print(f"Error moving file: {str(e)}")
+        
+    # print("After : ", os.listdir("/mnt/efs"))
+    
+    # Add more logic here as needed
+    
+    return {
+        'statusCode': 200,
+        'message': 'File downloaded and moved successfully',
+        'body': json.dumps(event)
+    }
+
+    # "{'operation': 'upload', 'path': '/mnt/efs', 'chunk_data': {'dzuuid': '10f726ea-ae1d-4363-9a97-4bf6772cd4df', 'dzchunkindex': '0', 'dzchunksize': '1000000', 'dztotalchunkcount': '1', 'dzchunkbyteoffset': '0', 'filename': 'Log at 2020-08-11 12-17-21 PM.txt', 'content': '(Emitted value instead of an instance of Error)'}}"
+    # path = event['path']
+    # filename = event['chunk_data']['filename']
+    # file_content_decoded = base64.b64decode(event['chunk_data']['content'])
+    # current_chunk = int(event['chunk_data']['dzchunkindex'])
+    # save_path = os.path.join(path, filename)
+
+    # if os.path.exists(save_path) and current_chunk == 0:
+    #     return {"message": "File already exists", "statusCode": 400}
+
+    # try:
+    #     with open(save_path, 'ab') as f:
+    #         f.seek(int(event['chunk_data']['dzchunkbyteoffset']))
+    #         f.write(file_content_decoded)
+    # except OSError as error:
+    #     print('Could not write to file: {error}'.format(error=error))
+    #     return {"message": "couldn't write the file to disk", "statusCode": 500}
+
+    # total_chunks = int(event['chunk_data']['dztotalchunkcount'])
+
+    # if current_chunk + 1 == total_chunks:
+    #     if int(os.path.getsize(save_path)) != int(event['chunk_data']['dztotalfilesize']):
+    #         print("File {filename} was completed, but there is a size mismatch. Was {size} but expected {total}".format(filename=filename, size=os.path.getsize(save_path), total=event['chunk_data']['dztotalfilesize']))
+    #         return {"message": "Size mismatch", "statusCode": 500}
+    #     else:
+    #         print("file {filename} has been uploaded successfully".format(filename=filename))
+    #         return {"message": "File uploaded successfuly", "statusCode": 200}
+    # else:
+    #     print("Chunk {current_chunk} of {total_chunks} for file {filename} complete".format(current_chunk=current_chunk + 1 , total_chunks=total_chunks, filename=filename))
+    #     return {"message": "Chunk upload successful", "statusCode": 200}
 
 
 def download(event):
@@ -265,8 +324,12 @@ def list(path):
 def handler(event, _context):
     # get operation type
     try:
-        operation_type = event['operation']
-        path = event['path']
+        if "Records" in event:
+            operation_type = "upload"
+            path = None
+        else:
+            operation_type = event['operation']
+            path = event['path']
     except KeyError:
         return {"message": "missing required parameter: operation", "statusCode": 400}
     else:
@@ -299,11 +362,40 @@ def handler(event, _context):
             filesystem = _lambda.FileSystem.from_efs_access_point(
                 access_point,
                 "/mnt/efs"
-            )
+            ),
         )
         # TODO
         # - S3 buckets and trigger
-
+        upload_bucket = s3.Bucket(
+            self,
+            "UploadBucket",
+            auto_delete_objects = True,
+            removal_policy=RemovalPolicy.DESTROY,
+            bucket_name = "vfs-" + vfs_id,
+            lifecycle_rules=[
+                s3.LifecycleRule(
+                    expiration=Duration.days(1)
+                )
+            ]
+        )
+        upload_bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED, 
+            s3n.LambdaDestination(list_lambda_function),
+            # s3.NotificationKeyFilter(
+            #     prefix="uploads/"
+            # )
+        )
+        list_lambda_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:*'
+                ],
+                resources=[
+                    upload_bucket.bucket_arn,
+                    upload_bucket.bucket_arn + "/*"
+                ]
+            )
+        )
         # <<<<<
 
 

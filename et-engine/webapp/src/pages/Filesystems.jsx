@@ -1,9 +1,10 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, act} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
 import Navbar from "../components/Navbar";
 import Directory from "../components/Directory";
 import './Filesystems.css'
 import Page from "./Page";
+import FilesDragAndDrop from "../components/FilesDragAndDrop"
 
 class VFS {
     constructor(name, id) {
@@ -61,6 +62,8 @@ const Filesystems = () => {
         await fetchData()
     }, [])
 
+
+
     // const map1 = 
     // console.log(vfsData.map(element => element.name))
     return (
@@ -68,7 +71,9 @@ const Filesystems = () => {
             <h2>Available Filesystems</h2>
             <div className="vfs-panel">
                 <Navbar resourceList={vfsData} activeResource={activeVFS} setActiveResource={setActiveVFS} style={{flex: 1}}/>
-                <Directory style={{flex: 5}} idToken={idToken} resource={activeVFS} command={"/list"}/>
+                <FilesDragAndDrop activeVFS={activeVFS} idToken={idToken}>
+                    <Directory style={{flex: 5}} idToken={idToken} resource={activeVFS} command={"/list"}/>
+                </FilesDragAndDrop>
             </div>
         </Page>
     )

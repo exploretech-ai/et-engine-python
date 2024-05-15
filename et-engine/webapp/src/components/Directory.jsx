@@ -117,7 +117,7 @@ const Directory = ({style, resource, command, idToken}) => {
                 
             })
             .then( files => {
-                console.log(files)
+                // console.log(files)
                 setContents(files)
                 // setDirectory(files)
                 // setCurrentDirectory(files)

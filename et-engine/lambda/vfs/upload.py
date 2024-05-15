@@ -25,6 +25,7 @@ def handler(event, context):
 
         # Create presigned post
         s3 = boto3.client('s3', region_name="us-east-2")
+
         bucket_name = "vfs-" + vfs_id
         presigned_post = s3.generate_presigned_post(
             Bucket=bucket_name, 
@@ -32,6 +33,9 @@ def handler(event, context):
             # Fields={"Content-Type": "multipart/form-data"},
             ExpiresIn=3600
         )    
+
+
+        
         return {
             'statusCode': 200,
             'headers': {
