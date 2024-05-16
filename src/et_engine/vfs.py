@@ -4,6 +4,41 @@ import os
 
 API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
 
+def create(name):	
+    """Creates a new Tool	
+        
+    Parameters	
+    ----------	
+    name : string	
+        Name of the tool	
+    description : string	
+        Plain text description of the tool	
+    Returns	
+    -------	
+    Tool	
+        A Tool object connected to the newly-created tool	
+    Raises	
+    ------	
+    Warnings	
+    --------	
+    The API works, but the method does not yet return a connected "Tool" object	
+    """	
+
+    # API Request	
+    status = requests.post(	
+        API_ENDPOINT + "vfs",
+        data=json.dumps({	
+            "name": name
+        }), 	
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+    )
+
+    if status.ok:
+        return status
+    else:
+        print(status)
+        raise Exception('Create failed')
+
 
 def connect(vfs_name):
     # How to know whether the request is from a Tool or not?
@@ -44,28 +79,27 @@ def connect(vfs_name):
     # ================================================================================
     
 def delete(name):	
-        """deletes the specified VFS	
-        	
-        Parameters	
-        ----------	
-        name : string	
-            Name of the VFS to delete	
-        """	
-        status = requests.delete(	
-            API_ENDPOINT + "vfs", 
-            params={'name':name},	
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
-        )	
+    """deletes the specified VFS	
+        
+    Parameters	
+    ----------	
+    name : string	
+        Name of the VFS to delete	
+    """	
+    status = requests.delete(	
+        API_ENDPOINT + "vfs", 
+        params={'name':name},	
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+    )	
 
-        if status.ok:
-            return status
-        else:
-            raise Exception('Delete failed')
+    if status.ok:
+        return status
+    else:
+        raise Exception('Delete failed')
         
 
 
-def list():
-    pass
+
 
 
 class VirtualFileSystem:
@@ -150,4 +184,16 @@ class VirtualFileSystem:
     def file(self, file_name):
         """Returns the path of the file"""
         pass
+
+    def list(self):
+        status = requests.get(	
+            self.url + "/list", 
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
+        )	
+
+        if status.ok:
+            return status
+        else:
+            print(status)
+            raise Exception('List failed')
 
