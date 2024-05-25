@@ -2,7 +2,7 @@ import boto3
 import json    
 import lambda_utils
 import db
-
+import uuid
 
 def fetch_available_vfs(user, cursor):
                     
@@ -135,12 +135,13 @@ def handler(event, context):
                 'logDriver': 'awslogs',
                 'options': {
                     'awslogs-region': "us-east-2" ,
-                    'awslogs-group': "EngineLogGroup"
+                    'awslogs-group': "EngineLogGroup",
+                    "awslogs-stream-prefix": str(uuid.uuid4())
                 }
             },
             'mountPoints': mount_points,
-            'memory': hardware['memory'],
-            'cpu': hardware['cpu'],
+            # 'memory': hardware['memory'],
+            # 'cpu': hardware['cpu'],
         }
         if hardware['gpu']:
             print('ADDING GPU')
@@ -158,7 +159,9 @@ def handler(event, context):
             taskRoleArn=role_arn,
             executionRoleArn=role_arn,
             containerDefinitions=[container_definition],
-            volumes=volumes
+            volumes=volumes,
+            memory=str(hardware['memory']),
+            cpu=str(hardware['cpu'])
         )
         print(f"Task Definition: {task_def}")
 
