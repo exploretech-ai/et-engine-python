@@ -121,6 +121,7 @@ class VirtualFileSystem:
         vfs_id : string
             id associated with the VFS of interest
         """
+        self.id = vfs_id
         self.url = API_ENDPOINT + f"vfs/{vfs_id}"
 
     def file_exists(self):

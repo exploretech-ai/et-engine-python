@@ -208,7 +208,6 @@ class Tool:
         return upload_response
     
 
-# >>>>>
 class Hardware:
     def __init__(self, filesystems=[], memory=512, cpu=1, gpu=None):
         """
@@ -231,4 +230,3 @@ class Hardware:
         }
         return json.dumps(json_dict)
 
-# <<<<<
