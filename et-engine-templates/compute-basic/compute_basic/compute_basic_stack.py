@@ -100,7 +100,8 @@ def handler(event, context):
                     "AWS_ACCOUNT_ID": codebuild.BuildEnvironmentVariable(
                         value="734818840861"
                     )
-                }
+                },
+                build_image=codebuild.LinuxBuildImage.STANDARD_5_0
             ),
             subnet_selection=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PUBLIC
