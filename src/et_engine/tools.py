@@ -143,9 +143,15 @@ class Tool:
         """
 
         # If hardware is in kwargs:
+        
 
         if kwargs:
+            if 'hardware' in kwargs:
+                assert isinstance(kwargs['hardware'], Hardware)
+                kwargs['hardware'] = kwargs['hardware'].to_json()
+
             data = json.dumps(kwargs)
+
         else:
             data = None
 
@@ -200,3 +206,29 @@ class Tool:
                 files=files
             )
         return upload_response
+    
+
+# >>>>>
+class Hardware:
+    def __init__(self, filesystems=[], memory=512, cpu=1, gpu=None):
+        """
+        Creates a hardware configuration object
+        """
+        self.filesystems = filesystems
+        self.memory = memory
+        self.cpu = cpu
+        self.gpu = gpu
+
+    def to_json(self):
+        """
+        Converts the class instance to a json string that can be passed to The Engine
+        """
+        json_dict = {
+            'filesystems': self.filesystems,
+            'memory': self.memory,
+            'cpu': self.cpu,
+            'gpu': self.gpu
+        }
+        return json.dumps(json_dict)
+
+# <<<<<
