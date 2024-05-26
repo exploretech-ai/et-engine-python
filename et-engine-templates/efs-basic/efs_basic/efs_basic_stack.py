@@ -68,15 +68,6 @@ class EfsBasicStack(Stack):
         )
 
         
-        # >>>>>
-        # Lambda function with all get/upload/download/etc, mounted to the FS above.
-        # https://github.com/aws-solutions/simple-file-manager-for-amazon-efs/blob/main/source/api/chalicelib/efs_lambda.py
-
-        # Might be easier to keep EFS i/o through an intermediate lambda function (until the files get too big)
-        # This architecture 
-        # https://medium.com/@karantyagi1501/s3-to-efs-elastic-file-system-with-aws-lambda-8da338cbd3f3
-
-        
         list_lambda_code = """
 import os
 import base64
@@ -278,9 +269,9 @@ def handler(event, _context):
         upload_bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED, 
             s3n.LambdaDestination(list_lambda_function),
-            # s3.NotificationKeyFilter(
-            #     prefix="uploads/"
-            # )
+            s3.NotificationKeyFilter(
+                prefix="./"
+            )
         )
         list_lambda_function.add_to_role_policy(
             iam.PolicyStatement(
@@ -295,7 +286,13 @@ def handler(event, _context):
         )
         upload_bucket.add_cors_rule(
             allowed_origins=["*"],
-            allowed_methods=[s3.HttpMethods.GET],
+            allowed_methods=[
+                s3.HttpMethods.PUT,
+                s3.HttpMethods.POST,
+                s3.HttpMethods.GET,
+                s3.HttpMethods.DELETE,
+                s3.HttpMethods.HEAD,
+            ],
             allowed_headers=["*"],
             max_age=3000,
         )

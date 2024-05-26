@@ -24,6 +24,9 @@ def handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps(f'Parse Error: {e}')
         }
 
@@ -48,6 +51,9 @@ def handler(event, context):
             print(f"VFS {vfs_name} already exists")
             return {
                 'statusCode': 500,
+                    'headers': {
+                    'Access-Control-Allow-Origin': '*'
+                },
                 'body': json.dumps(f"Failed: '{vfs_name}' already exists")
             }
         
@@ -98,6 +104,9 @@ def handler(event, context):
 
             return {
                 'statusCode': 200,
+                    'headers': {
+                    'Access-Control-Allow-Origin': '*'
+                },
                 'body': json.dumps(f"VFS '{vfs_name}' created")
             }
         
@@ -105,6 +114,9 @@ def handler(event, context):
         print(f"ERROR: {e}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps(f'Creation Error: {e}')
         }
     finally:

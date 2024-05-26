@@ -29,7 +29,7 @@ def handler(event, context):
         bucket_name = "vfs-" + vfs_id
         presigned_post = s3.generate_presigned_post(
             Bucket=bucket_name, 
-            Key=key,
+            Key="./" + key,
             # Fields={"Content-Type": "multipart/form-data"},
             ExpiresIn=3600
         )    

@@ -15,6 +15,7 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
         // GET request to API (where configuration is done and presigned URL is returned)
         // console.log(activeVFS)
         // console.log(idToken)
+        console.log(files)
         Array.from(files).forEach(file => {
         fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + activeVFS.id, {
@@ -26,6 +27,7 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
             }
         ).then(response => {
             if (response.ok) {
+              console.log('bucket post successful')
                 return response.json()
             } else {
                 return "ERROR"
@@ -36,15 +38,27 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
             Object.keys(presignedUrl.fields).forEach(key => data.append(key, presignedUrl.fields[key]))
             data.append('file', file)
 
+            console.log(presignedUrl)
+
             fetch(presignedUrl.url, {
                 method: 'POST',
                 body: data
-                })
-                .then(response => response.json())
-                .then(response => console.log(response))
-                .catch(error => console.error(error))
-            })  
-            .catch(error => console.error(error))
+            })
+            .then(response => {
+              if (response.ok) {
+                return response
+              } else {
+                throw new Error('something went wrong')
+              }
+            })
+            .then(response => {
+              console.log(response)
+            })
+            .catch(error => {
+              console.error(error)
+            })
+          })  
+          .catch(error => console.error(error))
         })
     }
 
@@ -79,6 +93,7 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
 
     const {files} = e.dataTransfer
     if (files && files.length) { 
+        console.log('Uploading files: ', files)
         onUpload(files)
     }
   }

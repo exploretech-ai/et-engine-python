@@ -535,7 +535,11 @@ Resources:
           - AllowedHeaders:
               - "*"
             AllowedMethods:
+              - PUT
+              - POST
               - GET
+              - DELETE
+              - HEAD
             AllowedOrigins:
               - "*"
             MaxAge: 3000
@@ -609,6 +613,11 @@ Resources:
         LambdaFunctionConfigurations:
           - Events:
               - s3:ObjectCreated:*
+            Filter:
+              Key:
+                FilterRules:
+                  - Name: prefix
+                    Value: ./
             LambdaFunctionArn:
               Fn::GetAtt:
                 - VFSLambda5FAABBC2
