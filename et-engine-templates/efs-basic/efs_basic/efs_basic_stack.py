@@ -97,14 +97,12 @@ def delete(event):
 
 
 def make_dir(event):
-    print(event)
+    print('NEW DIRECTORY REQUESTED')
     path = event['path']
-    name = event['name']
-
-    new_dir = path + '/' + name
+    print(f"path={path}")
 
     try:
-        os.mkdir(new_dir)
+        os.mkdir(path)
     except OSError:
         return {"message": "couldn't create the directory", "statusCode": 500}
     else:
@@ -231,7 +229,7 @@ def handler(event, _context):
         if operation_type == 'delete':
             delete_result = delete(event)
             return delete_result
-        if operation_type == 'make_dir':
+        if operation_type == 'mkdir':
             make_dir_result = make_dir(event)
             return make_dir_result
         if operation_type == 'download':

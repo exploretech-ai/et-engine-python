@@ -846,6 +846,47 @@ class API(Stack):
             )
         )
 
+        vfs_id_mkdir = vfs_id.add_resource("mkdir")
+        vfs_id_mkdir_lambda = _lambda.Function(
+            self, 'vfs-mkdir-directory',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.mkdir.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs_id_mkdir.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(vfs_id_mkdir_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(vfs_id_mkdir_lambda)
+        vfs_id_mkdir_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket',
+                    'lambda:InvokeFunction'
+                ],
+                resources=['*']
+            )
+        )
+
 
         # TOOLS API METHODS
         tools = self.api.root.add_resource("tools")

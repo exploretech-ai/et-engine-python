@@ -228,19 +228,16 @@ Resources:
 
           def make_dir(event):
 
-          \    print(event)
+          \    print('NEW DIRECTORY REQUESTED')
 
           \    path = event['path']
 
-          \    name = event['name']
-
-
-          \    new_dir = path + '/' + name
+          \    print(f\"path={path}\")
 
 
           \    try:
 
-          \        os.mkdir(new_dir)
+          \        os.mkdir(path)
 
           \    except OSError:
 
@@ -474,7 +471,7 @@ Resources:
 
           \            return delete_result
 
-          \        if operation_type == 'make_dir':
+          \        if operation_type == 'mkdir':
 
           \            make_dir_result = make_dir(event)
 

@@ -2,7 +2,7 @@ import React from "react"
 import './Navbar.css'
 
 
-const Navbar = ({resourceList, activeResource, setActiveResource, style}) => {
+const Navbar = ({resourceList, activeResource, setActiveResource, setFilesLoading, setPath, style}) => {
 
     // Navbar states
     // Default state
@@ -10,6 +10,12 @@ const Navbar = ({resourceList, activeResource, setActiveResource, style}) => {
 
     const handleTabClick = (resource) => {
         setActiveResource(resource); // Update active tab state when clicked
+        if (setFilesLoading) {
+            setFilesLoading(true)
+        }
+        if (setPath) {
+            setPath(['.'])
+        }
       };
 
     const tabs = []

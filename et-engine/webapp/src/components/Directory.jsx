@@ -74,12 +74,13 @@ const FileComponent = ({name, path, vfsId, idToken}) => {
     )
 }
 
-const FolderComponent = ({name, path, setPath}) => {
+const FolderComponent = ({name, path, setPath, setLoading}) => {
 
     const handleClick = () => {
         // setCurrentDirectory(directory)
         // console.log()
         setPath([...path, name])
+        setLoading(true)
     }
 
     return(
@@ -90,7 +91,7 @@ const FolderComponent = ({name, path, setPath}) => {
     )
 }
 
-const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, style}) => {
+const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, setLoading, style}) => {
 
     const components = []
 
@@ -102,6 +103,7 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, st
                     path={path} 
                     setPath={setPath}
                     key={dir}
+                    setLoading={setLoading}
                 />
             )
         }
@@ -127,13 +129,14 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, st
     )
 }
 
-const CurrentDirectoryPath = ({path, setPath}) => {
+const CurrentDirectoryPath = ({path, setPath, setLoading}) => {
 
     const handleClick = (i) => {
 
         // 
         const newPath = [...path.slice(0, i+1)]
         setPath(newPath);
+        setLoading(true)
 
         // let subfolder = {...directory}
         // for (let i = 1; i < newPath.length; i++){
@@ -162,12 +165,12 @@ const CurrentDirectoryPath = ({path, setPath}) => {
     )
 }
 
-const Directory = ({style, resource, command, idToken}) => {
+const Directory = ({style, resource, command, idToken, loading, setLoading, path, setPath}) => {
 
     // const [directory, setDirectory] = useState(null)
     // const [currentDirectory, setCurrentDirectory] = useState(null)
     // const [currentDirectoryPath, setCurrentDirectoryPath] = useState(null)
-    const [path, setPath] = useState(['.'])
+    
     const [contents, setContents] = useState(null)
 
     useEffect(async () => {
@@ -193,8 +196,10 @@ const Directory = ({style, resource, command, idToken}) => {
             })
             .then( files => {
                 setContents(files)
+                setLoading(false)
             })
             .catch(err => {
+                setLoading(false)
                 console.log(err)
             })
         }
@@ -210,15 +215,21 @@ const Directory = ({style, resource, command, idToken}) => {
                 setPath={setPath}
                 contents={contents}
                 setContents={setContents}
+                setLoading={setLoading}
             />
-            <DirectoryView 
-                path={path} 
-                setPath={setPath}
-                contents={contents}
-                setContents={setContents}
-                vfsId={resource.id}
-                idToken={idToken}
-            />
+            {loading ?
+                <div> Loading contents... </div>
+            :
+                <DirectoryView 
+                    path={path} 
+                    setPath={setPath}
+                    contents={contents}
+                    setContents={setContents}
+                    vfsId={resource.id}
+                    idToken={idToken}
+                    setLoading={setLoading}
+                />
+            }
         </div>
         
     )

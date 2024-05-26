@@ -28,7 +28,7 @@ class Tab {
 
 const ToolContent = ({idToken, activeTool, style}) => {
     
-    const [activeTab, setActiveTab] = useState(new Tab('Code', {...activeTool}))
+    const [activeTab, setActiveTab] = useState(new Tab('Build', {...activeTool}))
 
     useEffect(() => {
         setActiveTab(new Tab(activeTab.name, {...activeTool}))
@@ -37,9 +37,9 @@ const ToolContent = ({idToken, activeTool, style}) => {
     return (
             <div style={style}>
                 <div className="tool-tab" style={style}>
-                    <div onClick={() => setActiveTab(new Tab('Code', {...activeTool}))} className={activeTab.name === 'Code' ? 'active' : ''}>
+                    {/* <div onClick={() => setActiveTab(new Tab('Code', {...activeTool}))} className={activeTab.name === 'Code' ? 'active' : ''}>
                         Code
-                    </div>
+                    </div> */}
                     <div onClick={() => setActiveTab(new Tab('Build', {...activeTool}))} className={activeTab.name === 'Build' ? 'active' : ''}>
                         Build
                     </div>
@@ -47,7 +47,7 @@ const ToolContent = ({idToken, activeTool, style}) => {
                         Tasks
                     </div>
                 </div>
-                {activeTab.name === 'Code' && <CodeTab idToken={idToken} activeTool={activeTool}/>}
+                {/* {activeTab.name === 'Code' && <CodeTab idToken={idToken} activeTool={activeTool}/>} */}
                 {activeTab.name === 'Build' && <BuildTab idToken={idToken} activeTool={activeTool}/>}
                 {activeTab.name === 'Tasks' && <TaskTab idToken={idToken} activeTool={activeTool}/>}
             </div>
@@ -58,6 +58,7 @@ const Tools = () => {
     const [idToken, setIdToken] = useState(null)
     const [activeTool, setActiveTool] = useState(null)
     const [toolData, setToolData] = useState(null)
+    const [loading, setLoading] = useState(true)
 
 
     const fetchData = async () => {
@@ -86,7 +87,11 @@ const Tools = () => {
             setToolData(tools)
             setActiveTool(tools[0])
             setIdToken(session.tokens.idToken.toString())
-        }).catch(error => console.log(error))
+            setLoading(false)
+        }).catch(error => {
+            setLoading(false)
+            console.log(error)
+        })
         
     };
 
@@ -99,10 +104,14 @@ const Tools = () => {
     return (
         <Page name="Tools">
             <h2>Available Tools</h2>
-            <div className="tool-panel">
-                <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} style={{flex: 1}}/>
-                <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
-            </div>
+            {loading ?
+                <div> Loading Tools... </div>
+            :
+                <div className="tool-panel">
+                    <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} style={{flex: 1}}/>
+                    <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
+                </div>
+            }
         </Page>
     )
 

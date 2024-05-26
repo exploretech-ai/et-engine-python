@@ -101,6 +101,9 @@ const Filesystems = () => {
     const [activeVFS, setActiveVFS] = useState(new VFS(null, null))
     const [vfsData, setVfsData] = useState([])
     const [modalOpen, setModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true)
+    const [filesLoading, setFilesLoading] = useState(true)
+    const [path, setPath] = useState(['.'])
 
     const fetchData = async () => {
 
@@ -129,7 +132,9 @@ const Filesystems = () => {
             }
             setVfsData(vfsIds)
             setActiveVFS(vfsIds[0])
+            setLoading(false)
         }).catch(error => {
+            setLoading(false)
             console.log(error)
             return false
         })
@@ -153,12 +158,32 @@ const Filesystems = () => {
                 <h2>Available Filesystems</h2> 
                 <button onClick={openModal}>+ New</button>
             </span>
-            <div className="vfs-panel">
-                <Navbar resourceList={vfsData} activeResource={activeVFS} setActiveResource={setActiveVFS} style={{flex: 1, borderRight: '1px dashed gray'}}/>
-                <FilesDragAndDrop activeVFS={activeVFS} idToken={idToken}>
-                    <Directory style={{flex: 5}} idToken={idToken} resource={activeVFS} command={"/list"}/>
-                </FilesDragAndDrop>
-            </div>
+            {loading ?
+                <div> Loading Filesystems... </div>
+            :
+                <div className="vfs-panel">
+                    <Navbar 
+                        resourceList={vfsData}
+                        activeResource={activeVFS} 
+                        setActiveResource={setActiveVFS} 
+                        setFilesLoading={setFilesLoading} 
+                        setPath={setPath} 
+                        style={{flex: 1, borderRight: '1px dashed gray'}}
+                    />
+                    <FilesDragAndDrop activeVFS={activeVFS} idToken={idToken}>
+                        <Directory 
+                            style={{flex: 5}} 
+                            idToken={idToken} 
+                            resource={activeVFS} 
+                            loading={filesLoading} 
+                            setLoading={setFilesLoading} 
+                            command={"/list"}
+                            path={path}
+                            setPath={setPath}
+                        />
+                    </FilesDragAndDrop>
+                </div>
+            }
             {modalOpen && <Modal setModalOpen={setModalOpen} idToken={idToken}/>}
         </Page>
     )
