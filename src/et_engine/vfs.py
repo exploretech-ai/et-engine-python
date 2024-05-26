@@ -182,9 +182,13 @@ class VirtualFileSystem:
                 for chunk in r.iter_content(chunk_size=None):
                     f.write(chunk)
 
-    def file(self, file_name):
-        """Returns the path of the file"""
-        pass
+    def mkdir(self, path):
+        response = requests.post(
+            self.url + "/mkdir", 
+            data=json.dumps({"path": path}),
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
+        response.raise_for_status()
 
     def list(self):
         status = requests.get(	
