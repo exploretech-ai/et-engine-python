@@ -578,17 +578,6 @@ Resources:
                         - UploadBucketD2C1DA78
                         - Arn
                     - /*
-          - Action: s3:GetObject
-            Effect: Allow
-            Principal:
-              AWS: "*"
-            Resource:
-              Fn::Join:
-                - ""
-                - - Fn::GetAtt:
-                      - UploadBucketD2C1DA78
-                      - Arn
-                  - /*
         Version: "2012-10-17"
     Metadata:
       aws:cdk:path: EfsBasicStack/UploadBucket/Policy/Resource

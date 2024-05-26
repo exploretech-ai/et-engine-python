@@ -293,23 +293,13 @@ def handler(event, _context):
                 ]
             )
         )
-
-
         upload_bucket.add_cors_rule(
             allowed_origins=["*"],
             allowed_methods=[s3.HttpMethods.GET],
             allowed_headers=["*"],
             max_age=3000,
         )
-        upload_bucket.add_to_resource_policy(
-            iam.PolicyStatement(
-                effect = iam.Effect.ALLOW,
-                actions = ['s3:GetObject'],
-                resources = [f"{upload_bucket.bucket_arn}/*"],
-                principals = [iam.AnyPrincipal()]
-            )
-        )
-        # <<<<<
+
 
 
 
