@@ -397,88 +397,62 @@ Resources:
 
           def download(event):
 
-          \    # first call {\"path\": \"./\", \"filename\": \"test.txt\"}
 
-          \    # successive calls
-
-          \    # {\"path\": \"./\", \"filename\": \"test_video.mp4\", \"chunk_data\": {'dzchunkindex': chunk['dzchunkindex'],
-
-          \    # 'dzchunkbyteoffset': chunk['dzchunkbyteoffset']}}
-
-          \    path = event['path']
-
-          \    filename = event['filename']
-
-          \    file_path = os.path.join(path, filename)
-
-          \    chunk_size = 2000000  # bytes
-
-          \    file_size = os.path.getsize(file_path)
-
-          \    chunks = math.ceil(file_size / chunk_size)
+          \    print('DOWNlOAD REQUESTED')
 
 
-          \    if \"chunk_data\" in event:
+          \    try:
 
-          \        start_index = event['chunk_data']['dzchunkbyteoffset']
+          \        key = event['key']
 
-          \        current_chunk = event['chunk_data']['dzchunkindex']
+          \        prefix = event['prefix']
 
-          \        try:
-
-          \            with open(file_path, 'rb') as f:
-
-          \                f.seek(start_index)
-
-          \                file_content = f.read(chunk_size)
-
-          \                encoded_chunk_content = str(base64.b64encode(file_content), 'utf-8')
-
-          \                chunk_offset = start_index + chunk_size
-
-          \                chunk_number = current_chunk + 1
+          \        bucket_name = event['vfs']
 
 
-          \                return {\"dzchunkindex\": chunk_number, \"dztotalchunkcount\": chunks, \"dzchunkbyteoffset\": chunk_offset,
+          \        print(f\"key: {key}\")
 
-          \                        \"chunk_data\": encoded_chunk_content, \"dztotalfilesize\": file_size}
+          \        print(f\"prefix: {prefix}\")
 
-          \        except OSError as error:
-
-          \            print('Could not read file: {error}'.format(error=error))
-
-          \            return {\"message\": \"couldn't read the file from disk\", \"statusCode\": 500}
+          \        print(f\"bucket_name: {bucket_name}\")
 
 
-          \    else:
-
-          \        start_index = 0
-
-          \        try:
-
-          \            with open(file_path, 'rb') as f:
-
-          \                f.seek(start_index)
-
-          \                file_content = f.read(chunk_size)
-
-          \                encoded_chunk_content = str(base64.b64encode(file_content), 'utf-8')
-
-          \                chunk_number = 0
-
-          \                chunk_offset = chunk_size
+          \        file = prefix + key
 
 
-          \                return {\"dzchunkindex\": chunk_number, \"dztotalchunkcount\": chunks, \"dzchunkbyteoffset\": chunk_offset,
+          \        # Copy file to s3
 
-          \                        \"chunk_data\": encoded_chunk_content, \"dztotalfilesize\": file_size}
+          \        s3_client = boto3.client('s3')
+
+          \        s3_client.upload_file(file, bucket_name, key)
 
 
-          \        except OSError as error:
+          \        # Create presigned GET
 
-          \            print('Could not read file: {error}'.format(error=error))
+          \        presigned_url = s3_client.generate_presigned_url(
 
-          \            return {\"message\": \"couldn't read the file from disk\", \"statusCode\": 500}
+          \            'get_object',
+
+          \            Params={'Bucket': bucket_name, 'Key': key},
+
+          \            ExpiresIn=60
+
+          \        )
+
+          \        return {'presigned_url': presigned_url, 'statusCode': 200}
+
+          \    except KeyError as e:
+
+          \        return {'presigned_url': 'KEY_ERROR', 'statusCode': 500}
+
+          \    except Exception as e:
+
+          \        print(f\"Exception: {e}\")
+
+          \        return {'presigned_url': 'UNKNOWN EXCEPTION', 'statusCode': 500}
+
+
+          \   \ 
 
 
 
@@ -537,7 +511,7 @@ Resources:
 
           \            operation_type = event['operation']
 
-          \            path = event['path']
+          \           \ 
 
           \    except KeyError:
 
@@ -552,6 +526,8 @@ Resources:
           \            return upload_result
 
           \        if operation_type == 'list':
+
+          \            path = event['path']
 
           \            list_result = list(path)
 

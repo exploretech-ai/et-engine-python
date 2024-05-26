@@ -254,50 +254,38 @@ def upload(event):
 
 
 def download(event):
-    # first call {"path": "./", "filename": "test.txt"}
-    # successive calls
-    # {"path": "./", "filename": "test_video.mp4", "chunk_data": {'dzchunkindex': chunk['dzchunkindex'],
-    # 'dzchunkbyteoffset': chunk['dzchunkbyteoffset']}}
-    path = event['path']
-    filename = event['filename']
-    file_path = os.path.join(path, filename)
-    chunk_size = 2000000  # bytes
-    file_size = os.path.getsize(file_path)
-    chunks = math.ceil(file_size / chunk_size)
 
-    if "chunk_data" in event:
-        start_index = event['chunk_data']['dzchunkbyteoffset']
-        current_chunk = event['chunk_data']['dzchunkindex']
-        try:
-            with open(file_path, 'rb') as f:
-                f.seek(start_index)
-                file_content = f.read(chunk_size)
-                encoded_chunk_content = str(base64.b64encode(file_content), 'utf-8')
-                chunk_offset = start_index + chunk_size
-                chunk_number = current_chunk + 1
+    print('DOWNlOAD REQUESTED')
 
-                return {"dzchunkindex": chunk_number, "dztotalchunkcount": chunks, "dzchunkbyteoffset": chunk_offset,
-                        "chunk_data": encoded_chunk_content, "dztotalfilesize": file_size}
-        except OSError as error:
-            print('Could not read file: {error}'.format(error=error))
-            return {"message": "couldn't read the file from disk", "statusCode": 500}
+    try:
+        key = event['key']
+        prefix = event['prefix']
+        bucket_name = event['vfs']
 
-    else:
-        start_index = 0
-        try:
-            with open(file_path, 'rb') as f:
-                f.seek(start_index)
-                file_content = f.read(chunk_size)
-                encoded_chunk_content = str(base64.b64encode(file_content), 'utf-8')
-                chunk_number = 0
-                chunk_offset = chunk_size
+        print(f"key: {key}")
+        print(f"prefix: {prefix}")
+        print(f"bucket_name: {bucket_name}")
 
-                return {"dzchunkindex": chunk_number, "dztotalchunkcount": chunks, "dzchunkbyteoffset": chunk_offset,
-                        "chunk_data": encoded_chunk_content, "dztotalfilesize": file_size}
+        file = prefix + key
 
-        except OSError as error:
-            print('Could not read file: {error}'.format(error=error))
-            return {"message": "couldn't read the file from disk", "statusCode": 500}
+        # Copy file to s3
+        s3_client = boto3.client('s3')
+        s3_client.upload_file(file, bucket_name, key)
+
+        # Create presigned GET
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': key},
+            ExpiresIn=60
+        )
+        return {'presigned_url': presigned_url, 'statusCode': 200}
+    except KeyError as e:
+        return {'presigned_url': 'KEY_ERROR', 'statusCode': 500}
+    except Exception as e:
+        print(f"Exception: {e}")
+        return {'presigned_url': 'UNKNOWN EXCEPTION', 'statusCode': 500}
+
+    
 
 
 def list(path):
@@ -329,7 +317,7 @@ def handler(event, _context):
             path = None
         else:
             operation_type = event['operation']
-            path = event['path']
+            
     except KeyError:
         return {"message": "missing required parameter: operation", "statusCode": 400}
     else:
@@ -337,6 +325,7 @@ def handler(event, _context):
             upload_result = upload(event)
             return upload_result
         if operation_type == 'list':
+            path = event['path']
             list_result = list(path)
             return list_result
         if operation_type == 'delete':
