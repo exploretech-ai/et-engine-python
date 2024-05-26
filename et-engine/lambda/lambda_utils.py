@@ -131,3 +131,18 @@ def delete_stack(stack_name):
         s3 = boto3.client('s3')
         # s3.delete_bucket(Bucket=stack_name)
 
+def compute_template_parameters(tool_id):
+    return [
+        {
+            'ParameterKey': 'toolID',
+            'ParameterValue': tool_id
+        }
+    ]
+
+def vfs_template_parameters(vfs_id):
+    return [
+        {
+            'ParameterKey': 'vfsID',
+            'ParameterValue': vfs_id
+        }
+    ]
