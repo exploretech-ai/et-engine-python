@@ -129,6 +129,7 @@ class API(Stack):
 
         
         template_bucket = s3.Bucket(self, "Templates", bucket_name="et-engine-templates")
+        
         tools_update_lambda = _lambda.Function(
             self, 'tool-template-update',
             description="Script to update computing templates",
@@ -187,9 +188,46 @@ class API(Stack):
             )
         )
 
+        vfs_update_lambda = _lambda.Function(
+            self, 'vfs-template-update',
+            description="Script to update computing templates",
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.update.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        database.grant_access(vfs_update_lambda)
+        vfs_update_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'cloudformation:UpdateStack',
+                    'lambda:*',
+                    's3:*',
+                    'efs:*',
+                    'ssm:*',
+                    'iam:*',
+                    'ec2:*'
+                ],
+                resources=['*']
+            )
+        )
+
+
+
+        # template_bucket.add_event_notification(
+        #     s3.EventType.OBJECT_CREATED, 
+        #     s3n.LambdaDestination(tools_update_lambda)
+        # )
         template_bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED, 
-            s3n.LambdaDestination(tools_update_lambda)
+            s3n.LambdaDestination(vfs_update_lambda)
         )
 
 
@@ -760,7 +798,8 @@ class API(Stack):
         vfs_download_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    's3:GetObject'
+                    's3:GetObject',
+                    'lambda:*'
                 ],
                 resources=['*']
             )
