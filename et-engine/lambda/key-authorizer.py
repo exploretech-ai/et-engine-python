@@ -60,6 +60,7 @@ def handler(event, context):
     try:
             
         if "Bearer " in token:
+            print('BEARER TOKEN FOUND')
             user = None
 
             response = urllib.request.urlopen(keysUrl)
@@ -82,6 +83,7 @@ def handler(event, context):
             # <<<<<
   
         else:
+            print("API KEY ASSUMED")
             f = Fernet(fernet_key)
             key_id = f.decrypt(token).decode()
 

@@ -1,14 +1,14 @@
 
 .navbar-tabs {
     list-style-type: none;
-    margin: 0;
-    padding: 0;
+    padding: 5px;
     overflow: hidden;
-    background-color: #7c7c7c;
+    background-color: #ffffff00;
   }
   
   .navbar-tabs li {
     display: block;
+    margin-bottom: 10px;
   }
   
   .navbar-tabs li a {
@@ -21,9 +21,12 @@
   }
   
   .navbar-tabs li a:hover {
-    border-bottom: 2px solid #333; /* Add border on hover */
+    border: 1px solid #333; /* Add border on hover */
+    border-radius: 10px;
   }
   
   .navbar-tabs li a.active {
     background-color: #f1f1f1; /* Style for active tab */
+    border: 1px solid black;
+    border-radius: 10px;
   }

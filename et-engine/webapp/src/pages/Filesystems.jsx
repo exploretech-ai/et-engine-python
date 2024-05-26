@@ -70,7 +70,7 @@ const Filesystems = () => {
         <Page name="Filesystems">
             <h2>Available Filesystems</h2>
             <div className="vfs-panel">
-                <Navbar resourceList={vfsData} activeResource={activeVFS} setActiveResource={setActiveVFS} style={{flex: 1}}/>
+                <Navbar resourceList={vfsData} activeResource={activeVFS} setActiveResource={setActiveVFS} style={{flex: 1, 'border-right': '1px dashed gray'}}/>
                 <FilesDragAndDrop activeVFS={activeVFS} idToken={idToken}>
                     <Directory style={{flex: 5}} idToken={idToken} resource={activeVFS} command={"/list"}/>
                 </FilesDragAndDrop>

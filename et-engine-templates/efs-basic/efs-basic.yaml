@@ -287,15 +287,6 @@ Resources:
           \        print(f\"Error downloading file: {str(e)}\")
 
 
-          \    # # Additional logic
-
-          \    # with open(download_path, 'r') as file:
-
-          \    #     file_content = file.read()
-
-          \    #     print(f\"File content: {file_content}\")
-
-
           \    # Move the file to the /mnt/efs directory
 
           \    destination_path = '/mnt/efs/' + os.path.basename(s3_key)
@@ -337,63 +328,7 @@ Resources:
           \    }
 
 
-          \    # \"{'operation': 'upload', 'path': '/mnt/efs', 'chunk_data': {'dzuuid': '10f726ea-ae1d-4363-9a97-4bf6772cd4df', 'dzchunkindex': '0', 'dzchunksize': '1000000', 'dztotalchunkcount': '1', 'dzchunkbyteoffset': '0', 'filename': 'Log at 2020-08-11 12-17-21 PM.txt', 'content': '(Emitted value instead of an instance of Error)'}}\"
-
-          \    # path = event['path']
-
-          \    # filename = event['chunk_data']['filename']
-
-          \    # file_content_decoded = base64.b64decode(event['chunk_data']['content'])
-
-          \    # current_chunk = int(event['chunk_data']['dzchunkindex'])
-
-          \    # save_path = os.path.join(path, filename)
-
-
-          \    # if os.path.exists(save_path) and current_chunk == 0:
-
-          \    #     return {\"message\": \"File already exists\", \"statusCode\": 400}
-
-
-          \    # try:
-
-          \    #     with open(save_path, 'ab') as f:
-
-          \    #         f.seek(int(event['chunk_data']['dzchunkbyteoffset']))
-
-          \    #         f.write(file_content_decoded)
-
-          \    # except OSError as error:
-
-          \    #     print('Could not write to file: {error}'.format(error=error))
-
-          \    #     return {\"message\": \"couldn't write the file to disk\", \"statusCode\": 500}
-
-
-          \    # total_chunks = int(event['chunk_data']['dztotalchunkcount'])
-
-
-          \    # if current_chunk + 1 == total_chunks:
-
-          \    #     if int(os.path.getsize(save_path)) != int(event['chunk_data']['dztotalfilesize']):
-
-          \    #         print(\"File {filename} was completed, but there is a size mismatch. Was {size} but expected {total}\".format(filename=filename, size=os.path.getsize(save_path), total=event['chunk_data']['dztotalfilesize']))
-
-          \    #         return {\"message\": \"Size mismatch\", \"statusCode\": 500}
-
-          \    #     else:
-
-          \    #         print(\"file {filename} has been uploaded successfully\".format(filename=filename))
-
-          \    #         return {\"message\": \"File uploaded successfuly\", \"statusCode\": 200}
-
-          \    # else:
-
-          \    #     print(\"Chunk {current_chunk} of {total_chunks} for file {filename} complete\".format(current_chunk=current_chunk + 1 , total_chunks=total_chunks, filename=filename))
-
-          \    #     return {\"message\": \"Chunk upload successful\", \"statusCode\": 200}
-
-
+          \   \ 
 
           def download(event):
 
@@ -551,8 +486,6 @@ Resources:
 
           \            return download_result
 
-          \       \ 
-
           \        "
       FileSystemConfigs:
         - Arn:
@@ -597,6 +530,15 @@ Resources:
           - ""
           - - vfs-
             - Ref: vfsID
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - GET
+            AllowedOrigins:
+              - "*"
+            MaxAge: 3000
       LifecycleConfiguration:
         Rules:
           - ExpirationInDays: 1
@@ -636,6 +578,17 @@ Resources:
                         - UploadBucketD2C1DA78
                         - Arn
                     - /*
+          - Action: s3:GetObject
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Resource:
+              Fn::Join:
+                - ""
+                - - Fn::GetAtt:
+                      - UploadBucketD2C1DA78
+                      - Arn
+                  - /*
         Version: "2012-10-17"
     Metadata:
       aws:cdk:path: EfsBasicStack/UploadBucket/Policy/Resource
