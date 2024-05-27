@@ -3,15 +3,76 @@ import Page from "./Page"
 import { fetchAuthSession } from '@aws-amplify/auth';
 import "./Jobs.css"
 
+const TaskArgs = ({task}) => {
+
+    const taskArgs = []
+    for (const arg of task.args) {
+        taskArgs.push(
+            <p key={arg.name}>{arg.name}: {arg.value}</p>
+        )
+    }
+    return(
+        <div>
+            Arguments:
+            {taskArgs}
+        </div>
+    )
+}
+
+const TaskHardware = ({task}) => {
+
+    const filesystems = []
+    for (const fs of task.hardware.filesystems) {
+        filesystems.push(
+            <p key={fs}>{fs}</p>
+        )
+    }
+    return(
+        <div>
+            <p>CPU: {task.hardware.cpu}</p>
+            <p>GPU: {task.hardware.gpu}</p>
+            <p>Memory: {task.hardware.memory}</p>
+            <span>
+                Filesystems: {filesystems}
+            </span>
+        </div>
+    )
+}
+
+
+const TaskDropdown = ({task}) => {
+    return(
+        <div className="task-dropdown">
+            <TaskArgs task={task}/>
+            <TaskHardware task={task}/>
+        </div>
+    )
+}
+
+const Task = ({task}) => {
+
+    const [showDropdown, setDropdown] = useState(false)
+
+    return(
+        <div>
+            <div className="task" onClick={() => setDropdown(!showDropdown)}>
+                <p style={{flex:2}}>Tool: {task.toolName}</p>
+                <p style={{flex:2}}>{task.startTime}</p>
+                <p style={{flex:2}}>Status: {task.status}</p>
+            </div>
+            {showDropdown && 
+                <TaskDropdown task={task} />
+            }
+        </div>
+    )
+}
+
 const TaskList = ({taskList}) => {
 
     const tasks = []
     for (const task of taskList) {
         tasks.push(
-            <div key={task.taskID}>
-                <p style={{flex:20}}>Tool: {task.toolName}</p>
-                <p>Status: {task.status}</p>
-            </div>
+            <Task task={task} key={task.taskID}/>
         )
     }
     return (
@@ -38,7 +99,7 @@ const Jobs = () => {
     }
 
     useEffect(() => {
-        console.log('initializing')
+        console.log('Fetching available tasks...')
 
         fetchData()
         
@@ -60,7 +121,21 @@ const Jobs = () => {
             .then(tasks => {
                 
                 console.log('success: ', tasks)
-                setTaskList(tasks)
+
+                const orderedTasks = []
+                const taskList = []
+                const taskMap = new Map()
+                let i = 0
+                for (const task of tasks) {
+                    taskList.push([task.startTime, i])
+                    taskMap.set(i, task)
+                    i ++
+                }
+                taskList.sort().reverse()
+                for (const [time, index] of taskList) {
+                    orderedTasks.push(taskMap.get(index))
+                }
+                setTaskList(orderedTasks)
                 setLoading(false)
             })
             .catch(error => {
@@ -70,12 +145,36 @@ const Jobs = () => {
         
     }, [idToken])
 
+    const clearTasks = () => {
+        console.log('Task clearing requested')
+        const url = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tasks"
+        fetch(url, {
+            method: "DELETE",
+            headers: {
+                "Authorization": "Bearer " + idToken
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json()
+            } else {
+                throw new Error('error clearing tasks')
+            }
+        })
+        .then(message => {
+            console.log("success, returned message ", message)
+        })
+        .catch(error => {
+            console.error(error)
+        })
+    }
+
 
     return(
         <Page name="Tasks">
-            {/* This is where you can see the past, present, and pending jobs. */}
             <span id="task-header">
                 <h2>Browse</h2> 
+                <button onClick={clearTasks}>Clear</button>
             </span>
             {loading ? 
                 <div>Loading...</div>

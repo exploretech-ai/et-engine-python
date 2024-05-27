@@ -169,7 +169,7 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, se
     
 
     return(
-        <div style={style}>
+        <div style={style} className="directory">
             {components}
         </div>
     )
@@ -255,7 +255,7 @@ const Directory = ({style, resource, command, idToken, loading, setLoading, path
 
     return(
         // <div style={style}>Directory will appear here</div>
-        <div style={style}>
+        <div style={style} className="directory-container">
             <CurrentDirectoryPath 
                 path={path} 
                 setPath={setPath}

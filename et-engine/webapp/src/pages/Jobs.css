@@ -1,19 +1,38 @@
 .task-list {
+    overflow-y: auto;
+    height: 100%;
+}
+.task {
     background-color: rgb(221, 221, 221);
     border-radius: 10px;
     border: 1px solid gray;
-    margin:5px;
-    padding: 10px;
+    margin: 5px 0px 5px 0px;
+    padding: 0px 10px 0px 10px; 
+    display: flex;
 }
 
-.task-list:hover {
+.task:hover {
     background-color: rgb(196, 196, 196);
 }
 
-.task-list:active {
+.task:active {
     background-color: rgb(163, 163, 163);
 }
 
-.task-list div {
-    display: flex
+
+
+#task-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+
+#task-header h2 {
+    flex: 10;
+}
+
+#task-header button {
+    flex: 1;
+    height: 50%;
 }

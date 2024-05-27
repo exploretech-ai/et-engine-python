@@ -32,11 +32,11 @@ def handler(event, context):
                 'taskID':       row[0],
                 'toolName':     tool_name,
                 'logID':        row[2],
-                'start_time':   row[3].strftime('%Y-%m-%d %H:%M:%S'),
+                'startTime':   row[3].strftime('%Y-%m-%d %H:%M:%S'),
                 'hardware':     row[4],
                 'args':         row[5],
                 'status':       row[6],
-                'status_time':  row[7].strftime('%Y-%m-%d %H:%M:%S')
+                'statusTime':  row[7].strftime('%Y-%m-%d %H:%M:%S')
             })
         print('task list JSON: ', tasks)
 

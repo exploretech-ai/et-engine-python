@@ -1355,6 +1355,38 @@ class API(Stack):
         )
         database.grant_access(tasks_list_lambda)
 
+        tasks_clear_lambda = _lambda.Function(
+            self,
+            "tasks-clear",
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tasks.clear.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        tasks.add_method(
+            "DELETE",
+            integration=apigateway.LambdaIntegration(tasks_clear_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(tasks_clear_lambda)
+
 
         task_id = tasks.add_resource("{taskID}")
         task_id_status_lambda = _lambda.Function(

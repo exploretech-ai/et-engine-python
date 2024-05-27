@@ -1,5 +1,7 @@
 .vfs-panel {
     display: flex;
+    height: 100%;
+    /* overflow-y: auto; */
 }
 
 #vfs-header {

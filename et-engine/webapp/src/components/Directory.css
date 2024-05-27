@@ -114,3 +114,12 @@
     background-color: #985ca5;
     border-style: inset;
 }
+
+.directory-container {
+    height: 100%;
+}
+
+.directory {
+    overflow-y: auto;
+    height: 100%;
+}
