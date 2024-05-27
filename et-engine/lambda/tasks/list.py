@@ -30,7 +30,6 @@ def handler(event, context):
             tool_name = cursor.fetchone()[0]
             tasks.append({
                 'taskID':       row[0],
-                'toolID':       tool_id,
                 'toolName':     tool_name,
                 'logID':        row[2],
                 'start_time':   row[3].strftime('%Y-%m-%d %H:%M:%S'),

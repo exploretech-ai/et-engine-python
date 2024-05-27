@@ -244,7 +244,7 @@ class API(Stack):
 
         auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType("t2.2xlarge"),
+            instance_type=ec2.InstanceType("r5a.8xlarge"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
             min_capacity=0,
             max_capacity=10,
@@ -262,20 +262,20 @@ class API(Stack):
             )
         ])
 
-        auto_scaling_group_gpu = autoscaling.AutoScalingGroup(self, "ASGGPU",
-            vpc=self.vpc,
-            instance_type=ec2.InstanceType("c4.large"),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux(),
-            min_capacity=0,
-            max_capacity=10,
-            group_metrics=[autoscaling.GroupMetrics.all()]
-        )
-        auto_scaling_group_gpu.protect_new_instances_from_scale_in()
-        capacity_provider_gpu = ecs.AsgCapacityProvider(self, "AsgCapacityProviderGpu",
-            auto_scaling_group=auto_scaling_group_gpu,
-            capacity_provider_name="AsgCapacityProviderGpu"
-        )
-        self.ecs_cluster.add_asg_capacity_provider(capacity_provider_gpu)
+        # auto_scaling_group_gpu = autoscaling.AutoScalingGroup(self, "ASGGPU",
+        #     vpc=self.vpc,
+        #     instance_type=ec2.InstanceType("c4.large"),
+        #     machine_image=ecs.EcsOptimizedImage.amazon_linux(),
+        #     min_capacity=0,
+        #     max_capacity=10,
+        #     group_metrics=[autoscaling.GroupMetrics.all()]
+        # )
+        # auto_scaling_group_gpu.protect_new_instances_from_scale_in()
+        # capacity_provider_gpu = ecs.AsgCapacityProvider(self, "AsgCapacityProviderGpu",
+        #     auto_scaling_group=auto_scaling_group_gpu,
+        #     capacity_provider_name="AsgCapacityProviderGpu"
+        # )
+        # self.ecs_cluster.add_asg_capacity_provider(capacity_provider_gpu)
 
         # ==================================================================================================================
         # Engine-Wide resources
@@ -1338,9 +1338,6 @@ class API(Stack):
             ),
             security_groups=[database.sg]
         )
-
-
-        
         tasks.add_method(
             "GET",
             integration=apigateway.LambdaIntegration(tasks_list_lambda),
@@ -1357,22 +1354,49 @@ class API(Stack):
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tasks_list_lambda)
-        # tasks_list_lambda.add_to_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'cloudformation:CreateStack',
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
 
-        
+
         task_id = tasks.add_resource("{taskID}")
-
+        task_id_status_lambda = _lambda.Function(
+            self,
+            "tasks-status",
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tasks.status.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        task_id.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(task_id_status_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(task_id_status_lambda)
+        task_id_status_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'ecs:*',
+                ],
+                resources=['*']
+            )
+        )
         
-        
-        # POST + body = execute tool with params in body
-        # GET = fetch tool description
 
 
 class WebApp(Stack):

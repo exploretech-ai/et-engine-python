@@ -73,6 +73,7 @@ def handler(event, context):
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS Tasks (
                 taskID UUID PRIMARY KEY,
+                taskArn TEXT NOT NULL,
                 userID UUID NOT NULL,
                 toolID UUID NOT NULL,
                 logID UUID NOT NULL,

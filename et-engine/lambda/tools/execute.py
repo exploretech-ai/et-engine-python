@@ -19,13 +19,15 @@ def fetch_available_vfs(user, cursor):
     
     return vfs_id_map
 
-def log_task(task_id, user_id, tool_id, log_id, hardware, args, cursor):
+def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
 
     start_time = datetime.datetime.now()
     start_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
     status="SUBMITTED"
     status_time = datetime.datetime.now()
     status_time = status_time.strftime('%Y-%m-%d %H:%M:%S')
+
+    task_id = str(uuid.uuid4())
 
     print('hardware: ', hardware)
     print('args: ', args)
@@ -35,11 +37,13 @@ def log_task(task_id, user_id, tool_id, log_id, hardware, args, cursor):
     """)
 
     query = f"""
-        INSERT INTO Tasks (taskID, userID, toolID, logID, start_time, hardware, status, status_time, args)
-        VALUES ('{task_id}', '{user_id}', '{tool_id}', '{log_id}', '{start_time}', '{hardware}', '{status}', '{status_time}', '{args}')
+        INSERT INTO Tasks (taskID, taskArn, userID, toolID, logID, start_time, hardware, status, status_time, args)
+        VALUES ('{task_id}', '{task_arn}', '{user_id}', '{tool_id}', '{log_id}', '{start_time}', '{hardware}', '{status}', '{status_time}', '{args}')
     """
     print(query)
     cursor.execute(query)
+    
+    return task_id
     
 
 
@@ -218,17 +222,28 @@ def handler(event, context):
         print('Task Successfully Submitted')
         print('Logging Task...')
 
-        task_id = str(uuid.uuid4())
+        # task_id = str(uuid.uuid4())
+        print('ECS response: ', ecs_response)
+
+        task = ecs_response['tasks'][0]
+        print('Task: ', task)
+
+        task_arn = task['taskArn']
+        print('Task Arn: ', task_arn)
+
         args.pop(0)
-        log_task(task_id, user, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
+        task_id = log_task(task_arn, user, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
         print('Executed query, waiting to commit...')
+
         connection.commit()
         print('committed')
+
+        print('Task ID: ', task_id)
         
         
         return {
             'statusCode': 200,
-            'body': json.dumps(f'Task started')
+            'body': json.dumps(task_id)
         }
 
     except Exception as e:
