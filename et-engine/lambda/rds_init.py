@@ -70,17 +70,22 @@ def handler(event, context):
         connection.commit()
         print('Table "Policies" created successfully')
 
-
-        # cursor = connection.cursor()
-        # create_table_sql = """
-        #     CREATE TABLE IF NOT EXISTS Users (
-        #         userID UUID PRIMARY KEY,
-        #         policyID UUID NOT NULL
-        #     );
-        # """
-        # cursor.execute(create_table_sql)
-        # connection.commit()
-        # print('Table "Users" created successfully')
+        create_table_sql = """
+            CREATE TABLE IF NOT EXISTS Tasks (
+                taskID UUID PRIMARY KEY,
+                userID UUID NOT NULL,
+                toolID UUID NOT NULL,
+                logID UUID NOT NULL,
+                start_time TIMESTAMP NOT NULL,
+                hardware JSON NOT NULL,
+                args JSON NOT NULL,
+                status VARCHAR(255) NOT NULL,
+                status_time TIMESTAMP NOT NULL
+            );
+        """
+        cursor.execute(create_table_sql)
+        connection.commit()
+        print('Table "Tasks" created successfully')
 
 
         # =========================== TEMP ==============================
@@ -107,7 +112,7 @@ def handler(event, context):
 
 
         # sql_query = "select * from information_schema.columns where table_schema = 'public'"
-        # sql_query = "DROP TABLE VirtualFileSystems"
+        # sql_query = "DROP TABLE Tasks"
         # cursor.execute(sql_query)
         # connection.commit()
         # print(cursor.fetchall())

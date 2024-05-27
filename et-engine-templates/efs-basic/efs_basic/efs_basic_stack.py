@@ -15,6 +15,176 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+list_lambda_code = """
+import os
+import base64
+import math
+import json
+import boto3
+import shutil
+
+# File manager operation events:
+# list: {"operation": "list", "path": "$dir"}
+# upload: {"operation": "upload", "path": "$dir", "form_data": "$form_data"}
+
+
+def delete(event):
+
+    file_path = event['file']
+    print(f"file_path={file_path}")
+
+    try:
+        os.remove(file_path)
+    except OSError:
+        return {"message": "couldn't delete the file", "statusCode": 500}
+    else:
+        return {"message": "file deletion successful", "statusCode": 200}
+
+
+def make_dir(event):
+    path = event['path']
+    print(f"path={path}")
+
+    try:
+        os.mkdir(path)
+    except OSError:
+        return {"message": "couldn't create the directory", "statusCode": 500}
+    else:
+        return {"message": "directory creation successful", "statusCode": 200}
+
+
+def upload(event):
+    print("UPLOAD REQUESTED")
+    print(event)
+
+    s3_bucket = event['Records'][0]['s3']['bucket']['name']
+    s3_key = event['Records'][0]['s3']['object']['key']
+
+    print('bucket: ', s3_bucket)
+    print('key: ', s3_key)
+
+    # Set the download path in the /tmp directory
+    # download_path = '/tmp/' + os.path.basename(s3_key)
+    destination_path = '/mnt/efs/' + s3_key[2:]
+    # print('local path: ', download_path)
+
+    # Create an S3 client
+    s3_client = boto3.client('s3')
+
+    try:
+        # Download the file from S3
+        print('Dowloading...')
+        s3_client.download_file(s3_bucket, s3_key, destination_path)
+        print(f"success")
+        return {'message': 'successfully transfered file to EFS', 'statusCode': 200}
+    except Exception as e:
+        print(f"Error downloading file: {str(e)}")
+        return {'message': 'failed while downloading file to EFS', 'statusCode': 500}
+
+    # Move the file to the /mnt/efs directory
+    
+    # try:
+    #     print('Moving local file to EFS: ', destination_path)
+    #     shutil.move(download_path, destination_path)
+    #     print(f"success")
+
+    #     return {'message': 'successfully transfered file to EFS', 'statusCode': 200}
+    # except Exception as e:
+    #     print(f"Error moving file: {str(e)}")
+    #     return {'message': 'failed while moving local file to EFS', 'statusCode': 500}
+        
+
+    
+def download(event):
+
+    print('DOWNlOAD REQUESTED')
+
+    try:
+        key = event['key']
+        prefix = event['prefix']
+        bucket_name = event['vfs']
+
+        print(f"key: {key}")
+        print(f"prefix: {prefix}")
+        print(f"bucket_name: {bucket_name}")
+
+        file = prefix + key
+
+        # Copy file to s3
+        s3_client = boto3.client('s3')
+        s3_client.upload_file(file, bucket_name, key)
+
+        # Create presigned GET
+        presigned_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': key},
+            ExpiresIn=60
+        )
+        return {'presigned_url': presigned_url, 'statusCode': 200}
+    except KeyError as e:
+        return {'presigned_url': 'KEY_ERROR', 'statusCode': 500}
+    except Exception as e:
+        print(f"Exception: {e}")
+        return {'presigned_url': 'UNKNOWN EXCEPTION', 'statusCode': 500}
+
+    
+
+
+def list(path):
+    # get path to list
+    # try:
+    #     path = event['path']
+    # except KeyError:
+    #     return {"message": "missing required parameter: path", "statusCode": 400}
+
+    try:
+        dir_items = []
+        file_items = []
+        for (dirpath, dirnames, filenames) in os.walk(path):
+            dir_items.extend(dirnames)
+            file_items.extend(filenames)
+            break
+        print("directories: ", dir_items)
+        print("files: ", file_items)
+
+    except Exception as error:
+        print(error)
+        return {"message": "unable to list files", "statusCode": 500}
+    else:
+        return {"path": path, "directories": dir_items, "files": file_items, "statusCode": 200}
+
+
+def handler(event, _context):
+    # get operation type
+    try:
+        if "Records" in event:
+            operation_type = "upload"
+            path = None
+        else:
+            operation_type = event['operation']
+            
+    except KeyError:
+        return {"message": "missing required parameter: operation", "statusCode": 400}
+    else:
+        print("Operation Type: ", operation_type)
+        if operation_type == 'upload':
+            upload_result = upload(event)
+            return upload_result
+        if operation_type == 'list':
+            path = event['path']
+            list_result = list(path)
+            return list_result
+        if operation_type == 'delete':
+            delete_result = delete(event)
+            return delete_result
+        if operation_type == 'mkdir':
+            make_dir_result = make_dir(event)
+            return make_dir_result
+        if operation_type == 'download':
+            download_result = download(event)
+            return download_result
+        """
+
 class EfsBasicStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -68,181 +238,14 @@ class EfsBasicStack(Stack):
         )
 
         
-        list_lambda_code = """
-import os
-import base64
-import math
-import json
-import boto3
-import shutil
-
-# File manager operation events:
-# list: {"operation": "list", "path": "$dir"}
-# upload: {"operation": "upload", "path": "$dir", "form_data": "$form_data"}
-
-
-def delete(event):
-    print(event)
-    path = event['path']
-    name = event['name']
-
-    file_path = path + '/' + name
-
-    try:
-        os.remove(file_path)
-    except OSError:
-        return {"message": "couldn't delete the file", "statusCode": 500}
-    else:
-        return {"message": "file deletion successful", "statusCode": 200}
-
-
-def make_dir(event):
-    print('NEW DIRECTORY REQUESTED')
-    path = event['path']
-    print(f"path={path}")
-
-    try:
-        os.mkdir(path)
-    except OSError:
-        return {"message": "couldn't create the directory", "statusCode": 500}
-    else:
-        return {"message": "directory creation successful", "statusCode": 200}
-
-
-def upload(event):
-    print("UPLOAD REQUESTED")
-    print(event)
-
-    s3_bucket = event['Records'][0]['s3']['bucket']['name']
-    s3_key = event['Records'][0]['s3']['object']['key']
-
-    # Set the download path in the /tmp directory
-    download_path = '/tmp/' + os.path.basename(s3_key)
-
-    # Create an S3 client
-    s3_client = boto3.client('s3')
-
-    try:
-        # Download the file from S3
-        s3_client.download_file(s3_bucket, s3_key, download_path)
-        print(f"File downloaded: {download_path}")
-    except Exception as e:
-        print(f"Error downloading file: {str(e)}")
-
-    # Move the file to the /mnt/efs directory
-    destination_path = '/mnt/efs/' + os.path.basename(s3_key)
-    try:
-        print(download_path, destination_path)
-        print(os.listdir('/tmp/'))
-        print(os.listdir('/mnt/efs/'))
-        shutil.move(download_path, destination_path)
-        print(f"File moved to: {destination_path}")
-    except Exception as e:
-        print(f"Error moving file: {str(e)}")
         
-    # print("After : ", os.listdir("/mnt/efs"))
-    
-    # Add more logic here as needed
-    
-    return {
-        'statusCode': 200,
-        'message': 'File downloaded and moved successfully',
-        'body': json.dumps(event)
-    }
-
-    
-def download(event):
-
-    print('DOWNlOAD REQUESTED')
-
-    try:
-        key = event['key']
-        prefix = event['prefix']
-        bucket_name = event['vfs']
-
-        print(f"key: {key}")
-        print(f"prefix: {prefix}")
-        print(f"bucket_name: {bucket_name}")
-
-        file = prefix + key
-
-        # Copy file to s3
-        s3_client = boto3.client('s3')
-        s3_client.upload_file(file, bucket_name, key)
-
-        # Create presigned GET
-        presigned_url = s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket_name, 'Key': key},
-            ExpiresIn=60
-        )
-        return {'presigned_url': presigned_url, 'statusCode': 200}
-    except KeyError as e:
-        return {'presigned_url': 'KEY_ERROR', 'statusCode': 500}
-    except Exception as e:
-        print(f"Exception: {e}")
-        return {'presigned_url': 'UNKNOWN EXCEPTION', 'statusCode': 500}
-
-    
-
-
-def list(path):
-    # get path to list
-    # try:
-    #     path = event['path']
-    # except KeyError:
-    #     return {"message": "missing required parameter: path", "statusCode": 400}
-
-    try:
-        dir_items = []
-        file_items = []
-        for (dirpath, dirnames, filenames) in os.walk(path):
-            dir_items.extend(dirnames)
-            file_items.extend(filenames)
-            break
-    except Exception as error:
-        print(error)
-        return {"message": "unable to list files", "statusCode": 500}
-    else:
-        return {"path": path, "directories": dir_items, "files": file_items, "statusCode": 200}
-
-
-def handler(event, _context):
-    # get operation type
-    try:
-        if "Records" in event:
-            operation_type = "upload"
-            path = None
-        else:
-            operation_type = event['operation']
-            
-    except KeyError:
-        return {"message": "missing required parameter: operation", "statusCode": 400}
-    else:
-        if operation_type == 'upload':
-            upload_result = upload(event)
-            return upload_result
-        if operation_type == 'list':
-            path = event['path']
-            list_result = list(path)
-            return list_result
-        if operation_type == 'delete':
-            delete_result = delete(event)
-            return delete_result
-        if operation_type == 'mkdir':
-            make_dir_result = make_dir(event)
-            return make_dir_result
-        if operation_type == 'download':
-            download_result = download(event)
-            return download_result
-        """
         list_lambda_function = _lambda.Function(
             self,
             "VFSLambda",
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= "index.handler",
             code=_lambda.Code.from_inline(list_lambda_code),
-            timeout = Duration.seconds(30),
+            timeout = Duration.minutes(15),
             vpc=vpc,
             function_name = "vfs-" + vfs_id,
             filesystem = _lambda.FileSystem.from_efs_access_point(

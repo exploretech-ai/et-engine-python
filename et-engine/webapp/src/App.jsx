@@ -48,7 +48,7 @@ const Sidebar = ({user}) => {
             <Link to={`filesystems`}>Filesystems</Link>
           </li>
           <li>
-            <Link to={`jobs`}>Monitor Jobs</Link>
+            <Link to={`jobs`}>Tasks</Link>
           </li>
           <li>
             <Link to={`share`}>Share</Link>

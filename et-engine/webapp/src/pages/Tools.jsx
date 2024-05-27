@@ -81,8 +81,15 @@ const Tools = () => {
             else {throw Error('error retrieving key IDs')}
         }).then(response => {
             const tools = []
+            const toolNames = []
+            const toolMap = new Map()
             for (const [name, id] of response) {
-                tools.push(new Tool(name, id))
+                toolNames.push(name)
+                toolMap.set(name, new Tool(name, id))
+            }
+            toolNames.sort()
+            for (const name of toolNames) {
+                tools.push(toolMap.get(name))
             }
             setToolData(tools)
             setActiveTool(tools[0])
@@ -108,7 +115,7 @@ const Tools = () => {
                 <div> Loading Tools... </div>
             :
                 <div className="tool-panel">
-                    <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} style={{flex: 1}}/>
+                    <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} idToken={idToken} style={{flex: 1}}/>
                     <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
                 </div>
             }

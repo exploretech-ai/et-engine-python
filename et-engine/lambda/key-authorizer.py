@@ -11,6 +11,8 @@ from cryptography.fernet import Fernet
 import urllib.request
 import jwt
 from jwt.algorithms import RSAAlgorithm
+import traceback
+
 
 region = 'us-east-2'
 userpoolId = 'us-east-2_c3KpcMfzh'
@@ -60,21 +62,25 @@ def handler(event, context):
     try:
             
         if "Bearer " in token:
-            print('BEARER TOKEN FOUND')
-            user = None
+            print('** Bearer Token Found **')
 
+            print('Fetching keys...')
             response = urllib.request.urlopen(keysUrl)
             keys = json.loads(response.read())['keys']
 
+            print('Parsing token...')
+            print(token)
             jwtToken = token.split(' ')[-1]
             header = jwt.get_unverified_header(jwtToken)
             kid = header['kid']
 
+            print('Decoding token...')
             jwkValue = findJwkValue(keys, kid)
             publicKey = RSAAlgorithm.from_jwk(json.dumps(jwkValue))
 
             decoded = decodeJwtToken(jwtToken, publicKey)
             user_id = decoded['cognito:username']
+            print('User ID found: ', user_id)
 
             source = "web"
             api_key = None
@@ -84,25 +90,25 @@ def handler(event, context):
   
         else:
             print("API KEY ASSUMED")
+
+            print("Unencrypting key...")
             f = Fernet(fernet_key)
             key_id = f.decrypt(token).decode()
 
             source = "api"
             api_key = token
 
+            print('Fetching userID associated with key ', api_key)
             cursor.execute(f"""
                 SELECT userID FROM APIKeys WHERE keyID = '{key_id}'
             """)
 
-            print(cursor)
-            print(cursor.rowcount)
-
             if cursor.rowcount == 0:
                 raise NameError(f'no user not associated with key {key_id}')      
             else:
-                user_id = cursor.fetchall()[0][0]     
+                user_id = cursor.fetchall()[0][0]   
+                print('User ID found: ', user_id)  
             
-        print("User ID: " + user_id)
 
     except NameError as e:
         print(e)
@@ -117,7 +123,8 @@ def handler(event, context):
         }
     
     except Exception as e:
-        print(e)
+        print('Error: ', e)
+        print(traceback.format_exc())
         cursor.close()
         connection.close()
         return {
@@ -142,6 +149,7 @@ def handler(event, context):
         """)
 
         allow_tools, allow_vfs = cursor.fetchall()[0]
+        print('** Policy **')
         print(f"allow_tools: {allow_tools}")
         print(f"allow_vfs: {allow_vfs}")
 
@@ -172,7 +180,7 @@ def handler(event, context):
         if api_key is not None:
             response['context']['apiKey'] = api_key
         
-        print(response)
+        print('Auth Policy: ', response)
         return response
 
 

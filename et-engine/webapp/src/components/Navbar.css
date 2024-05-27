@@ -9,15 +9,18 @@
   .navbar-tabs li {
     display: block;
     margin-bottom: 10px;
+    align-items: center;
+    width: 100%
   }
   
   .navbar-tabs li a {
-    display: block;
+    display: flex;
     color: black;
     text-align: left;
     padding: 14px 16px;
     text-decoration: none;
     border-bottom: 2px solid transparent; /* Initially no border */
+    align-items: center;
   }
   
   .navbar-tabs li a:hover {
@@ -30,3 +33,23 @@
     border: 1px solid black;
     border-radius: 10px;
   }
+
+  .navbar-tabs li a.active:hover {
+    background-color: #d6d6d6; /* Style for active tab */
+    border: 1px solid black;
+    border-radius: 10px;
+  }
+
+
+.icon i {
+  transition: all 0.1s linear;
+}
+
+.icon:hover i {
+  transform: scale(1.5);
+  cursor: pointer;
+}
+
+.icon:active i {
+  color: black;
+}

@@ -3,7 +3,7 @@ import lambda_utils
 import db
 
 
-def delete_workflow(tool_id):
+def delete_tool(tool_id):
     tool_name = "tool-"+tool_id
     print(f'Tool Name: {tool_name}')
     
@@ -43,40 +43,58 @@ def handler(event, context):
                     raise NameError('no tool id found')
                 else:
                     tool_id = tool_id[0][0]
-                    print(f"Tool ID: {tool_id}")
+                    print(f"Delete Requested for Tool ID: {tool_id}")
                 
-                delete_workflow(tool_id)
+                
 
                 sql_query = f"""
                     DELETE FROM Tools WHERE userID = '{user}' AND name = '{tool_name}'
                 """
                 cursor.execute(sql_query)
                 connection.commit()
-                
+                print("Tool deleted from database")
+
+                delete_tool(tool_id)
+                print("Tool successfully deleted")
 
                 return {
                     'statusCode': 200,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*'
+                    },
                     'body': json.dumps(f"'{tool_name}' deleted")
                 }
             else:
                 return {
-                    'statusCode': 500,
+                    'statusCode': 501,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*'
+                    },
                     'body': json.dumps("Error: Invalid query string")
                 }
         else:
             return {
-                'statusCode': 500,
+                'statusCode': 502,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*'
+                },
                 'body': json.dumps("Error: must include query string")
             }
         
     except NameError as e:
         return {
             'statusCode': 404,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps(f'Tool not found')
         }
     except Exception as e:
         return {
-            'statusCode': 500,
+            'statusCode': 503,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps(f'Error: {e}')
         }
     finally:

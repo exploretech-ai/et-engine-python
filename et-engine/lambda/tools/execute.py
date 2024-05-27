@@ -3,6 +3,7 @@ import json
 import lambda_utils
 import db
 import uuid
+import datetime
 
 def fetch_available_vfs(user, cursor):
                     
@@ -17,6 +18,29 @@ def fetch_available_vfs(user, cursor):
         vfs_id_map[row[0]] = row[1]
     
     return vfs_id_map
+
+def log_task(task_id, user_id, tool_id, log_id, hardware, args, cursor):
+
+    start_time = datetime.datetime.now()
+    start_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    status="SUBMITTED"
+    status_time = datetime.datetime.now()
+    status_time = status_time.strftime('%Y-%m-%d %H:%M:%S')
+
+    print('hardware: ', hardware)
+    print('args: ', args)
+
+    cursor.execute(f"""
+        DELETE FROM Tasks WHERE userID = '{user_id}'
+    """)
+
+    query = f"""
+        INSERT INTO Tasks (taskID, userID, toolID, logID, start_time, hardware, status, status_time, args)
+        VALUES ('{task_id}', '{user_id}', '{tool_id}', '{log_id}', '{start_time}', '{hardware}', '{status}', '{status_time}', '{args}')
+    """
+    print(query)
+    cursor.execute(query)
+    
 
 
 def handler(event, context):
@@ -40,8 +64,8 @@ def handler(event, context):
         # pass API key as environment variable if exists
         if "apiKey" in event['requestContext']['authorizer'].keys():
             args.append({
-                'name': 'ET_ENGINE_API_KEY',
-                'value': event['requestContext']['authorizer']['apiKey']
+                "name": "ET_ENGINE_API_KEY",
+                "value": event['requestContext']['authorizer']['apiKey']
             })
 
         if 'body' in event:
@@ -128,6 +152,7 @@ def handler(event, context):
         print(f'Volumes: {volumes}')
 
         print('DEFINING CONTAINER')
+        log_id = str(uuid.uuid4())
         container_definition = {
             'name': "tool-" + tool_id,
             'image': image,
@@ -136,7 +161,7 @@ def handler(event, context):
                 'options': {
                     'awslogs-region': "us-east-2" ,
                     'awslogs-group': "EngineLogGroup",
-                    "awslogs-stream-prefix": str(uuid.uuid4())
+                    "awslogs-stream-prefix": log_id
                 }
             },
             'mountPoints': mount_points,
@@ -186,16 +211,24 @@ def handler(event, context):
                 ]
             }
         )
-        print('Task Successfully Submitted')
-        
         if len(ecs_response['tasks']) == 0:
             print(ecs_response)
             raise Exception('No task launched')
         
-        task_arn = ecs_response['tasks'][0]['taskArn']
+        print('Task Successfully Submitted')
+        print('Logging Task...')
+
+        task_id = str(uuid.uuid4())
+        args.pop(0)
+        log_task(task_id, user, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
+        print('Executed query, waiting to commit...')
+        connection.commit()
+        print('committed')
+        
+        
         return {
             'statusCode': 200,
-            'body': json.dumps(f'Task started, ARN: {task_arn}')
+            'body': json.dumps(f'Task started')
         }
 
     except Exception as e:

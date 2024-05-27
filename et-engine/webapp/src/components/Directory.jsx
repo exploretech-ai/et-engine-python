@@ -62,12 +62,47 @@ const FileComponent = ({name, path, vfsId, idToken}) => {
         })
         .catch(error => console.error(error))
     };
+
+    const deleteItem = async (e) => {
+        
+        let key
+        if (path.length === 1) {
+            key = name
+        }
+        else {
+            key = path.slice(1) + "/" + name
+        }
+        console.log('Delete Requested on ', key)
+
+        fetch("https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + vfsId + "/files/" + key, {
+            method: "DELETE",
+            headers: {
+                "Authorization": "Bearer " + idToken
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json()
+            } else {
+                throw new Error('Delete failed')
+            }
+        })
+        .then(response => {
+            console.log(response)
+        })
+        .catch(error => {
+            console.log(error)
+        })
+    }
     return(
         <div key={name} className="file">
             <i class="fa fa-arrow-right" style={{flex: 1}}></i>
             <a key={name+"-p"} style={{flex: 20}}>{name}</a>
-            <span className="download-icon" onClick={downloadItem}>
+            <span className="download-icon" style={{flex: 1}} onClick={downloadItem}>
                 <i class="fa fa-download" ></i>
+            </span>
+            <span className="download-icon" style={{flex: 1}} onClick={deleteItem}>
+                <i class="fa fa-trash" ></i>
             </span>
             
         </div>
@@ -93,21 +128,32 @@ const FolderComponent = ({name, path, setPath, setLoading}) => {
 
 const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, setLoading, style}) => {
 
-    const components = []
+    const folderList = []
+    const components = [] 
 
     if (contents){
         for (const dir of contents.directories) {
+            folderList.push(dir)
+        }
+        folderList.sort()
+        for (const folder of folderList) {
             components.push(
                 <FolderComponent 
-                    name={dir} 
+                    name={folder} 
                     path={path} 
                     setPath={setPath}
-                    key={dir}
+                    key={folder}
                     setLoading={setLoading}
                 />
             )
         }
+
+        const fileList = []
         for (const file of contents.files) {
+            fileList.push(file)
+        }
+        fileList.sort()
+        for (const file of fileList) {
             components.push(
                 <FileComponent 
                     name={file} 

@@ -1,0 +1,19 @@
+.task-list {
+    background-color: rgb(221, 221, 221);
+    border-radius: 10px;
+    border: 1px solid gray;
+    margin:5px;
+    padding: 10px;
+}
+
+.task-list:hover {
+    background-color: rgb(196, 196, 196);
+}
+
+.task-list:active {
+    background-color: rgb(163, 163, 163);
+}
+
+.task-list div {
+    display: flex
+}

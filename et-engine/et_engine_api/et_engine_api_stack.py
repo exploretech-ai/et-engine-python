@@ -716,9 +716,12 @@ class API(Stack):
         vfs_delete_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    's3:ListBucket',
-                    's3:DeleteObject',
-                    's3:DeleteBucket'
+                    's3:*',
+                    'cloudformation:*',
+                    'efs:*',
+                    'ec2:*',
+                    'iam:*',
+                    'lambda:*'
                 ],
                 resources=['*']
             )
@@ -881,6 +884,47 @@ class API(Stack):
             iam.PolicyStatement(
                 actions=[
                     's3:ListBucket',
+                    'lambda:InvokeFunction'
+                ],
+                resources=['*']
+            )
+        )
+
+        vfs_files = vfs_id.add_resource("files")
+        vfs_file_path = vfs_files.add_resource("{filepath+}")
+        vfs_file_delete_lambda = _lambda.Function(
+            self, 'vfs-file-delete',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.files.delete.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+        vfs_file_path.add_method(
+            "DELETE",
+            integration=apigateway.LambdaIntegration(vfs_file_delete_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(vfs_file_delete_lambda)
+        vfs_file_delete_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
                     'lambda:InvokeFunction'
                 ],
                 resources=['*']
@@ -1276,6 +1320,55 @@ class API(Stack):
                 resources=['*']
             )
         )
+        
+        
+        tasks = self.api.root.add_resource("tasks")
+        tasks_list_lambda = _lambda.Function(
+            self,
+            "tasks-list",
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "tasks.list.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=ec2.SubnetSelection(
+                subnets=database.vpc.select_subnets(
+                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+                ).subnets
+            ),
+            security_groups=[database.sg]
+        )
+
+
+        
+        tasks.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(tasks_list_lambda),
+            method_responses=[{
+                'statusCode': '200',
+                'responseParameters': {
+                    'method.response.header.Content-Type': True,
+                },
+                'responseModels': {
+                    'application/json': apigateway.Model.EMPTY_MODEL,
+                },
+            }],
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(tasks_list_lambda)
+        # tasks_list_lambda.add_to_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=[
+        #             'cloudformation:CreateStack',
+        #         ],
+        #         resources=['*']
+        #     )
+        # )
+
+        
+        task_id = tasks.add_resource("{taskID}")
+
         
         
         # POST + body = execute tool with params in body

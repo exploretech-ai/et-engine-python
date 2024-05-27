@@ -14,7 +14,7 @@ class VFS {
     }
 }
 
-const NewVfsForm = ({idToken, setModalOpen}) => {
+const NewVfsForm = ({idToken, setModalOpen, setLoading}) => {
 
     
     const [formData, setFormData] = useState({
@@ -29,6 +29,7 @@ const NewVfsForm = ({idToken, setModalOpen}) => {
 
     const createNewVfs = async (event) => {
         event.preventDefault()
+        setLoading(true)
 
         const response = await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
@@ -58,7 +59,10 @@ const NewVfsForm = ({idToken, setModalOpen}) => {
         }).catch(err => {
             
             console.log('could not create vfs', err)
-        }).finally(() => setModalOpen(false))
+        }).finally(() => {
+            setModalOpen(false)
+            setLoading(false)
+        })
     }
 
     return (
@@ -82,6 +86,8 @@ const NewVfsForm = ({idToken, setModalOpen}) => {
 
 const Modal = ({setModalOpen, idToken}) => {
 
+    const [loading, setLoading] = useState(false)
+
     const closeModal = () => {
         setModalOpen(false);
     };
@@ -90,7 +96,11 @@ const Modal = ({setModalOpen, idToken}) => {
       <div className="modal">
         <div className="modal-content">
           <span className="close" onClick={closeModal}>&times;</span>
-          <NewVfsForm idToken={idToken} setModalOpen={setModalOpen}/>
+          {loading ? 
+            <div>Creating new filesystem... </div>
+            :
+            <NewVfsForm idToken={idToken} setModalOpen={setModalOpen} setLoading={setLoading}/>
+          }
         </div>
       </div>
     );
@@ -127,8 +137,15 @@ const Filesystems = () => {
             else {throw Error('error retrieving key IDs')}
         }).then(response => {
             const vfsIds = []
+            const vfsNames = []
+            const vfsMap = new Map()
             for (const [name, id] of response) {
-                vfsIds.push(new VFS(name, id))
+                vfsNames.push(name)
+                vfsMap.set(name, new VFS(name, id))
+            }
+            vfsNames.sort()
+            for (const name of vfsNames) {
+                vfsIds.push(vfsMap.get(name))
             }
             setVfsData(vfsIds)
             setActiveVFS(vfsIds[0])
@@ -168,6 +185,7 @@ const Filesystems = () => {
                         setActiveResource={setActiveVFS} 
                         setFilesLoading={setFilesLoading} 
                         setPath={setPath} 
+                        idToken={idToken}
                         style={{flex: 1, borderRight: '1px dashed gray'}}
                     />
                     <FilesDragAndDrop activeVFS={activeVFS} idToken={idToken}>
