@@ -43,14 +43,16 @@ const Tab = ({resource, activeResource, setActiveResource, setFilesLoading, setP
         
     }
 
-    return <li key={resource.name}>
-                <a className={activeResource.id === resource.id ? 'active' : ''} onClick={() => handleTabClick(resource)}>
-                    <p style={{flex:100}}>{resource.name}</p>
-                    <span className="icon" style={{flex: 1}} onClick={deleteItem}>
-                        <i class="fa fa-trash" ></i>
-                    </span>
-                </a>
-            </li>
+    return (
+        <li key={resource.name}>
+            <a className={activeResource.id === resource.id ? 'active' : ''} onClick={() => handleTabClick(resource)}>
+                <p style={{flex:100}}>{resource.name}</p>
+                <span className="icon" style={{flex: 1}} onClick={deleteItem}>
+                    <i class="fa fa-trash" ></i>
+                </span>
+            </a>
+        </li>
+    )
 }
 
 const Navbar = ({resourceList, activeResource, setActiveResource, setFilesLoading, setPath, idToken, style}) => {
@@ -65,15 +67,16 @@ const Navbar = ({resourceList, activeResource, setActiveResource, setFilesLoadin
             
         }
         resourceNames.sort()
-        for (const tool of resourceNames) {
+        for (const resource of resourceNames) {
             tabs.push(
                 <Tab 
-                    resource={resourceMap.get(tool)}
+                    resource={resourceMap.get(resource)}
                     activeResource={activeResource}
                     setActiveResource={setActiveResource}
                     setFilesLoading={setFilesLoading}
                     setPath={setPath}
                     idToken={idToken}
+                    key={resource}
                 />
             )
         }

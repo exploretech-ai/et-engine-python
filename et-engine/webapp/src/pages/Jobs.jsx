@@ -88,7 +88,7 @@ const Jobs = () => {
     const [loading, setLoading] = useState(true)
     const [taskList, setTaskList] = useState([])
 
-    const fetchData = async () => {
+    const fetchToken = async () => {
         let session = null
         try {
             session = await fetchAuthSession();   // Fetch the authentication session
@@ -98,12 +98,10 @@ const Jobs = () => {
         setIdToken(session.tokens.idToken.toString())
     }
 
-    useEffect(() => {
-        console.log('Fetching available tasks...')
-
-        fetchData()
+    const fetchTasks = () => {
         
         if (idToken){
+            console.log('Fetching available tasks...')
             fetch(
                 "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tasks", {
                     method: "GET",
@@ -142,10 +140,18 @@ const Jobs = () => {
                 console.error(error)
             })
         }
+    }
+
+    useEffect(() => {
+        
+        fetchToken()
+        fetchTasks()
         
     }, [idToken])
 
     const clearTasks = () => {
+
+        setLoading(true)
         console.log('Task clearing requested')
         const url = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tasks"
         fetch(url, {
@@ -163,9 +169,11 @@ const Jobs = () => {
         })
         .then(message => {
             console.log("success, returned message ", message)
+            fetchTasks()
         })
         .catch(error => {
             console.error(error)
+            setLoading(false)
         })
     }
 

@@ -115,8 +115,7 @@ const Filesystems = () => {
     const [filesLoading, setFilesLoading] = useState(true)
     const [path, setPath] = useState(['.'])
 
-    const fetchData = async () => {
-
+    const fetchToken = async () => {
         let session = null
         try {
             session = await fetchAuthSession();   // Fetch the authentication session
@@ -124,45 +123,53 @@ const Filesystems = () => {
             console.log(err);
         }
         setIdToken(session.tokens.idToken.toString())
+    }
 
-        await fetch(
-            "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
-                method: "GET",
-                headers: {
-                    "Authorization": "Bearer " + session.tokens.idToken.toString()
+
+    const fetchFilesystems = () => {
+
+        console.log('Fetching available filesystems...')
+
+        if (idToken) {
+            fetch(
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + idToken
+                    }
                 }
-            }
-        ).then(response => {
-            if (response.ok) {return response.json()}
-            else {throw Error('error retrieving key IDs')}
-        }).then(response => {
-            const vfsIds = []
-            const vfsNames = []
-            const vfsMap = new Map()
-            for (const [name, id] of response) {
-                vfsNames.push(name)
-                vfsMap.set(name, new VFS(name, id))
-            }
-            vfsNames.sort()
-            for (const name of vfsNames) {
-                vfsIds.push(vfsMap.get(name))
-            }
-            setVfsData(vfsIds)
-            setActiveVFS(vfsIds[0])
-            setLoading(false)
-        }).catch(error => {
-            setLoading(false)
-            console.log(error)
-            return false
-        })
-        
+            ).then(response => {
+                if (response.ok) {return response.json()}
+                else {throw Error('error retrieving key IDs')}
+            }).then(response => {
+                const vfsIds = []
+                const vfsNames = []
+                const vfsMap = new Map()
+                for (const [name, id] of response) {
+                    vfsNames.push(name)
+                    vfsMap.set(name, new VFS(name, id))
+                }
+                vfsNames.sort()
+                for (const name of vfsNames) {
+                    vfsIds.push(vfsMap.get(name))
+                }
+                setVfsData(vfsIds)
+                setActiveVFS(vfsIds[0])
+                setLoading(false)
+                console.log('success')
+            }).catch(error => {
+                setLoading(false)
+                console.error(error)
+            })
+        }
     };
 
 
 
     useEffect(async () => {
-        await fetchData()
-    }, [])
+        fetchToken()
+        fetchFilesystems()
+    }, [idToken])
 
     const openModal = () => {
         setModalOpen(true);

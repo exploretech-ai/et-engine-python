@@ -2,7 +2,7 @@ import React, {useState, useEffect} from "react";
 import './Directory.css'
 
 
-const FileComponent = ({name, path, vfsId, idToken}) => {
+const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) => {
     const downloadItem = async (e) => {
         
         let key
@@ -73,6 +73,7 @@ const FileComponent = ({name, path, vfsId, idToken}) => {
             key = path.slice(1) + "/" + name
         }
         console.log('Delete Requested on ', key)
+        setLoading(true)
 
         fetch("https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + vfsId + "/files/" + key, {
             method: "DELETE",
@@ -88,10 +89,13 @@ const FileComponent = ({name, path, vfsId, idToken}) => {
             }
         })
         .then(response => {
-            console.log(response)
+            setLoading(true)
+            fetchContents()
+            console.log('success: ',response)
         })
         .catch(error => {
-            console.log(error)
+            setLoading(false)
+            console.error(error)
         })
     }
     return(
@@ -126,7 +130,7 @@ const FolderComponent = ({name, path, setPath, setLoading}) => {
     )
 }
 
-const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, setLoading, style}) => {
+const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, setLoading, fetchContents, style}) => {
 
     const folderList = []
     const components = [] 
@@ -161,6 +165,8 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, se
                     vfsId={vfsId}
                     path={path}
                     idToken={idToken}
+                    fetchContents={fetchContents}
+                    setLoading={setLoading}
                 />
             )
         }
@@ -219,11 +225,10 @@ const Directory = ({style, resource, command, idToken, loading, setLoading, path
     
     const [contents, setContents] = useState(null)
 
-    useEffect(async () => {
-        
+    const fetchContents = () => {
         if (resource && idToken) {
-            const searchPath = path.join('/')
-            const files = await fetch(
+            console.log('Fetching directory contents...')
+            fetch(
                 "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/" + resource.resource + "/" + resource.id + command + "?" + new URLSearchParams({
                     path: path.join('/')
                 }), {
@@ -236,19 +241,25 @@ const Directory = ({style, resource, command, idToken, loading, setLoading, path
             .then(response => {
                 if (response.ok) {
                     return response.json()
-                } 
-                throw new Error('empty directory')
-                
+                } else {
+                    throw new Error('empty directory')
+                }
             })
             .then( files => {
                 setContents(files)
                 setLoading(false)
+                console.log('success')
             })
             .catch(err => {
                 setLoading(false)
                 console.log(err)
             })
         }
+    }
+
+    useEffect(() => {
+        fetchContents()
+        
     }, [resource, path])
 
 
@@ -274,6 +285,7 @@ const Directory = ({style, resource, command, idToken, loading, setLoading, path
                     vfsId={resource.id}
                     idToken={idToken}
                     setLoading={setLoading}
+                    fetchContents={fetchContents}
                 />
             }
         </div>

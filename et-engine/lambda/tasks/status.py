@@ -42,8 +42,44 @@ def handler(event, context):
         cursor.execute(f"""
             UPDATE Tasks SET status = '{status}', status_time = '{status_time}' WHERE userID= '{user}' AND taskID = '{task_id}'
         """)
-        print('Updated table...')
+        print('Updated table, waiting to commit...')
         connection.commit()
+        print('committed')
+
+        exit_code = None
+        reason = None
+        try: 
+            print('Fetching exit code...')
+            container_list = task['containers']
+            print('Container list: ', container_list)
+            container = container_list[0]
+            print('Container: ', container)
+
+            try: 
+                exit_code = container['exitCode']
+                print('Found exit code: ', exit_code)
+            except KeyError as e:
+                print('Key Error while fetching exit code:', e)
+                print('proceeding with unknown exit code')
+            
+            try:
+                reason = container["reason"]
+                print('Found exit reason:', reason)
+            except KeyError as e:
+                print('Key Error while fetching exit reason:', e)
+                print('proceeding with unknown exit code')
+
+            
+        except KeyError as e:
+            print('Key Error while processing status:', e)
+        except IndexError as e:
+            print('Index Error while processing status:', e)
+
+        status = {
+            'status': status,
+            'code': exit_code,
+            'reason': reason
+        }
 
         return {
             'statusCode': 200,
