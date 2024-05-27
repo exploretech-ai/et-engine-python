@@ -2,6 +2,7 @@ import shutil
 import requests
 import json
 import os
+from .tasks import Task
 
 API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
 
@@ -163,7 +164,7 @@ class Tool:
         )
 
         if status.ok:
-            return status
+            return Task(status.json())
         else:
             print(status.text)
             raise Exception('Execute failed')
