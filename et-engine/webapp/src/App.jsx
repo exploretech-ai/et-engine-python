@@ -64,8 +64,19 @@ const Sidebar = ({user}) => {
 
 
 function App() {
+
+  const components = {
+    Header() {
+      return (
+        <div style={{display: "flex", padding: 20}}>
+          <a id="logo" alt="ET Logo"/>
+        </div>
+      )
+  
+    }
+  }
   return (
-    <Authenticator loginMechanisms={['email']} hideSignUp={true}>
+    <Authenticator loginMechanisms={['email']} hideSignUp={true} components={components}>
     {({signOut, user}) => (
       <>
         <Sidebar user={user}/>

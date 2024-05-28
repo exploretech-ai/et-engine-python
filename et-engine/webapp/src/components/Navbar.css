@@ -41,15 +41,15 @@
   }
 
 
-.icon i {
+.icon {
   transition: all 0.1s linear;
 }
 
-.icon:hover i {
+.icon:hover {
   transform: scale(1.5);
   cursor: pointer;
 }
 
-.icon:active i {
+.icon:active {
   color: black;
 }

@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from "react";
 import './Directory.css'
-
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {faTrash, faDownload, faArrowRight, faFolder} from '@fortawesome/free-solid-svg-icons'
 
 const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) => {
     const downloadItem = async (e) => {
@@ -100,14 +101,10 @@ const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) 
     }
     return(
         <div key={name} className="file">
-            <i class="fa fa-arrow-right" style={{flex: 1}}></i>
+            <FontAwesomeIcon icon={faArrowRight} style={{flex: 1, color: "gray"}}/>
             <a key={name+"-p"} style={{flex: 20}}>{name}</a>
-            <span className="download-icon" style={{flex: 1}} onClick={downloadItem}>
-                <i class="fa fa-download" ></i>
-            </span>
-            <span className="download-icon" style={{flex: 1}} onClick={deleteItem}>
-                <i class="fa fa-trash" ></i>
-            </span>
+            <FontAwesomeIcon icon={faDownload} style={{flex: 1}} onClick={downloadItem} className="icon"/>
+            <FontAwesomeIcon icon={faTrash} className="icon" style={{flex: 1}} onClick={deleteItem}/>
             
         </div>
     )
@@ -124,7 +121,7 @@ const FolderComponent = ({name, path, setPath, setLoading}) => {
 
     return(
         <div key={name} className="folder" onClick={handleClick}>
-            <i class="fa fa-folder" style={{flex: 1}}></i>
+            <FontAwesomeIcon icon={faFolder} style={{flex: 1, color: "gray"}}/>
             <a key={name+"-p"} style={{flex: 20}}>{name}</a>
         </div>
     )

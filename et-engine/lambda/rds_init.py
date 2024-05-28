@@ -81,7 +81,9 @@ def handler(event, context):
                 hardware JSON NOT NULL,
                 args JSON NOT NULL,
                 status VARCHAR(255) NOT NULL,
-                status_time TIMESTAMP NOT NULL
+                status_time TIMESTAMP NOT NULL,
+                exit_reason TEXT,
+                exit_code INTEGER
             );
         """
         cursor.execute(create_table_sql)

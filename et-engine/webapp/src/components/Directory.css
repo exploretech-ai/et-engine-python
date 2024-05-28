@@ -17,10 +17,7 @@
 .file:hover {
     background-color: #b7b7b7;
 }
-/* .file:active {
-    border-style: inset;
-    background-color: #8c8c8c;
-} */
+
 .file a {
     display: inline;
     color: black;
@@ -29,19 +26,6 @@
     border-bottom: 2px solid transparent; /* Initially no border */
     background-color: transparent;
     padding-left: 10px;
-}
-
-.download-icon i {
-    transition: all 0.1s linear;
-}
-
-.download-icon:hover i {
-    transform: scale(1.5);
-    cursor: pointer;
-}
-
-.download-icon:active i {
-    color: black;
 }
 
 .folder {
@@ -122,4 +106,18 @@
 .directory {
     overflow-y: auto;
     height: 100%;
+}
+
+.icon {
+    transition: all 0.1s linear;
+    color: gray;
+}
+
+.icon:hover {
+    transform: scale(1.5);
+    cursor: pointer;
+}
+
+.icon:active {
+    color: black;
 }

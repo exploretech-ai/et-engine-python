@@ -45,6 +45,8 @@ const TaskDropdown = ({task}) => {
         <div className="task-dropdown">
             <TaskArgs task={task}/>
             <TaskHardware task={task}/>
+            <p>Exit Code: {task.exitCode}</p>
+            <p>Exit Reason: {task.exitReason}</p>
         </div>
     )
 }

@@ -10,7 +10,7 @@ def handler(event, context):
         print('User requested task list: ', user)
 
         query = f"""
-            SELECT taskID, toolID, logID, start_time, hardware, args, status, status_time FROM Tasks WHERE userID = '{user}'
+            SELECT taskID, toolID, logID, start_time, hardware, args, status, status_time, exit_code, exit_reason FROM Tasks WHERE userID = '{user}'
         """
         print(query)
 
@@ -36,7 +36,9 @@ def handler(event, context):
                 'hardware':     row[4],
                 'args':         row[5],
                 'status':       row[6],
-                'statusTime':  row[7].strftime('%Y-%m-%d %H:%M:%S')
+                'statusTime':  row[7].strftime('%Y-%m-%d %H:%M:%S'),
+                'exitCode':     row[8],
+                'exitReason':   row[9]
             })
         print('task list JSON: ', tasks)
 

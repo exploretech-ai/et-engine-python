@@ -244,7 +244,7 @@ class API(Stack):
 
         auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType("r5a.8xlarge"),
+            instance_type=ec2.InstanceType("r5d.8xlarge"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
             min_capacity=0,
             max_capacity=10,
@@ -1489,8 +1489,36 @@ class WebApp(Stack):
         #     validation=certificatemanager.CertificateValidation.from_dns(hosted_zone)
         # )
 
+        store = cloudfront.KeyValueStore(self, "KeyValueStore")
+        client_side_routing_function = cloudfront.Function(
+            self, 
+            "ClientSideRouting",
+            code=cloudfront.FunctionCode.from_inline("""function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+  var paths = ['assets', 'app.webmanifest']
+  var isServerPath = (path) => uri.includes(path);
+
+  if (!paths.some(isServerPath)) {
+    request.uri = '/';
+  }
+
+  return request;
+}
+"""),
+            runtime=cloudfront.FunctionRuntime.JS_2_0,
+            key_value_store=store
+        )
+        function_association = cloudfront.FunctionAssociation(
+            event_type=cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function=client_side_routing_function
+        )
+        
         cloudfront_distribution = cloudfront.Distribution(self, 'WebsiteDistribution',
-            default_behavior=cloudfront.BehaviorOptions(origin=origins.S3Origin(bucket)),
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.S3Origin(bucket),
+                function_associations = [function_association]
+            ),
             domain_names=['engine.exploretech.ai'],
             certificate=certificatemanager.Certificate.from_certificate_arn(
                 self,

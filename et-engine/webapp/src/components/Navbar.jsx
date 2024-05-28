@@ -1,5 +1,7 @@
 import React from "react"
 import './Navbar.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {faTrash} from '@fortawesome/free-solid-svg-icons'
 
 const Tab = ({resource, activeResource, setActiveResource, setFilesLoading, setPath, idToken}) => {
 
@@ -39,17 +41,13 @@ const Tab = ({resource, activeResource, setActiveResource, setFilesLoading, setP
         } else {
             console.log('Delete requested, but ID token not found')
         }
-        
-        
     }
 
     return (
         <li key={resource.name}>
             <a className={activeResource.id === resource.id ? 'active' : ''} onClick={() => handleTabClick(resource)}>
                 <p style={{flex:100}}>{resource.name}</p>
-                <span className="icon" style={{flex: 1}} onClick={deleteItem}>
-                    <i class="fa fa-trash" ></i>
-                </span>
+                <FontAwesomeIcon icon={faTrash} className="icon" style={{flex: 1}} onClick={deleteItem}/>
             </a>
         </li>
     )
