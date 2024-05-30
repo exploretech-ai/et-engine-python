@@ -42,16 +42,16 @@ const Sidebar = ({user}) => {
             <Link to={`home`}>Home</Link>
           </li>
           <li>
-            <Link to={`tools`}>Tools</Link>
+            <Link to={`filesystems`}>Filesystems</Link>
           </li>
           <li>
-            <Link to={`filesystems`}>Filesystems</Link>
+            <Link to={`tools`}>Tools</Link>
           </li>
           <li>
             <Link to={`jobs`}>Tasks</Link>
           </li>
           <li>
-            <Link to={`share`}>Share</Link>
+            <Link to={`viewer`}>Viewer</Link>
           </li>
           <li>
             <Link to={`keys`}>API Keys</Link>

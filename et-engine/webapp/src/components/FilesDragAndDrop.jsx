@@ -11,11 +11,8 @@ import './FilesDragAndDrop.css';
 function FilesDragAndDrop({activeVFS, idToken, children}) {
 
     const onUpload = (files) => {
-        
-        // GET request to API (where configuration is done and presigned URL is returned)
-        // console.log(activeVFS)
-        // console.log(idToken)
-        console.log(files)
+
+        console.log('Uploading files: ', files)
         Array.from(files).forEach(file => {
         fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + activeVFS.id, {
@@ -68,18 +65,20 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
   const [dragging, setDragging] = React.useState(false)
 
   React.useEffect(() => {
-    drop.current.addEventListener('dragover', handleDragOver)
-    drop.current.addEventListener('drop', handleDrop)
-    drop.current.addEventListener('dragenter', handleDragEnter)
-    drop.current.addEventListener('dragleave', handleDragLeave)
 
-    return () => {
-        drop.current.removeEventListener('dragover', handleDragOver)
-        drop.current.removeEventListener('drop', handleDrop)
-        drop.current.removeEventListener('dragenter', handleDragEnter)
-        drop.current.removeEventListener('dragleave', handleDragLeave)
-        
-    }
+    if (drop.current) {
+        drop.current.addEventListener('dragover', handleDragOver)
+        drop.current.addEventListener('drop', handleDrop)
+        drop.current.addEventListener('dragenter', handleDragEnter)
+        drop.current.addEventListener('dragleave', handleDragLeave)
+
+        return () => {
+            drop.current.removeEventListener('dragover', handleDragOver)
+            drop.current.removeEventListener('drop', handleDrop)
+            drop.current.removeEventListener('dragenter', handleDragEnter)
+            drop.current.removeEventListener('dragleave', handleDragLeave)
+        }
+      }
   }, [activeVFS, idToken])
 
   const handleDragOver = (e) => {

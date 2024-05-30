@@ -1,0 +1,31 @@
+
+#content-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    height: 90vh;
+    flex-wrap: wrap;
+    padding: 20px
+  }
+  
+  #sidebar-container {
+    flex: 1;
+    height: 100%;
+    text-align: center;
+    justify-content: center;
+    border: solid black 1px;
+    border-radius: 3em;
+    margin-right: 10px;
+  }
+  
+  #canvas-container {
+    flex: 3;
+    height: 100%;
+    border: solid black 1px;
+    border-radius: 3em;
+    margin-left: 10px;
+  }
+  
+  #canvas {
+    height: 800px;
+  }

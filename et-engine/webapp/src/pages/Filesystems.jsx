@@ -128,9 +128,8 @@ const Filesystems = () => {
 
     const fetchFilesystems = () => {
 
-        console.log('Fetching available filesystems...')
-
         if (idToken) {
+            console.log('Fetching available filesystems...')
             fetch(
                 "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
                     method: "GET",
@@ -140,7 +139,7 @@ const Filesystems = () => {
                 }
             ).then(response => {
                 if (response.ok) {return response.json()}
-                else {throw Error('error retrieving key IDs')}
+                else {throw Error('error retrieving filesystems')}
             }).then(response => {
                 const vfsIds = []
                 const vfsNames = []
@@ -166,7 +165,7 @@ const Filesystems = () => {
 
 
 
-    useEffect(async () => {
+    useEffect(() => {
         fetchToken()
         fetchFilesystems()
     }, [idToken])

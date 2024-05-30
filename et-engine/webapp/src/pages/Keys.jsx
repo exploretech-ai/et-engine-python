@@ -186,37 +186,37 @@ const Keys = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [idToken, setIdToken] = useState(null)
 
-    useEffect(async () => {
+    const fetchToken = () => {
         let session = null
         try {
-            session = await fetchAuthSession();   // Fetch the authentication session
+            session = fetchAuthSession();   // Fetch the authentication session
+            setIdToken(session.tokens.idToken.toString())
         } catch (err) {
-            console.log(err);
+          console.error(err);
         }
-        setIdToken(session.tokens.idToken.toString())
+    }
 
-        const response = await fetch(
-            "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/keys", {
-                method: "GET",
-                headers: {
-                    "Authorization": "Bearer " + session.tokens.idToken.toString()
+    useEffect(() => {
+        if (idToken) {
+            fetch(
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/keys", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + session.tokens.idToken.toString()
+                    }
                 }
-            }
-        ).then(
-            response => response.json()
-        ).then(response => {
-            const newAPIKeys = []
-            let nextKeyID = 0
-            for (const item of response){
-                newAPIKeys.push(new Key(item.name, item.dateCreated, nextKeyID))
-                nextKeyID += 1
-            }
-            setAPIKeys(newAPIKeys)
-        })
-                
-        
-        
-
+            ).then(
+                response => response.json()
+            ).then(response => {
+                const newAPIKeys = []
+                let nextKeyID = 0
+                for (const item of response){
+                    newAPIKeys.push(new Key(item.name, item.dateCreated, nextKeyID))
+                    nextKeyID += 1
+                }
+                setAPIKeys(newAPIKeys)
+            })
+        }
     }, [])
 
     const openModal = () => {

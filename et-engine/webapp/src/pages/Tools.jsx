@@ -61,51 +61,57 @@ const Tools = () => {
     const [loading, setLoading] = useState(true)
 
 
-    const fetchData = async () => {
+    const fetchToken = async () => {
         let session = null
         try {
             session = await fetchAuthSession();   // Fetch the authentication session
         } catch (err) {
-          console.log(err);
+          console.error(err);
         }
-
-        await fetch(
-            "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools", {
-                method: "GET",
-                headers: {
-                    "Authorization": "Bearer " + session.tokens.idToken.toString()
+        setIdToken(session.tokens.idToken.toString())
+    }
+    
+    const fetchTools = () => {
+        if (idToken) {
+            console.log('Fetching available tools...')
+            fetch(
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + idToken
+                    }
                 }
-            }
-        ).then(response => {
-            if (response.ok) {return response.json()}
-            else {throw Error('error retrieving key IDs')}
-        }).then(response => {
-            const tools = []
-            const toolNames = []
-            const toolMap = new Map()
-            for (const [name, id] of response) {
-                toolNames.push(name)
-                toolMap.set(name, new Tool(name, id))
-            }
-            toolNames.sort()
-            for (const name of toolNames) {
-                tools.push(toolMap.get(name))
-            }
-            setToolData(tools)
-            setActiveTool(tools[0])
-            setIdToken(session.tokens.idToken.toString())
-            setLoading(false)
-        }).catch(error => {
-            setLoading(false)
-            console.log(error)
-        })
-        
+            ).then(response => {
+                if (response.ok) {return response.json()}
+                else {throw Error('error retrieving tools')}
+            }).then(response => {
+                const tools = []
+                const toolNames = []
+                const toolMap = new Map()
+                for (const [name, id] of response) {
+                    toolNames.push(name)
+                    toolMap.set(name, new Tool(name, id))
+                }
+                toolNames.sort()
+                for (const name of toolNames) {
+                    tools.push(toolMap.get(name))
+                }
+                setToolData(tools)
+                setActiveTool(tools[0])
+                setLoading(false)
+                console.log('success')
+            }).catch(error => {
+                setLoading(false)
+                console.error(error)
+            })
+        }
     };
 
 
 
-    useEffect(async () => {
-        await fetchData()
+    useEffect(() => {
+        fetchToken()
+        fetchTools()
     }, [idToken])
 
     return (
