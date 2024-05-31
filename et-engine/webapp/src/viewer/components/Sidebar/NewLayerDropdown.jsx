@@ -13,7 +13,7 @@ import Dropdown from "../../Dropdown";
  * @param {Array} checkboxPropSetters the global list of checkbox property settters (react States)
  * @returns a dropdown menu that lets the user load new objects
  */
-function NewObjectMenu() {
+function NewObjectMenu({style}) {
     const [modalOpen, toggleModal] = useToggle(false)
     const [modalKey, setModalKey] = useState(null)
 
@@ -23,7 +23,7 @@ function NewObjectMenu() {
     }
 
     return(
-        <div>
+        <div style={style}>
             <ImportWizard modalKey={modalKey} isOpen={modalOpen} toggleOpen={toggleModal} />
 
             <Dropdown>

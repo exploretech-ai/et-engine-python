@@ -30,7 +30,6 @@ const ViewerPage = () => {
         checkboxPropSetters[i] = sp
     }
 
-
     return(
         <Page name="Viewer" style={{paddingLeft: 0, paddingRight: 0}}>
             <CBContext.Provider value={[checkboxes, checkboxProps, checkboxPropSetters]}>

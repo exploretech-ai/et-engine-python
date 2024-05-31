@@ -2,10 +2,11 @@
 #content-container {
     display: flex;
     align-items: center;
-    justify-content: space-evenly;
+    /* justify-content: space-evenly; */
     height: 90vh;
-    flex-wrap: wrap;
-    padding: 20px
+    /* flex-wrap: wrap; */
+    padding: 20pxl;
+    width: 100%;
   }
   
   #sidebar-container {
@@ -13,17 +14,20 @@
     height: 100%;
     text-align: center;
     justify-content: center;
-    border: solid black 1px;
+    /* border: solid black 1px; */
     border-radius: 3em;
     margin-right: 10px;
+    margin-left: 10px;
+    width: 100%
   }
   
   #canvas-container {
     flex: 3;
     height: 100%;
-    border: solid black 1px;
-    border-radius: 3em;
-    margin-left: 10px;
+    border: 1px solid rgb(167, 167, 167);
+    border-radius: 20px;
+    width: 100%;
+    margin-right: 15px;
   }
   
   #canvas {

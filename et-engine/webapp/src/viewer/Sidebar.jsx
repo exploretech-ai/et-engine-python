@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import NewLayerDropdown from "./components/Sidebar/NewLayerDropdown";
 import { CBContext } from "../pages/Viewer";
+import "./Sidebar.css"
 
 /**
  * Sidebar consisting of an object loader and a layer modifier
@@ -41,12 +42,12 @@ function Sidebar() {
   // Returns only rendered checkboxes + properties and setters
   return ([
     <div>
-      <NewLayerDropdown />
-      <fieldset>
-        <legend>Select Layers:</legend>
+      <NewLayerDropdown style={{marginTop: "10px"}}/>
+      <fieldset id="fields">
+        <legend>Select Layers</legend>
           {renderCheckboxes()}
       </fieldset>
-      <button onClick={saveProject}>Save Project</button>
+      <button onClick={saveProject} style={{marginTop: "20px"}}>Save Project</button>
     </div>
   ]);
 }

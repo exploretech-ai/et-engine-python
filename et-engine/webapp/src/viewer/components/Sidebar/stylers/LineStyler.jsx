@@ -12,82 +12,6 @@ const colorMapOptionsReverse = {
     TerrainColormap: 'Terrain'
 }
 
-/**
- * 
- * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
- * @param {setState} checkboxPropSetter (named arg) react state setter for checkbox properties
- * @returns a styling JSX element that the user can interact with the modify the layer style
- */
-function LineStyler({checkboxProps, checkboxPropSetter}) {
-
-    const [colorField, setColorField] = useState(checkboxProps.object.style.colorValue)          // For the color variable to display on the lines
-    const [colorMap, setColorMap] = useState(checkboxProps.object.style.colorMap.name)              // For the colormap used to set colors
-    
-    const [width, setWidth] = useState(checkboxProps.object.style.width)                      // For the rendering line width
-
-
-    /**
-     * Updates colors based on a colormap change only
-     * @param {string} cmap string identifier for the colormap, either 'Seismic' or 'Terrain'
-     */
-    function updateColorMap(cmap) {
-
-        // These are the pre-defined colormap options
-        const colorMapOptions = {
-            'Seismic': SeismicColormap,
-            'Terrain': TerrainColormap
-        }
-
-        // Update the displayed color field
-        setColorMap(cmap)
-
-        // Update the colormap property on the layer object
-        let newProps = checkboxProps.clone()
-        newProps.object.style.colorMap = colorMapOptions[cmap]
-
-        // Use the new colormap to update the mesh colors and then update the rendering
-        newProps.object.setColors(colorField)
-        checkboxPropSetter(newProps)
-    }
-
-
-
-    /**
-     * Updates the mesh width along the lines
-     * @param {Number} newWidth line mesh width in new render
-     */
-    function updateWidth(newWidth) {
-
-        // Update the width property
-        let newProps = checkboxProps.clone()
-        newProps.object.geometry.width = newWidth
-
-        // Update the mesh and re-render with new props
-        newProps.object.geometry.updateGeometry()
-        checkboxPropSetter(newProps)
-    }
-
-
-
-    // Each style option is contained within a <span> block
-    return(
-        <div>
-            <ColorFieldSelector colorField={colorField} setColorField={setColorField} checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
-            <ColorMapSelector colorField={colorField} checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
-            <TransformSelector colorField={colorField} checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
-            {/* <span style={{display: 'flex'}}>
-                Transparency
-            </span> */}
-            <span style={{display: 'flex'}}>
-                Width
-                <input type="number" value={width} onChange={(e) => setWidth(e.target.value)}/>
-                <button type="submit" onClick={() => updateWidth(width)}>Submit</button>
-
-            </span>
-        </div>
-    )
-}
-
 
 function ColorMapSelector({checkboxProps, checkboxPropSetter, colorField}) {
 
@@ -119,9 +43,9 @@ function ColorMapSelector({checkboxProps, checkboxPropSetter, colorField}) {
    
     // Each style option is contained within a <span> block
     return(
-        <span style={{display: 'flex'}}>
+        <span>
             Colormap
-            <Dropdown>
+            <Dropdown style={{marginLeft: "10px"}}>
                 <Dropdown.Button>
                     {colorMap ? colorMap:"Select From List"}
                 </Dropdown.Button>
@@ -173,9 +97,9 @@ function ColorFieldSelector({checkboxProps, checkboxPropSetter, colorField, setC
     }
 
     return (
-        <span style={{display: 'flex'}}>
+        <span>
             Color Field
-            <Dropdown>
+            <Dropdown style={{marginLeft: "10px"}}>
                 <Dropdown.Button>
                     {colorField ? colorField:"Select From List"}
                 </Dropdown.Button>
@@ -214,11 +138,10 @@ function TransformSelector({checkboxProps, checkboxPropSetter, colorField}) {
         checkboxPropSetter(newProps)
     }
 
-
     return (
-        <span style={{display: 'flex'}}>
+        <span>
             Transform
-            <Dropdown>
+            <Dropdown style={{marginLeft: "10px"}}>
                 <Dropdown.Button>
                     {transform ? transform:"Select From List"}
                 </Dropdown.Button>
@@ -234,5 +157,76 @@ function TransformSelector({checkboxProps, checkboxPropSetter, colorField}) {
         </span>
     )
 }
+
+/**
+ * 
+ * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
+ * @param {setState} checkboxPropSetter (named arg) react state setter for checkbox properties
+ * @returns a styling JSX element that the user can interact with the modify the layer style
+ */
+function LineStyler({checkboxProps, checkboxPropSetter}) {
+
+    const [colorField, setColorField] = useState(checkboxProps.object.style.colorValue)          // For the color variable to display on the lines
+    const [colorMap, setColorMap] = useState(checkboxProps.object.style.colorMap.name)              // For the colormap used to set colors
+    const [width, setWidth] = useState(checkboxProps.object.style.width)                      // For the rendering line width
+
+    /**
+     * Updates colors based on a colormap change only
+     * @param {string} cmap string identifier for the colormap, either 'Seismic' or 'Terrain'
+     */
+    function updateColorMap(cmap) {
+
+        // These are the pre-defined colormap options
+        const colorMapOptions = {
+            'Seismic': SeismicColormap,
+            'Terrain': TerrainColormap
+        }
+
+        // Update the displayed color field
+        setColorMap(cmap)
+
+        // Update the colormap property on the layer object
+        let newProps = checkboxProps.clone()
+        newProps.object.style.colorMap = colorMapOptions[cmap]
+
+        // Use the new colormap to update the mesh colors and then update the rendering
+        newProps.object.setColors(colorField)
+        checkboxPropSetter(newProps)
+    }
+
+    /**
+     * Updates the mesh width along the lines
+     * @param {Number} newWidth line mesh width in new render
+     */
+    function updateWidth(newWidth) {
+
+        // Update the width property
+        let newProps = checkboxProps.clone()
+        newProps.object.geometry.width = newWidth
+
+        // Update the mesh and re-render with new props
+        newProps.object.geometry.updateGeometry()
+        checkboxPropSetter(newProps)
+    }
+
+    // Each style option is contained within a <span> block
+    return(
+        <div>
+            <ColorFieldSelector colorField={colorField} setColorField={setColorField} checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
+            <ColorMapSelector colorField={colorField} checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
+            <TransformSelector colorField={colorField} checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
+            {/* <span style={{display: 'flex'}}>
+                Transparency
+            </span> */}
+            <span style={{display: 'flex'}}>
+                Width
+                <input type="number" value={width} onChange={(e) => setWidth(e.target.value)} style={{marginLeft: "10px"}}/>
+                <button type="submit" onClick={() => updateWidth(width)}>Submit</button>
+
+            </span>
+        </div>
+    )
+}
+
 
 export default LineStyler

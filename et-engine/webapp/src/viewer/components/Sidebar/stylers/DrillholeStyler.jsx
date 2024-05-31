@@ -9,81 +9,6 @@ const colorMapOptions = {
 }
 
 
-/**
- * 
- * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
- * @param {setState} checkboxPropSetter (named arg) react state setter for checkbox properties
- * @returns a styling JSX element that the user can interact with the modify the layer style
- */
-function DrillholeStyler({checkboxProps, checkboxPropSetter}) {
-
-    const [colorMap, setColorMap] = useState('Seismic')              // For the colormap used to set colors
-    const [realization, setRealization] = useState(0)
-
-
-    /**
-     * Updates the realization set to visible
-     * @param {event} e event associated with a change in the number input box
-     */
-    function updateRealization(e) {
-
-        const realizationNumber = e.target.value
-
-        // Make sure the number is between 0-numReals
-        if (realizationNumber >= 0 && realizationNumber < checkboxProps.object.parameters.numObservations) {
-
-            // Update the checkbox properties with new realization visible
-            const newProps = checkboxProps.clone()
-            newProps.object.currentObservation = realizationNumber
-            newProps.object.setColors(colorMapOptions[colorMap])
-
-            // Update React states
-            checkboxPropSetter(newProps)
-            setRealization(realizationNumber)
-        }
-    }
-
-    /**
-     * Updates colors based on a colormap change only
-     * @param {string} cmap string identifier for the colormap, either 'Seismic' or 'Terrain'
-     */
-    function updateColorMap(cmap) {
-        setColorMap(cmap)
-        let newProps = checkboxProps.clone()
-        newProps.object.setColors(colorMapOptions[cmap])
-        checkboxPropSetter(newProps)
-    }
-
-    // Each style option is contained within a <span> block
-    return(
-        <div>
-            <span style={{display: 'flex'}}>
-                Colormap
-                <Dropdown>
-                    <Dropdown.Button>
-                        {colorMap ? colorMap:"Select From List"}
-                    </Dropdown.Button>
-
-                    <Dropdown.Menu>
-                        <Dropdown.Item onClick={() => updateColorMap('Seismic')} key={"seismic"}>
-                            Seismic
-                        </Dropdown.Item>
-                        <Dropdown.Item onClick={() => updateColorMap('Terrain')} key={"terrain"}>
-                            Terrain
-                        </Dropdown.Item>
-                    </Dropdown.Menu>
-                </Dropdown>
-            </span>
-            <span style={{display: 'flex'}}>
-            Property  
-            <input type="number" value={realization} onChange={(e) => updateRealization(e)}/>
-        </span>
-            {/* <TubeRadiusSetter checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/> */}
-            {/* <CollarRadiusSetter checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/> */}
-        </div>
-    )
-}
-
 // function TubeRadiusSetter({checkboxProps, checkboxPropSetter}) {
 
 //     const [radius, setRadius] = useState(1)
@@ -135,5 +60,82 @@ function DrillholeStyler({checkboxProps, checkboxPropSetter}) {
 //         </span>
 //     )
 // }
+
+
+/**
+ * 
+ * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
+ * @param {setState} checkboxPropSetter (named arg) react state setter for checkbox properties
+ * @returns a styling JSX element that the user can interact with the modify the layer style
+ */
+function DrillholeStyler({checkboxProps, checkboxPropSetter}) {
+
+    const [colorMap, setColorMap] = useState('Seismic')              // For the colormap used to set colors
+    const [realization, setRealization] = useState(0)
+
+
+    /**
+     * Updates the realization set to visible
+     * @param {event} e event associated with a change in the number input box
+     */
+    function updateRealization(e) {
+
+        const realizationNumber = e.target.value
+
+        // Make sure the number is between 0-numReals
+        if (realizationNumber >= 0 && realizationNumber < checkboxProps.object.parameters.numObservations) {
+
+            // Update the checkbox properties with new realization visible
+            const newProps = checkboxProps.clone()
+            newProps.object.currentObservation = realizationNumber
+            newProps.object.setColors(colorMapOptions[colorMap])
+
+            // Update React states
+            checkboxPropSetter(newProps)
+            setRealization(realizationNumber)
+        }
+    }
+
+    /**
+     * Updates colors based on a colormap change only
+     * @param {string} cmap string identifier for the colormap, either 'Seismic' or 'Terrain'
+     */
+    function updateColorMap(cmap) {
+        setColorMap(cmap)
+        let newProps = checkboxProps.clone()
+        newProps.object.setColors(colorMapOptions[cmap])
+        checkboxPropSetter(newProps)
+    }
+
+    // Each style option is contained within a <span> block
+    return(
+        <div>
+            <span>
+                Colormap
+                <Dropdown style={{marginLeft: "10px"}}>
+                    <Dropdown.Button>
+                        {colorMap ? colorMap:"Select From List"}
+                    </Dropdown.Button>
+
+                    <Dropdown.Menu>
+                        <Dropdown.Item onClick={() => updateColorMap('Seismic')} key={"seismic"}>
+                            Seismic
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => updateColorMap('Terrain')} key={"terrain"}>
+                            Terrain
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </span>
+            <span style={{display: 'flex'}}>
+            Property  
+            <input type="number" value={realization} onChange={(e) => updateRealization(e)} style={{marginLeft: "10px"}}/>
+        </span>
+            {/* <TubeRadiusSetter checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/> */}
+            {/* <CollarRadiusSetter checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/> */}
+        </div>
+    )
+}
+
 
 export default DrillholeStyler

@@ -13,28 +13,6 @@ const colorMapOptionsReverse = {
     TerrainColormap: 'Terrain'
 }
 
-
-/**
- * 
- * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
- * @param {setState} checkboxPropSetter (named arg) react state setter for checkbox properties
- * @returns a styling JSX element that the user can interact with the modify the layer style
- */
-function SurfaceStyler({checkboxProps, checkboxPropSetter}) {
-
-    const [colorMap, setColorMap] = useState(colorMapOptionsReverse[checkboxProps.object.style.colorMap.name])                  // For the colormap used to set colors
-
-    // Each style option is contained within a <span> block
-    return(
-        <div>
-            <ColorMapSelector checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} colorMap={colorMap} setColorMap={setColorMap}/>
-            <BandSelector checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} colorMap={colorMap}/>
-            <OpacitySlider checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} />
-        </div>
-    )
-}
-
-
 function OpacitySlider({checkboxProps, checkboxPropSetter}) {
     const [opacity, setOpacity] = useState(checkboxProps.object.style.opacity)
 
@@ -46,9 +24,9 @@ function OpacitySlider({checkboxProps, checkboxPropSetter}) {
     }
 
     return (
-        <span style={{display: 'flex'}}>
+        <span>
             Opacity
-            <input type="range" min="0" max="1" step=".01" value={opacity} onChange={(e) => updateOpacity(e)}/>
+            <input type="range" min="0" max="1" step=".01" value={opacity} onChange={(e) => updateOpacity(e)} style={{marginLeft: "10px"}}/>
         </span>
     )
 }
@@ -70,7 +48,7 @@ function ColorMapSelector({checkboxProps, checkboxPropSetter, colorMap, setColor
     return(
         <span style={{display: 'flex'}}>
             Colormap
-            <Dropdown>
+            <Dropdown style={{marginLeft: "10px"}}>
                 <Dropdown.Button>
                     {colorMap ? colorMap:"Select From List"}
                 </Dropdown.Button>
@@ -113,12 +91,32 @@ function BandSelector({checkboxProps, checkboxPropSetter, colorMap}) {
     }
 
     return(
-        <span style={{display: 'flex'}}>
+        <span>
             Color Band:
-            <select id="elevBand" value={colorBand} onChange={e => updateColors(e)}>
+            <select id="elevBand" value={colorBand} onChange={e => updateColors(e)} style={{marginLeft: "10px"}}>
                 {bandOptions}  
             </select>
         </span>
+    )
+}
+
+/**
+ * 
+ * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
+ * @param {setState} checkboxPropSetter (named arg) react state setter for checkbox properties
+ * @returns a styling JSX element that the user can interact with the modify the layer style
+ */
+function SurfaceStyler({checkboxProps, checkboxPropSetter}) {
+
+    const [colorMap, setColorMap] = useState(colorMapOptionsReverse[checkboxProps.object.style.colorMap.name])                  // For the colormap used to set colors
+
+    // Each style option is contained within a <span> block
+    return(
+        <div>
+            <ColorMapSelector checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} colorMap={colorMap} setColorMap={setColorMap}/>
+            <BandSelector checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} colorMap={colorMap}/>
+            <OpacitySlider checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} />
+        </div>
     )
 }
 
