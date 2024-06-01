@@ -3,6 +3,8 @@ import { useState, useEffect } from "react"
 import Page from "./Page"
 import "./Keys.css"
 import { fetchAuthSession } from '@aws-amplify/auth';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClipboard, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 class Key {
     constructor(name, date, id) {
@@ -53,7 +55,7 @@ const KeyItem = ({apiKey, updateList, idToken}) =>{
             <p style={{flex: 2}}>{apiKey.name}</p>
             <p style={{flex: 2}}>Date Created: {apiKey.date}</p>
             <span className="delete-icon" onClick={handleRemoveItem}>
-                <i className="fa fa-trash fa-lg"></i>
+                <FontAwesomeIcon icon={faTrash}/>
             </span>
         </div>
     )
@@ -62,7 +64,6 @@ const KeyItem = ({apiKey, updateList, idToken}) =>{
 
 const NewKeyForm = ({idToken, APIKeys, setAPIKeys, showKey, updateShowKey}) => {
 
-    
     const [formData, setFormData] = useState({
         name: '',
         description: ''
@@ -134,7 +135,7 @@ const NewKeyForm = ({idToken, APIKeys, setAPIKeys, showKey, updateShowKey}) => {
                 <p>Make sure to copy and store this key in a secure location. You will not be able to see this again. If you lose it, you will have to create another key.</p>
                 <div className="key-container">
                     <span onClick={() => navigator.clipboard.writeText(showKey)}>
-                        <i className="fa fa-copy"></i>
+                        <FontAwesomeIcon icon={faClipboard}/>
                     </span>
                     <p>{showKey}</p>
                 </div>
@@ -186,28 +187,33 @@ const Keys = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [idToken, setIdToken] = useState(null)
 
-    const fetchToken = () => {
+    const fetchToken = async () => {
         let session = null
         try {
-            session = fetchAuthSession();   // Fetch the authentication session
-            setIdToken(session.tokens.idToken.toString())
+            session = await fetchAuthSession();   // Fetch the authentication session
         } catch (err) {
           console.error(err);
         }
+        setIdToken(session.tokens.idToken.toString())
     }
 
-    useEffect(() => {
+    const fetchKeys = () => {
         if (idToken) {
+            console.log('Fetching API keys...')
             fetch(
                 "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/keys", {
                     method: "GET",
                     headers: {
-                        "Authorization": "Bearer " + session.tokens.idToken.toString()
+                        "Authorization": "Bearer " + idToken
                     }
                 }
-            ).then(
-                response => response.json()
             ).then(response => {
+                if (response.ok) {
+                    return response.json()
+                } else {
+                    throw new Error('Error fetching API keys')
+                }
+            }).then(response => {
                 const newAPIKeys = []
                 let nextKeyID = 0
                 for (const item of response){
@@ -215,15 +221,22 @@ const Keys = () => {
                     nextKeyID += 1
                 }
                 setAPIKeys(newAPIKeys)
+                console.log('success:', newAPIKeys)
+            }).catch(error => {
+                setLoading(false)
+                console.error(error)
             })
         }
-    }, [])
+    }
+
+    useEffect(() => {
+        fetchToken()
+        fetchKeys()
+    }, [idToken])
 
     const openModal = () => {
         setModalOpen(true);
     };
-
-    
 
     return(
         <Page name={'API Keys'}>

@@ -1,13 +1,13 @@
-.delete-icon i {
+.delete-icon * {
     transition: all 0.1s linear;
 }
 
-.delete-icon:hover i {
+.delete-icon:hover * {
     transform: scale(1.5);
     cursor: pointer;
 }
 
-.delete-icon:active i {
+.delete-icon:active * {
     color: black;
 }
 
@@ -44,6 +44,7 @@
     border: 1px solid #888;
     width: 50%;
     text-align: center;
+    color: black;
   }
 .modal-content form {
     display: inline-block;
@@ -79,19 +80,21 @@
   top: -10px;
   right: -10px;
 }
-.key-container span i {
+.key-container span * {
   transition: all 0.1s linear;
   border: 1px solid black;
   border-radius: 5px;
   padding: 5px;
   background-color: aqua;
+  align-items: center;
 }
 
-.key-container span:hover i {
+.key-container span:hover * {
   transform: scale(1.5);
   cursor: pointer;
 }
 
-.key-container span:active i {
+.key-container span:active * {
   color: black;
 }
+

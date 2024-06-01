@@ -169,8 +169,6 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, se
         }
     }
 
-    
-
     return(
         <div style={style} className="directory">
             {components}
