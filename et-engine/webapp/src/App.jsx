@@ -48,7 +48,7 @@ const Sidebar = ({user}) => {
             <Link to={`tools`}>Tools</Link>
           </li>
           <li>
-            <Link to={`jobs`}>Tasks</Link>
+            <Link to={`tasks`}>Tasks</Link>
           </li>
           <li>
             <Link to={`viewer`}>Viewer</Link>

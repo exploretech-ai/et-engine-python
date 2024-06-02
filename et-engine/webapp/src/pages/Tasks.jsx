@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from "react"
 import Page from "./Page"
 import { fetchAuthSession } from '@aws-amplify/auth';
-import "./Jobs.css"
+import "./Tasks.css"
 
 const TaskArgs = ({task}) => {
 
@@ -84,7 +84,7 @@ const TaskList = ({taskList}) => {
     )
 }
 
-const Jobs = () => {
+const Tasks = () => {
 
     const [idToken, setIdToken] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -195,4 +195,4 @@ const Jobs = () => {
     )
 }
 
-export default Jobs
+export default Tasks

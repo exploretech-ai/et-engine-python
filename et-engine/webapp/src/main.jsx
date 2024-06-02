@@ -7,7 +7,7 @@ import Home from './pages/Home'
 import Filesystems from './pages/Filesystems'
 import Tools from './pages/Tools'
 import Keys from './pages/Keys'
-import Jobs from './pages/Jobs'
+import Tasks from './pages/Tasks'
 import Viewer from './pages/Viewer'
 
 import {
@@ -41,8 +41,8 @@ const router = createBrowserRouter([
         element: <Keys/>
       },
       {
-        path: "jobs",
-        element: <Jobs/>
+        path: "tasks",
+        element: <Tasks/>
       },
       {
         path: "viewer",
