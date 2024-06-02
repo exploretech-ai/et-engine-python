@@ -14,71 +14,53 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
 
         console.log('Uploading files: ', files)
         Array.from(files).forEach(file => {
-        fetch(
-            "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + activeVFS.id, {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + idToken
-                },
-                body: JSON.stringify({key: file.name})
-            }
-        ).then(response => {
-            if (response.ok) {
-              console.log('bucket post successful')
-                return response.json()
-            } else {
-                return "ERROR"
-            }
-        }).then(presignedUrl => {
-
-            let data = new FormData()
-            Object.keys(presignedUrl.fields).forEach(key => data.append(key, presignedUrl.fields[key]))
-            data.append('file', file)
-
-            console.log(presignedUrl)
-
-            fetch(presignedUrl.url, {
-                method: 'POST',
-                body: data
-            })
-            .then(response => {
+          fetch(
+              "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + activeVFS.id, {
+                  method: "POST",
+                  headers: {
+                      "Authorization": "Bearer " + idToken
+                  },
+                  body: JSON.stringify({key: file.name})
+          }).then(response => {
               if (response.ok) {
-                return response
+                console.log('upload request sent')
+                  return response.json()
               } else {
-                throw new Error('something went wrong')
+                  return "ERROR"
               }
-            })
-            .then(response => {
-              console.log(response)
-            })
-            .catch(error => {
-              console.error(error)
-            })
-          })  
-          .catch(error => console.error(error))
+          }).then(presignedUrl => {
+
+              let data = new FormData()
+              Object.keys(presignedUrl.fields).forEach(key => data.append(key, presignedUrl.fields[key]))
+              data.append('file', file)
+
+              console.log(presignedUrl)
+
+              fetch(presignedUrl.url, {
+                  method: 'POST',
+                  body: data
+              })
+              .then(response => {
+                if (response.ok) {
+                  return response
+                } else {
+                  throw new Error('something went wrong')
+                }
+              })
+              .then(response => {
+                console.log('upload successful')
+              })
+              .catch(error => {
+                console.error(error)
+              })
+            })  
+            .catch(error => console.error(error))
         })
     }
-
 
   const drop = React.useRef(null)
   const drag = React.useRef(null)
   const [dragging, setDragging] = React.useState(false)
-
-  React.useEffect(() => {
-
-    if (drop.current) {
-        drop.current.addEventListener('dragover', handleDragOver)
-        drop.current.addEventListener('drop', handleDrop)
-        drop.current.addEventListener('dragenter', handleDragEnter)
-        drop.current.addEventListener('dragleave', handleDragLeave)        
-      }
-      return () => {
-        drop.current.removeEventListener('dragover', handleDragOver)
-        drop.current.removeEventListener('drop', handleDrop)
-        drop.current.removeEventListener('dragenter', handleDragEnter)
-        drop.current.removeEventListener('dragleave', handleDragLeave)
-    }
-  }, [activeVFS, idToken])
 
   const handleDragOver = (e) => {
     e.preventDefault()
@@ -112,6 +94,23 @@ function FilesDragAndDrop({activeVFS, idToken, children}) {
     }
   }
 
+  React.useEffect(() => {
+
+    const instance = drop.current;
+
+    if (instance) {
+      instance.addEventListener('dragover', handleDragOver)
+      instance.addEventListener('drop', handleDrop)
+      instance.addEventListener('dragenter', handleDragEnter)
+      instance.addEventListener('dragleave', handleDragLeave)        
+    }
+    return () => {
+      instance.removeEventListener('dragover', handleDragOver)
+      instance.removeEventListener('drop', handleDrop)
+      instance.removeEventListener('dragenter', handleDragEnter)
+      instance.removeEventListener('dragleave', handleDragLeave)
+    }
+  }, [])
 
   return (
     <div ref={drop} className='overlayContainer'>

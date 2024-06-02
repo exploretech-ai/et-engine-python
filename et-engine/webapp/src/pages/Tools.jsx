@@ -1,15 +1,11 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, act} from "react";
 import { fetchAuthSession } from '@aws-amplify/auth';
 import Navbar from "../components/Navbar";
 import './Tools.css'
 import Page from "./Page";
 
-import CodeTab from "../components/CodeTab"; 
-import BuildTab from "../components/BuildTab"
-import TaskTab from "../components/TaskTab";
-// import ToolTabs from "../components/ToolTabs"
-
 class Tool {
+    
     constructor(name, id, description) {
         this.name = name
         this.id = id
@@ -18,48 +14,60 @@ class Tool {
     }
 }
 
-class Tab {
-    constructor(name, resource) {
-        this.name = name
-        this.resource = resource
+const ToolContent = ({idToken, activeTool, loading, setLoading, style}) => {
+
+    const [toolInfo, setToolInfo] = useState({})
+
+    const describeTool = () => {
+        if (activeTool && idToken) {
+            console.log('Fetching details for tool', activeTool.name)
+            fetch(
+                "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/tools/" + activeTool.id, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + idToken
+                    }
+            }).then(response => {
+                if (response.ok) {return response.json()}
+                else {throw Error('error describing tool', activeTool.name)}
+            }).then(description => {
+                setToolInfo(description)
+                console.log('success:', description)
+                setLoading(false)
+            }).catch(error => {
+                setLoading(false)
+                console.error(error)
+            })
+        }
     }
-}
-
-
-const ToolContent = ({idToken, activeTool, style}) => {
-    
-    const [activeTab, setActiveTab] = useState(new Tab('Build', {...activeTool}))
 
     useEffect(() => {
-        setActiveTab(new Tab(activeTab.name, {...activeTool}))
-    }, [activeTool])
+        describeTool()
+    }, [activeTool, idToken])
 
     return (
-            <div style={style}>
-                <div className="tool-tab" style={style}>
-                    {/* <div onClick={() => setActiveTab(new Tab('Code', {...activeTool}))} className={activeTab.name === 'Code' ? 'active' : ''}>
-                        Code
-                    </div> */}
-                    <div onClick={() => setActiveTab(new Tab('Build', {...activeTool}))} className={activeTab.name === 'Build' ? 'active' : ''}>
-                        Build
-                    </div>
-                    <div onClick={() => setActiveTab(new Tab('Tasks', {...activeTool}))} className={activeTab.name === 'Tasks' ? 'active' : ''}>
-                        Tasks
-                    </div>
-                </div>
-                {/* {activeTab.name === 'Code' && <CodeTab idToken={idToken} activeTool={activeTool}/>} */}
-                {activeTab.name === 'Build' && <BuildTab idToken={idToken} activeTool={activeTool}/>}
-                {activeTab.name === 'Tasks' && <TaskTab idToken={idToken} activeTool={activeTool}/>}
+        <div style={style}>
+            {loading ?
+                <div>Loading tool contents...</div>
+            :
+            <div>
+                <p>Status: {toolInfo.ready ? "Ready" : "Not Ready"}</p>
+                <p>Build Info: {toolInfo.buildStatus}</p>
+                <button>New Task</button>
             </div>
+            }
+        </div>
+        
     )
 }
 
 const Tools = () => {
+    
     const [idToken, setIdToken] = useState(null)
     const [activeTool, setActiveTool] = useState(null)
     const [toolData, setToolData] = useState(null)
     const [loading, setLoading] = useState(true)
-
+    const [toolLoading, setToolLoading] = useState(true)
 
     const fetchToken = async () => {
         let session = null
@@ -80,8 +88,7 @@ const Tools = () => {
                     headers: {
                         "Authorization": "Bearer " + idToken
                     }
-                }
-            ).then(response => {
+            }).then(response => {
                 if (response.ok) {return response.json()}
                 else {throw Error('error retrieving tools')}
             }).then(response => {
@@ -105,9 +112,7 @@ const Tools = () => {
                 console.error(error)
             })
         }
-    };
-
-
+    }
 
     useEffect(() => {
         fetchToken()
@@ -121,14 +126,25 @@ const Tools = () => {
                 <div> Loading Tools... </div>
             :
                 <div className="tool-panel">
-                    <Navbar resourceList={toolData} activeResource={activeTool} setActiveResource={setActiveTool} idToken={idToken} style={{flex: 1}}/>
-                    <ToolContent idToken={idToken} activeTool={activeTool} style={{flex:3}}/>
+                    <Navbar 
+                        resourceList={toolData} 
+                        activeResource={activeTool} 
+                        setActiveResource={setActiveTool} 
+                        idToken={idToken} 
+                        setFilesLoading={setToolLoading}
+                        style={{flex: 1}}
+                    />
+                    <ToolContent 
+                        idToken={idToken} 
+                        activeTool={activeTool} 
+                        loading={toolLoading}
+                        setLoading={setToolLoading} 
+                        style={{flex:3}}
+                    />
                 </div>
             }
         </Page>
     )
-
-
 }
 
 export default Tools

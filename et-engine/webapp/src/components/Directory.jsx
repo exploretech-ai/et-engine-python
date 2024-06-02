@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faTrash, faDownload, faArrowRight, faFolder} from '@fortawesome/free-solid-svg-icons'
 
 const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) => {
+    
     const downloadItem = async (e) => {
         
         let key
@@ -113,8 +114,6 @@ const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) 
 const FolderComponent = ({name, path, setPath, setLoading}) => {
 
     const handleClick = () => {
-        // setCurrentDirectory(directory)
-        // console.log()
         setPath([...path, name])
         setLoading(true)
     }
@@ -179,17 +178,9 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, se
 const CurrentDirectoryPath = ({path, setPath, setLoading}) => {
 
     const handleClick = (i) => {
-
-        // 
         const newPath = [...path.slice(0, i+1)]
         setPath(newPath);
         setLoading(true)
-
-        // let subfolder = {...directory}
-        // for (let i = 1; i < newPath.length; i++){
-        //     subfolder = subfolder[newPath[i]]
-        // }
-        // setDirectory(subfolder)
     }
     const folders = []
     if (path){
@@ -199,14 +190,13 @@ const CurrentDirectoryPath = ({path, setPath, setLoading}) => {
             folders.push(
                 <div key={i} onClick={() => handleClick(i)}>
                     {component + '/'}
-                </div>)
-
+                </div>
+            )
         }
     }
     
     return (
         <div className="path">
-            {/* <p>Current Directory: </p> */}
             {folders}
         </div>
     )
@@ -214,10 +204,6 @@ const CurrentDirectoryPath = ({path, setPath, setLoading}) => {
 
 const Directory = ({style, resource, command, idToken, loading, setLoading, path, setPath}) => {
 
-    // const [directory, setDirectory] = useState(null)
-    // const [currentDirectory, setCurrentDirectory] = useState(null)
-    // const [currentDirectoryPath, setCurrentDirectoryPath] = useState(null)
-    
     const [contents, setContents] = useState(null)
 
     const fetchContents = () => {
@@ -254,13 +240,9 @@ const Directory = ({style, resource, command, idToken, loading, setLoading, path
 
     useEffect(() => {
         fetchContents()
-        
     }, [resource, path])
 
-
-
     return(
-        // <div style={style}>Directory will appear here</div>
         <div style={style} className="directory-container">
             <CurrentDirectoryPath 
                 path={path} 

@@ -16,7 +16,6 @@ class VFS {
 
 const NewVfsForm = ({idToken, setModalOpen, setLoading}) => {
 
-    
     const [formData, setFormData] = useState({
         name: '',
         description: ''
@@ -83,7 +82,6 @@ const NewVfsForm = ({idToken, setModalOpen, setLoading}) => {
     )
 }
 
-
 const Modal = ({setModalOpen, idToken}) => {
 
     const [loading, setLoading] = useState(false)
@@ -107,6 +105,7 @@ const Modal = ({setModalOpen, idToken}) => {
   }
 
 const Filesystems = () => {
+
     const [idToken, setIdToken] = useState(null)
     const [activeVFS, setActiveVFS] = useState(new VFS(null, null))
     const [vfsData, setVfsData] = useState([])
@@ -163,8 +162,6 @@ const Filesystems = () => {
         }
     };
 
-
-
     useEffect(() => {
         fetchToken()
         fetchFilesystems()
@@ -173,7 +170,6 @@ const Filesystems = () => {
     const openModal = () => {
         setModalOpen(true);
     };
-
 
     return (
         <Page name="Filesystems">
