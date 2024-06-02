@@ -30,7 +30,7 @@ const NewVfsForm = ({idToken, setModalOpen, setLoading}) => {
         event.preventDefault()
         setLoading(true)
 
-        const response = await fetch(
+        await fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs", {
                 method: "POST",
                 headers: {
@@ -49,14 +49,11 @@ const NewVfsForm = ({idToken, setModalOpen, setLoading}) => {
                     return response.json()
                 }
             } else {
-                throw Error(response.json())
+                throw new Error(response.json())
             }
         }).then(newVfs => {
-
             console.log('new vfs', newVfs)
-
         }).catch(err => {
-            
             console.log('could not create vfs', err)
         }).finally(() => {
             setModalOpen(false)
@@ -86,14 +83,10 @@ const Modal = ({setModalOpen, idToken}) => {
 
     const [loading, setLoading] = useState(false)
 
-    const closeModal = () => {
-        setModalOpen(false);
-    };
-
     return (
       <div className="modal">
         <div className="modal-content">
-          <span className="close" onClick={closeModal}>&times;</span>
+          <span className="close" onClick={() => setModalOpen(false)}>&times;</span>
           {loading ? 
             <div>Creating new filesystem... </div>
             :
@@ -123,7 +116,6 @@ const Filesystems = () => {
         }
         setIdToken(session.tokens.idToken.toString())
     }
-
 
     const fetchFilesystems = () => {
 
@@ -167,15 +159,12 @@ const Filesystems = () => {
         fetchFilesystems()
     }, [idToken])
 
-    const openModal = () => {
-        setModalOpen(true);
-    };
 
     return (
         <Page name="Filesystems">
             <span id="vfs-header">
                 <h2>Available Filesystems</h2> 
-                <button onClick={openModal}>+ New</button>
+                <button onClick={() => setModalOpen(true)}>+ New</button>
             </span>
             {loading ?
                 <div> Loading Filesystems... </div>

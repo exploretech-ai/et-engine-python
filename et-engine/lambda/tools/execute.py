@@ -19,6 +19,7 @@ def fetch_available_vfs(user, cursor):
     
     return vfs_id_map
 
+
 def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
 
     start_time = datetime.datetime.now()
@@ -46,17 +47,17 @@ def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
     return task_id
     
 
-
 def handler(event, context):
 
     # Cluster Properties
     role_arn = "arn:aws:iam::734818840861:role/ETEngineAPI706397EC-ECSTaskRoleF2ADB362-6bXEZofBdhmg"
     cluster="ETEngineAPI706397EC-ClusterEB0386A7-M0TrrRi5C32N"
     
-
     try:
         user = event['requestContext']['authorizer']['userID']
         tool_id = event['pathParameters']['toolID']
+
+        print(f'Execute Requested on Tool {tool_id}')
 
         image = "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-" + tool_id + ':latest'
         container_mount_base = "/mnt/"
@@ -67,18 +68,20 @@ def handler(event, context):
         
         # pass API key as environment variable if exists
         if "apiKey" in event['requestContext']['authorizer'].keys():
+            print('API Key found... copying to environment variable')
             args.append({
                 "name": "ET_ENGINE_API_KEY",
                 "value": event['requestContext']['authorizer']['apiKey']
             })
 
         if 'body' in event:
+            print(f'Request body: {event["body"]}')
+
             if event['body'] is not None:
                 body = json.loads(event['body'])
 
                 if 'hardware' in body:
                     hardware = body.pop('hardware')
-                    hardware = json.loads(hardware)
 
                 # Default Hardware
                 else:
@@ -96,13 +99,18 @@ def handler(event, context):
                     })
 
         print(f'Capacity Provider: {capacity_provider_name}')
+        print(f'Hardware: {hardware}')
         print(f'Arguments: {args}')
 
 
     except Exception as e:
+        print(f"Error processing task: {e}")
         return {
             'statusCode': 500,
-            'body': json.dumps(f"Error processing task: {e}")
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps('Error parsing task parameters')
         }
 
     # Executes an ECS task
@@ -243,6 +251,9 @@ def handler(event, context):
         
         return {
             'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps(task_id)
         }
 
@@ -250,6 +261,9 @@ def handler(event, context):
         print(f'Error executing task: {e}')
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
             'body': json.dumps('Task failed to launch')
         }
     
