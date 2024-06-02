@@ -3,12 +3,12 @@ import './Navbar.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {faTrash} from '@fortawesome/free-solid-svg-icons'
 
-const Tab = ({resource, activeResource, setActiveResource, setFilesLoading, setPath, idToken}) => {
+const Tab = ({resource, activeResource, setActiveResource, setContentLoading, setPath, idToken}) => {
 
     const handleTabClick = (resource) => {
         setActiveResource(resource); // Update active tab state when clicked
-        if (setFilesLoading) {
-            setFilesLoading(true)
+        if (setContentLoading) {
+            setContentLoading(true)
         }
         if (setPath) {
             setPath(['.'])
@@ -53,7 +53,7 @@ const Tab = ({resource, activeResource, setActiveResource, setFilesLoading, setP
     )
 }
 
-const Navbar = ({resourceList, activeResource, setActiveResource, setFilesLoading, setPath, idToken, style}) => {
+const Navbar = ({resourceList, activeResource, setActiveResource, setContentLoading, setPath, idToken, style}) => {
 
     const tabs = []
     const resourceNames = []
@@ -71,7 +71,7 @@ const Navbar = ({resourceList, activeResource, setActiveResource, setFilesLoadin
                     resource={resourceMap.get(resource)}
                     activeResource={activeResource}
                     setActiveResource={setActiveResource}
-                    setFilesLoading={setFilesLoading}
+                    setContentLoading={setContentLoading}
                     setPath={setPath}
                     idToken={idToken}
                     key={resource}

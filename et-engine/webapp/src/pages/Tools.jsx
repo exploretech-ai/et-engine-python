@@ -131,7 +131,7 @@ const Tools = () => {
                         activeResource={activeTool} 
                         setActiveResource={setActiveTool} 
                         idToken={idToken} 
-                        setFilesLoading={setToolLoading}
+                        setContentLoading={setToolLoading}
                         style={{flex: 1}}
                     />
                     <ToolContent 

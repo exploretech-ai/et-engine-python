@@ -185,7 +185,7 @@ const Filesystems = () => {
                         resourceList={vfsData}
                         activeResource={activeVFS} 
                         setActiveResource={setActiveVFS} 
-                        setFilesLoading={setFilesLoading} 
+                        setContentLoading={setFilesLoading} 
                         setPath={setPath} 
                         idToken={idToken}
                         style={{flex: 1, borderRight: '1px dashed gray'}}
