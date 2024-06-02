@@ -118,7 +118,7 @@ class MasterDB(Stack):
         self.sg = lambda_security_group
 
 
-    def grant_access(self, lambda_function, access = None):        
+    def grant_access(self, lambda_function):        
         self.db_secret.grant_read(lambda_function)
         self.database.grant_connect(lambda_function)
 
@@ -244,11 +244,26 @@ class API(Stack):
 
         auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
             vpc=self.vpc,
-            instance_type=ec2.InstanceType("r5d.8xlarge"),
+            instance_type=ec2.InstanceType("t2.xlarge"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
             min_capacity=0,
-            max_capacity=10,
-            group_metrics=[autoscaling.GroupMetrics.all()]
+            max_capacity=1,
+            group_metrics=[autoscaling.GroupMetrics.all()],
+            key_name="hpc-admin",
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PUBLIC
+            ),
+            block_devices=[
+                autoscaling.BlockDevice(
+                    device_name="/dev/xvdcz",
+                    volume=autoscaling.BlockDeviceVolume.ebs(64)
+                )
+            ]
+            # key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin")
+        )
+        auto_scaling_group.add_user_data(
+            'echo "ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=1s" >> /etc/ecs/ecs.config',
+            'echo "ECS_IMAGE_PULL_BEHAVIOR=always" >> /etc/ecs/ecs.config'
         )
         auto_scaling_group.protect_new_instances_from_scale_in()
         capacity_provider = ecs.AsgCapacityProvider(self, "AsgCapacityProvider",
@@ -1395,7 +1410,7 @@ class API(Stack):
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= "tasks.status.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
+            timeout = Duration.minutes(1),
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnets=database.vpc.select_subnets(
