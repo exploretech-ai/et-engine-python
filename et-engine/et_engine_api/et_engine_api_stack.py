@@ -277,24 +277,7 @@ class API(Stack):
             )
         ])
 
-        # auto_scaling_group_gpu = autoscaling.AutoScalingGroup(self, "ASGGPU",
-        #     vpc=self.vpc,
-        #     instance_type=ec2.InstanceType("c4.large"),
-        #     machine_image=ecs.EcsOptimizedImage.amazon_linux(),
-        #     min_capacity=0,
-        #     max_capacity=10,
-        #     group_metrics=[autoscaling.GroupMetrics.all()]
-        # )
-        # auto_scaling_group_gpu.protect_new_instances_from_scale_in()
-        # capacity_provider_gpu = ecs.AsgCapacityProvider(self, "AsgCapacityProviderGpu",
-        #     auto_scaling_group=auto_scaling_group_gpu,
-        #     capacity_provider_name="AsgCapacityProviderGpu"
-        # )
-        # self.ecs_cluster.add_asg_capacity_provider(capacity_provider_gpu)
-
-        # ==================================================================================================================
-        # Engine-Wide resources
-        # TASK ROLE?
+        
         task_role = iam.Role(
             self,
             "ECSTaskRole",
@@ -327,137 +310,6 @@ class API(Stack):
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(2049)
         )
-
-        # VFS-specific Resources
-        # file_system = efs.FileSystem(
-        #     self,
-        #     "TESTEfsFileSystem",
-        #     vpc = self.vpc,
-        #     security_group=security_group
-        # )
-        # file_system.add_to_resource_policy(
-        #     iam.PolicyStatement(
-        #         actions = ["elasticfilesystem:*"],
-        #         effect=iam.Effect.ALLOW,
-        #         principals=[iam.AnyPrincipal()]
-        #     )
-        # )
-        # access_point = file_system.add_access_point(
-        #     "AP",
-        #     path="/",
-        # )
-
-        # Tool-Specific Resources (or do these need to be configured on the fly?)
-        # temp_task_definition = ecs.Ec2TaskDefinition(
-        #     self,
-        #     "TempTask",
-        # )
-        # container = temp_task_definition.add_container(
-        #     "TempImage",
-        #     image=ecs.ContainerImage.from_registry(
-        #         "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-c645dc64-2f7d-4971-aab4-d828e15781a5:latest"
-        #     ),
-        #     container_name="HelloWorld",
-        #     memory_limit_mib=512,
-        #     logging=ecs.LogDrivers.aws_logs(
-        #         stream_prefix=f"temp-task",
-        #         mode=ecs.AwsLogDriverMode.NON_BLOCKING,
-        #     ),
-        # )
-        # temp_task_definition.add_to_execution_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'ecr:*',
-        #             'elasticfilesystem:*'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-        # temp_task_definition.add_to_task_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'ecr:*',
-        #             'elasticfilesystem:*'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-
-        # # Configured before executing
-        # temp_task_definition.add_volume(
-        #     name="EFSVolume",
-        #     efs_volume_configuration=ecs.EfsVolumeConfiguration(
-        #         file_system_id=file_system.file_system_id,
-        #         authorization_config=ecs.AuthorizationConfig(
-        #             access_point_id=access_point.access_point_id,
-        #             iam='ENABLED'
-        #         ),
-        #         root_directory="/",
-        #         transit_encryption='ENABLED'
-        #     )
-        # )
-        # container.add_mount_points(
-        #     ecs.MountPoint(
-        #         read_only=False,
-        #         source_volume="EFSVolume",
-        #         container_path="/data"
-        #     )
-        # )
-        
-
-        # instance = ec2.Instance(
-        #     scope=self,
-        #     id="ec2Instance",
-        #     instance_name="my_ec2_instance",
-        #     instance_type=ec2.InstanceType.of(
-        #         instance_class=ec2.InstanceClass.BURSTABLE2,
-        #         instance_size=ec2.InstanceSize.MICRO,
-        #     ),
-        #     machine_image=ec2.AmazonLinuxImage(
-        #         generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
-        #     ),
-        #     vpc=self.vpc,
-        #     key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin"),
-        #     vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)
-        # )
-        # file_system.connections.allow_default_port_from(instance)
-        # file_system.grant_read_write(instance)
-        # instance.connections.allow_from_any_ipv4(ec2.Port.tcp(22))
-        # instance.user_data.add_commands(
-        #     "echo 'STARTING USER COMMANDS'"
-        #     "yum check-update -y",
-        #     "yum upgrade -y",
-        #     "yum install -y amazon-efs-utils",
-        #     "yum install -y nfs-utils",
-        #     "file_system_id_1=" + file_system.file_system_id + ".efs." + self.region + ".amazonaws.com", # <-- THIS NEEDS TO BE THE EFS DNS
-        #     "echo ${file_system_id_1}",
-        #     "efs_mount_point_1=/mnt/efs/fs1",
-        #     "echo 'MAKING DIRECTORY'",
-        #     'mkdir -p "${efs_mount_point_1}"',
-        #     "echo 'MOUNTING'",
-        #     'sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 ${file_system_id_1}:/ ${efs_mount_point_1}',
-        #     "sudo chmod go+rw ${efs_mount_point_1}",
-        #     "echo 'SUCCESS!'",
-        #     # See here for commands to install docker on command https://medium.com/appgambit/part-1-running-docker-on-aws-ec2-cbcf0ec7c3f8
-        # )
-
-        # ==================================================================================================================
-        
-
-
-        
-
-
-        
-
-
-        
-
-        
-
-
-
-
 
         # USER POOL
         self.user_pool = cognito.UserPool(
@@ -1213,129 +1065,16 @@ class API(Stack):
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
         database.grant_access(tools_describe_lambda)
-        
-
-        tools_code = tools_id.add_resource('code')
-        tools_code_get_lambda = _lambda.Function(
-            self, 'tools-code-get',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "tools.code.get.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
-        )
-        tools_code.add_method(
-            "GET",
-            integration=apigateway.LambdaIntegration(tools_code_get_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-            authorizer = key_authorizer,
-            authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(tools_code_get_lambda)
-        tools_code_get_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:ListBucket'
-                ],
-                resources=['*']
-            )
-        )
-
-        tools_build = tools_id.add_resource('build')
-        tools_build_get_lambda = _lambda.Function(
-            self, 'tools-build-get',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "tools.build.get.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
-        )
-        tools_build.add_method(
-            "GET",
-            integration=apigateway.LambdaIntegration(tools_build_get_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-            authorizer = key_authorizer,
-            authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(tools_build_get_lambda)
-        tools_build_get_lambda.add_to_role_policy(
+        tools_describe_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     'codebuild:ListBuildsForProject',
-                    'codebuild:BatchGetBuilds'
-                ],
-                resources=['*']
-            )
-        )
-
-        tools_tasks = tools_id.add_resource('tasks')
-        tools_tasks_get_lambda = _lambda.Function(
-            self, 'tools-tasks-get',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "tools.tasks.get.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
-        )
-        tools_tasks.add_method(
-            "GET",
-            integration=apigateway.LambdaIntegration(tools_tasks_get_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-            authorizer = key_authorizer,
-            authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(tools_tasks_get_lambda)
-        tools_tasks_get_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
+                    'codebuild:BatchGetBuilds',
                     'ecr:DescribeImages'
                 ],
                 resources=['*']
             )
         )
-        
         
         tasks = self.api.root.add_resource("tasks")
         tasks_list_lambda = _lambda.Function(
@@ -1459,11 +1198,7 @@ class WebApp(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ACLS,
             access_control = s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL
         )
-        # iam_role = iam.Role(
-        #     self, 
-        #     'engine-webapp-role',
-        #     assumed_by=iam.ServicePrincipal('lambda.amazonaws.com')
-        # )
+
         bucket.add_to_resource_policy(
             iam.PolicyStatement(
                 effect = iam.Effect.ALLOW,
@@ -1473,37 +1208,12 @@ class WebApp(Stack):
             )
         )
 
-        # source_code = s3_deploy.Source.asset(path='./webapp')
-        # self.bucket_deploy = s3_deploy.BucketDeployment(
-        #     self, 
-        #     'webapp-bucket-deploy', 
-        #     sources=[source_code],
-        #     destination_bucket=bucket
-        # )
-        
-        # self.handler = _lambda.Function(
-        #     self,
-        #     "WebAppHandler",
-        #     runtime=_lambda.Runtime.NODEJS_14_X,
-        #     handler= "app",
-        #     code=_lambda.Code.from_bucket(
-        #         self.bucket, 
-        #         "app.app.handler"
-        #     ), 
-        #     timeout = Duration.seconds(10))
-
         hosted_zone = route53.HostedZone.from_lookup(
             self, 
             'exploretech-ai', 
             domain_name='exploretech.ai'
         )
         
-        # certificate = certificatemanager.Certificate(self, "webapp-certificate",
-        #     domain_name="engine.exploretech.ai",
-        #     certificate_name="Hello World Service",  # Optionally provide an certificate name
-        #     validation=certificatemanager.CertificateValidation.from_dns(hosted_zone)
-        # )
-
         store = cloudfront.KeyValueStore(self, "KeyValueStore")
         client_side_routing_function = cloudfront.Function(
             self, 
@@ -1595,14 +1305,5 @@ class ETEngine(Stack):
             "ClusterName",
             value=api.ecs_cluster.cluster_arn
         )
-        # CfnOutput(
-        #     self,
-        #     "SecurityGroupID",
-        #     value=api.security_group.attr_group_id
-        # )
-        # CfnOutput(
-        #     self,
-        #     "PublicSubnetId",
-        #     value=api.public_subnet.attr_subnet_id
-        # )
+
 
