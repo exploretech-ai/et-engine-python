@@ -24,7 +24,7 @@ function NewObjectMenu({style}) {
 
     return(
         <div style={style}>
-            <ImportWizard modalKey={modalKey} isOpen={modalOpen} toggleOpen={toggleModal} />
+            {modalOpen && <ImportWizard modalKey={modalKey} toggleOpen={toggleModal}/>}
 
             <Dropdown>
                 <Dropdown.Button>

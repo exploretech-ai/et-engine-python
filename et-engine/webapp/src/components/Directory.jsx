@@ -106,12 +106,46 @@ const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) 
             <a key={name+"-p"} style={{flex: 20}}>{name}</a>
             <FontAwesomeIcon icon={faDownload} style={{flex: 1}} onClick={downloadItem} className="icon"/>
             <FontAwesomeIcon icon={faTrash} className="icon" style={{flex: 1}} onClick={deleteItem}/>
-            
         </div>
     )
 }
 
-const FolderComponent = ({name, path, setPath, setLoading}) => {
+const FolderComponent = ({name, vfsId, path, setPath, setLoading, fetchContents, idToken}) => {
+
+    const deleteItem = async (e) => {
+
+        e.stopPropagation()
+        
+        let key
+        if (path.length === 1) {
+            key = name
+        }
+        else {
+            key = path.slice(1) + "/" + name
+        }
+        console.log('Delete Requested on ', key)
+        setLoading(true)
+
+        fetch("https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + vfsId + "/files/" + key, {
+            method: "DELETE",
+            headers: {
+                "Authorization": "Bearer " + idToken
+            }
+        }).then(response => {
+            if (response.ok) {
+                return response.json()
+            } else {
+                throw new Error('Delete failed')
+            }
+        }).then(response => {
+            setLoading(true)
+            fetchContents()
+            console.log('success: ',response)
+        }).catch(error => {
+            setLoading(false)
+            console.error(error)
+        })
+    }
 
     const handleClick = () => {
         setPath([...path, name])
@@ -122,6 +156,7 @@ const FolderComponent = ({name, path, setPath, setLoading}) => {
         <div key={name} className="folder" onClick={handleClick}>
             <FontAwesomeIcon icon={faFolder} style={{flex: 1, color: "gray"}}/>
             <a key={name+"-p"} style={{flex: 20}}>{name}</a>
+            <FontAwesomeIcon icon={faTrash} className="icon" style={{flex: 1}} onClick={deleteItem}/>
         </div>
     )
 }
@@ -140,10 +175,13 @@ const DirectoryView = ({path, vfsId, setPath, contents, setContents, idToken, se
             components.push(
                 <FolderComponent 
                     name={folder} 
+                    vfsId={vfsId}
                     path={path} 
                     setPath={setPath}
                     key={folder}
                     setLoading={setLoading}
+                    fetchContents={fetchContents}
+                    idToken={idToken}
                 />
             )
         }

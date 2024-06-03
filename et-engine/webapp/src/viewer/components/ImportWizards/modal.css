@@ -10,7 +10,7 @@
     border-radius: 5px; /* Rounded corners (optional) */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* Drop shadow (optional) */
   }
-.closeButton {
+.close {
     margin-top:-25px;
     margin-right:-25px;
     float: right;
