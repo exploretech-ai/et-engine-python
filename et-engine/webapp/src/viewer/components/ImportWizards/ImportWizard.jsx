@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import React from 'react'
 import './modal.css'
 
 import SurfaceModal from './SurfaceModal'
@@ -11,19 +10,19 @@ const ImportWizard = ({modalKey, toggleOpen}) => {
 
   function getModal(key) {
     switch(key) {
-        case "Surface":
-            return <SurfaceModal toggleOpen={toggleOpen}/>
-        case "Lines":
-            return <LinesModal toggleOpen={toggleOpen}/>
-        case "Volume":
-            return null
-        case "Ensemble":
-            return <EnsembleModal toggleOpen={toggleOpen}/>
-        case "Drillhole":
-            return <DrillholeModal toggleOpen={toggleOpen}/>
-        default:
-            console.log(`Object key ${key} not recognized`)
-            return null
+      case "Surface":
+        return <SurfaceModal toggleOpen={toggleOpen}/>
+      case "Lines":
+        return <LinesModal toggleOpen={toggleOpen}/>
+      case "Volume":
+        return null
+      case "Ensemble":
+        return <EnsembleModal toggleOpen={toggleOpen}/>
+      case "Drillhole":
+        return <DrillholeModal toggleOpen={toggleOpen}/>
+      default:
+        console.log(`Object key ${key} not recognized`)
+        return null
     }
 }
 

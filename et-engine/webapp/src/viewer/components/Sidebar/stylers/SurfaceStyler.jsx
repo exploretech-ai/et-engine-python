@@ -1,6 +1,7 @@
-import React, {useState} from "react";
+import React, {useRef, useState} from "react";
 import { TerrainColormap, SeismicColormap } from '../../../layers/geometries/Colormaps';
 import Dropdown from "../../../Dropdown";
+import { fromBlob } from "geotiff";
 
 
 const colorMapOptions = {
@@ -100,6 +101,63 @@ function BandSelector({checkboxProps, checkboxPropSetter, colorMap}) {
     )
 }
 
+const AddBand = ({checkboxProps, checkboxPropSetter}) => {
+
+    const inputFile = useRef(null) 
+
+
+    const handleClick = () => {
+        inputFile.current.click();
+    }
+
+
+    const addBandFromFile = async (e) => {
+
+        console.log('Adding new band...')
+
+        // Fetch the new data
+        const file = document.getElementById("file").files[0]
+        const tiff = await fromBlob(file)
+        const image = await tiff.getImage()
+        const rasterData = await image.readRasters({interleave: true});
+        const pixelData = Array.from(rasterData)
+
+        // Update the checkbox properties with the new data
+        const newCheckbox = checkboxProps.clone()
+        newCheckbox.object.geometry.parameters.nBands = newCheckbox.object.geometry.parameters.nBands + 1
+        newCheckbox.object.parameters.nBands = newCheckbox.object.geometry.parameters.nBands
+
+        const numPixels = newCheckbox.object.geometry.parameters.width * newCheckbox.object.geometry.parameters.height 
+        const newData = []
+
+        for (let i = 0; i < numPixels; i += 1) {
+            for (let j = 0; j < newCheckbox.object.parameters.nBands - 1; j += 1) {
+                newData.push(newCheckbox.object.parameters.data[i * (newCheckbox.object.parameters.nBands - 1) + j])
+            }
+            newData.push(pixelData[i])
+        }
+        newCheckbox.object.geometry.parameters.data = newData
+        newCheckbox.object.parameters.data = newData
+        checkboxPropSetter(newCheckbox)
+    }
+
+    return(
+        <span>
+            <Dropdown>
+                <Dropdown.Button>
+                    Add Band
+                </Dropdown.Button>
+                <Dropdown.Menu>
+                    <Dropdown.Item onClick={handleClick}>
+                        from file
+                    </Dropdown.Item>
+                </Dropdown.Menu>
+            </Dropdown>
+            <input type='file' id='file' ref={inputFile} onChange={addBandFromFile} style={{display: 'none'}}/>
+        </span>
+    )
+}
+
 /**
  * 
  * @param {CheckBoxProps} checkboxProps (named arg) react state checkbox properties associated with the styler
@@ -116,6 +174,7 @@ function SurfaceStyler({checkboxProps, checkboxPropSetter}) {
             <ColorMapSelector checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} colorMap={colorMap} setColorMap={setColorMap}/>
             <BandSelector checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} colorMap={colorMap}/>
             <OpacitySlider checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} />
+            <AddBand checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter}/>
         </div>
     )
 }

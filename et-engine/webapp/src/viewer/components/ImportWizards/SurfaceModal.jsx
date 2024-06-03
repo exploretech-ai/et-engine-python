@@ -35,8 +35,6 @@ function SurfaceModal({toggleOpen}) {
 function Page1({setPage, setParameters, setLayerName}) {
   const inputRef = useRef(null)
   
-
-    
   const createNew = async () => {
       // Load the file & eturn with nothing if the file is empty
       const file = document.getElementById("newSurface").files[0]
@@ -50,7 +48,6 @@ function Page1({setPage, setParameters, setLayerName}) {
       setParameters(parameters)
       setLayerName(file.name)
       setPage(2)
-
   }
 
   return(
