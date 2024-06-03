@@ -247,7 +247,7 @@ class API(Stack):
             instance_type=ec2.InstanceType("t2.xlarge"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
             min_capacity=0,
-            max_capacity=1,
+            max_capacity=5,
             group_metrics=[autoscaling.GroupMetrics.all()],
             key_name="hpc-admin",
             vpc_subnets=ec2.SubnetSelection(
@@ -1149,7 +1149,7 @@ class API(Stack):
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= "tasks.status.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.minutes(1),
+            timeout = Duration.minutes(3),
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnets=database.vpc.select_subnets(

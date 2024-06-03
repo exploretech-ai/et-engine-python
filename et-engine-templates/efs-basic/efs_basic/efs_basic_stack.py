@@ -23,10 +23,6 @@ import json
 import boto3
 import shutil
 
-# File manager operation events:
-# list: {"operation": "list", "path": "$dir"}
-# upload: {"operation": "upload", "path": "$dir", "form_data": "$form_data"}
-
 
 def delete(event):
 
@@ -34,7 +30,12 @@ def delete(event):
     print(f"file_path={file_path}")
 
     try:
-        os.remove(file_path)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+        else:
+            raise OSError('path is neither file nor directory')
     except OSError:
         return {"message": "couldn't delete the file", "statusCode": 500}
     else:
@@ -81,20 +82,7 @@ def upload(event):
         print(f"Error downloading file: {str(e)}")
         return {'message': 'failed while downloading file to EFS', 'statusCode': 500}
 
-    # Move the file to the /mnt/efs directory
-    
-    # try:
-    #     print('Moving local file to EFS: ', destination_path)
-    #     shutil.move(download_path, destination_path)
-    #     print(f"success")
-
-    #     return {'message': 'successfully transfered file to EFS', 'statusCode': 200}
-    # except Exception as e:
-    #     print(f"Error moving file: {str(e)}")
-    #     return {'message': 'failed while moving local file to EFS', 'statusCode': 500}
-        
-
-    
+          
 def download(event):
 
     print('DOWNlOAD REQUESTED')
@@ -127,16 +115,9 @@ def download(event):
         print(f"Exception: {e}")
         return {'presigned_url': 'UNKNOWN EXCEPTION', 'statusCode': 500}
 
-    
-
 
 def list(path):
-    # get path to list
-    # try:
-    #     path = event['path']
-    # except KeyError:
-    #     return {"message": "missing required parameter: path", "statusCode": 400}
-
+    
     try:
         dir_items = []
         file_items = []
@@ -155,7 +136,6 @@ def list(path):
 
 
 def handler(event, _context):
-    # get operation type
     try:
         if "Records" in event:
             operation_type = "upload"
