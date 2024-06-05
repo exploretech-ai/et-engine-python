@@ -2,23 +2,13 @@
     display: flex;
 }
 
-.tool-tab {
-    display: flex;
+#tool-content {
+    padding-left: 50px;
+    border-left: 1px dashed gray;
+    height: 100%
 }
 
-.tool-tab div {
-    flex: 1;
-    background-color: rgb(89, 158, 158);
-}
-
-.tool-tab div:hover {
-    background-color: rgb(75, 133, 133);
-}
-
-.tool-tab div:active {
-    border-style: inset;
-}
-
-.tool-tab div.active {
-    background-color: rgb(105, 186, 186);
+#new-task-form form * {
+    margin-top: 5px;
+    margin-bottom: 5px
 }

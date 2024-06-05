@@ -152,8 +152,8 @@ const NewTaskForm = ({idToken, setModalOpen, setLoading, activeTool}) => {
     }
 
     return (
-        <>
-            <h3>Launch a new Task for Tool {activeTool.name}</h3>
+        <div id="new-task-form">
+            <h3>Launch a new Task for Tool `{activeTool.name}`</h3>
             <form onSubmit={launchTask}>
                 
                 <label>Filesystems:</label><br/>
@@ -206,7 +206,7 @@ const NewTaskForm = ({idToken, setModalOpen, setLoading, activeTool}) => {
 
                 <input type="submit" value="Submit"/>
             </form>
-        </> 
+        </div> 
     )
 }
 
@@ -265,10 +265,11 @@ const ToolContent = ({idToken, activeTool, loading, setLoading, style}) => {
             {loading ?
                 <div>Loading tool contents...</div>
             :
-            <div>
+            <div id="tool-content">
+                <h3>Tool `{activeTool.name}`</h3>
                 <p>Status: {toolInfo.ready ? "Ready" : "Not Ready"}</p>
-                <p>Build Info: {toolInfo.buildStatus}</p>
-                <button onClick={() => setModalOpen(true)}>New Task</button>
+                <p>Build: {toolInfo.buildStatus}</p>
+                <button onClick={() => setModalOpen(true)}>Launch New Task</button>
             </div>
             }
             {modalOpen && <Modal setModalOpen={setModalOpen} idToken={idToken} activeTool={activeTool}/>}

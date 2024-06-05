@@ -23,7 +23,18 @@ const Home = () => {
                     </ul>
                 </div>
                 <div style={{flex:1}}>
-                    <h2>Features</h2> 
+                    <h2>Resources</h2>
+                    <ul>
+                        <li>
+                            Viewer
+                        </li>    
+                        <li>
+                            Python API
+                        </li>
+                        <li>
+                            Support (link)
+                        </li>
+                    </ul> 
                 </div>
             </div> 
         </Page>
