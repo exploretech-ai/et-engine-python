@@ -82,7 +82,7 @@ ENDPOINTS = [
     f'POST/vfs/{str(uuid.uuid4())}/mkdir'
 ]
 ALLOWED_RESULTS_ENDPOINTS = [e for e in ENDPOINTS if 'GET/vfs' in e]
-DENIED_TOOL_SERVICE_ENDPOINTS = [
+DENIED_TOOL_USE_ENDPOINTS = [
     'DELETE/tools',
     'POST/tools',
     [e for e in ENDPOINTS if 'PUT/tools' in e][0]
@@ -91,7 +91,7 @@ DENIED_TOOL_SERVICE_ENDPOINTS = [
 @pytest.mark.parametrize("endpoint", ENDPOINTS)
 @patch('key_authorizer.decode_key')
 @patch('key_authorizer.get_policy_from_user')
-def test_full_access_allowed(mock_get_policy_from_user, mock_decode_key, endpoint):
+def test_full_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     """
     Tests the authorizer to make sure that a user with full access can access all the endpoints
     """
@@ -120,7 +120,7 @@ def test_full_access_allowed(mock_get_policy_from_user, mock_decode_key, endpoin
 @pytest.mark.parametrize("endpoint", ENDPOINTS)
 @patch('key_authorizer.decode_key')
 @patch('key_authorizer.get_policy_from_user')
-def test_results_access_allowed(mock_get_policy_from_user, mock_decode_key, endpoint):
+def test_results_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     """
     Tests the authorizer to make sure that a user with full access can access all the endpoints
     """
@@ -132,6 +132,42 @@ def test_results_access_allowed(mock_get_policy_from_user, mock_decode_key, endp
     
 
     plan = 'RESULTS'
+
+    api_key = os.environ['ET_ENGINE_API_KEY']
+    user_id = os.environ['ET_ENGINE_USER_ID']
+
+    mock_decode_key.return_value = user_id
+    mock_get_policy_from_user.return_value = (True, True)
+
+    event = {
+        'authorizationToken': api_key,
+        'methodArn': ARN_BASE + endpoint,
+    }
+    context = {}
+
+    response = key_authorizer.handler(event, context, plan=plan)
+
+    assert len(response['policyDocument']['Statement']) == 1
+    assert response['policyDocument']['Statement'][0]['Effect'] == effect
+    assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
+
+
+
+@pytest.mark.parametrize("endpoint", ENDPOINTS)
+@patch('key_authorizer.decode_key')
+@patch('key_authorizer.get_policy_from_user')
+def test_tool_use_access(mock_get_policy_from_user, mock_decode_key, endpoint):
+    """
+    Tests the authorizer to make sure that a user with full access can access all the endpoints
+    """
+
+    if endpoint in DENIED_TOOL_USE_ENDPOINTS:
+        effect = 'Deny'
+    else:
+        effect = 'Allow'
+    
+
+    plan = 'TOOL_USE'
 
     api_key = os.environ['ET_ENGINE_API_KEY']
     user_id = os.environ['ET_ENGINE_USER_ID']

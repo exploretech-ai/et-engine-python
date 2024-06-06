@@ -127,16 +127,19 @@ def handler(event, context, cursor=cursor, plan='FULL'):
         auth_policy.region = methodArn[3]
         auth_policy.stage = apiGatewayArnTmp[1]
 
-        # allow_tools, allow_vfs = get_policy_from_user(cursor, user_id)
-
-        # print('** Policy **')
-        # print(f"allow_tools: {allow_tools}")
-        # print(f"allow_vfs: {allow_vfs}")
 
         # >>>>> MODIFY POLICY HERE
         allow = True
-        
+
         # Check if requested method is in plan
+        if plan == 'RESULTS':
+            if 'vfs' not in resource or verb != 'GET':
+                allow = False
+        elif plan == 'TOOL_USE':
+            if 'tools' in resource and (verb == 'DELETE' or verb == 'PUT'):
+                allow = False
+            elif verb == 'POST' and resource == 'tools':
+                allow = False
 
         # Check if user owns requested resource (tool/vfs/task)
 
