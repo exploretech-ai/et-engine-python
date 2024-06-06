@@ -5,24 +5,39 @@ https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lamb
 """
 
 import json
-import db
 import re
-from cryptography.fernet import Fernet
 import urllib.request
-import jwt
-from jwt.algorithms import RSAAlgorithm
 import traceback
-
+import sys
 
 region = 'us-east-2'
 userpoolId = 'us-east-2_c3KpcMfzh'
 appClientId = '7veifuegtpskqerl7b2lakdfdn' 
 keysUrl = 'https://cognito-idp.{}.amazonaws.com/{}/.well-known/jwks.json'.format(region, userpoolId)
-
-
 fernet_key = b'IGE3pGK7ih1vDm4na0EmW-rYCqfnZKMaNR7ea1ose2s='
 
-def handler(event, context):
+  
+try:
+    # These are wrapped in try/catch for unit testing purposes
+    from cryptography.fernet import Fernet 
+    import jwt
+    from jwt.algorithms import RSAAlgorithm
+except:
+    print('WARNING: could not import cryptography packages')
+
+ 
+try:
+    # These are wrapped in try/catch for unit testing purposes
+    import db
+    connection = db.connect()
+    cursor = connection.cursor()
+except Exception as e:
+    print('WARNING: Could not connect to database', e)
+    cursor = None
+
+
+
+def handler(event, context, cursor=cursor, plan='FULL'):
 
     # VALIDATE REQUEST
     try:
@@ -31,9 +46,11 @@ def handler(event, context):
         methodArn = event['methodArn'].split(':')
         apiGatewayArnTmp = methodArn[5].split('/')
         awsAccountId = methodArn[4]
-        resource = apiGatewayArnTmp[-1]
+        resource = '/'.join(apiGatewayArnTmp[3:])
+        verb = apiGatewayArnTmp[2]
+        print('Event:', event)
 
-        print("Resource Requested: " + resource)
+        print(f"Request: {verb}/{resource}")
         print(f"Method ARN: {event['methodArn']}")
 
     except Exception as e:
@@ -45,18 +62,7 @@ def handler(event, context):
             },
             'body': json.dumps('Could not validate request')
         }
- 
-    try:
-        connection = db.connect()
-        cursor = connection.cursor()
-    except Exception as e:
-        return {
-            'statusCode': 501,
-            'headers': {
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps('Could not connect to database')
-        }
+
     
     # VALIDATE USER EXISTS
     try:
@@ -84,36 +90,16 @@ def handler(event, context):
 
             source = "web"
             api_key = None
-
-            # >>>>> MORE VALIDATION HERE?
-            # <<<<<
   
         else:
-            print("API KEY ASSUMED")
-
-            print("Unencrypting key...")
-            f = Fernet(fernet_key)
-            key_id = f.decrypt(token).decode()
-
+            print("** API Key Assumed **")
+            user_id = decode_key(cursor, token)
             source = "api"
             api_key = token
-
-            print('Fetching userID associated with key ', api_key)
-            cursor.execute(f"""
-                SELECT userID FROM APIKeys WHERE keyID = '{key_id}'
-            """)
-
-            if cursor.rowcount == 0:
-                raise NameError(f'no user not associated with key {key_id}')      
-            else:
-                user_id = cursor.fetchall()[0][0]   
-                print('User ID found: ', user_id)  
             
 
     except NameError as e:
-        print(e)
-        cursor.close()
-        connection.close()
+        print('NAME ERROR:', e)
         return {
             'statusCode': 401,
             'headers': {
@@ -125,8 +111,6 @@ def handler(event, context):
     except Exception as e:
         print('Error: ', e)
         print(traceback.format_exc())
-        cursor.close()
-        connection.close()
         return {
             'statusCode': 500,
             'headers': {
@@ -143,33 +127,29 @@ def handler(event, context):
         auth_policy.region = methodArn[3]
         auth_policy.stage = apiGatewayArnTmp[1]
 
-        # >>>>> PREPARE AUTH POLICY (THIS WILL NEED TO CHANGE)
-        cursor.execute(f"""
-            SELECT allow_tools, allow_vfs FROM Policies WHERE userID = '{user_id}'
-        """)
+        # allow_tools, allow_vfs = get_policy_from_user(cursor, user_id)
 
-        allow_tools, allow_vfs = cursor.fetchall()[0]
-        print('** Policy **')
-        print(f"allow_tools: {allow_tools}")
-        print(f"allow_vfs: {allow_vfs}")
+        # print('** Policy **')
+        # print(f"allow_tools: {allow_tools}")
+        # print(f"allow_vfs: {allow_vfs}")
 
-        policy = {
-            'keys': {
-                'web': True,
-                'api': False
-            },
-            'tools': {
-                'web': allow_tools,
-                'api': allow_tools
-            },
-            'vfs': {
-                'web': allow_vfs,
-                'api': allow_vfs
-            }
-        }
-        
         # >>>>> MODIFY POLICY HERE
-        auth_policy.allowAllMethods()
+        allow = True
+        
+        # Check if requested method is in plan
+
+        # Check if user owns requested resource (tool/vfs/task)
+
+        # Check if user was given access to requested resource (tool/vfs sharing)
+        
+
+        if allow:
+            auth_policy.allowMethod(verb, resource)
+            print('REQUEST ALLOWED')
+        else:
+            auth_policy.denyMethod(verb, resource)
+            print('REQUEST DENIED')
+        
         # <<<<<
 
         response = auth_policy.build()
@@ -185,27 +165,59 @@ def handler(event, context):
 
 
     except Exception as e:
-        print(e)
+        print('ERROR BUILDING POLICY:', e)
         return {
             'statusCode': 501,
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
             'body': json.dumps('Could not build policy')
-        }
-    
-    finally:
-        cursor.close()
-        connection.close()
+        }   
 
-                
-    
+
+
+def decode_key(cursor, token):
+    """
+    Helper function to decode the API key. This is wrapped into a separate function to facilitate unit test mocking.
+    For this reason, note that this function is not covered by unit tests.
+    To implement unit tests, the try/catch statements above need to work on a local machine, which requires a big overhaul of the environment setup.
+    This is caused by the fact that psycopg2, cryptography, and jwt require binaries to be installed, which vary from machine to machine.
+    """
+
+    print("Decrypting key...")
+    f = Fernet(fernet_key)
+    key_id = f.decrypt(token).decode()
+
+    api_key = token
+
+    print('Fetching userID associated with key ', api_key)
+
+    cursor.execute("SELECT userID FROM APIKeys WHERE keyID = %s", (key_id,))
+    if cursor.rowcount == 0:
+        raise NameError(f'no user not associated with key {key_id}')      
+    else:
+        user_id = cursor.fetchall()[0][0]   
+        print('User ID found: ', user_id) 
+
+    return user_id
+
+
+def get_policy_from_user(cursor, user_id):
+    """
+    Helper function to decode the API key. This is wrapped into a separate function to facilitate unit test mocking.
+    For this reason, note that this function is not covered by unit tests.
+    To implement unit tests, the try/catch statements above need to work on a local machine, which requires a big overhaul of the environment setup.
+    This is caused by the fact that psycopg2, cryptography, and jwt require binaries to be installed, which vary from machine to machine.
+    """
+    cursor.execute("SELECT allow_tools, allow_vfs FROM Policies WHERE userID = %s", (user_id,))
+    return cursor.fetchall()[0]
 
 
 def findJwkValue(keys, kid):
     for key in keys:
         if key['kid'] == kid:
             return key
+
 
 def decodeJwtToken(token, publicKey):
     try:
@@ -214,6 +226,8 @@ def decodeJwtToken(token, publicKey):
     except Exception as e:
         print(e)
         raise
+
+
 
 class HttpVerb:
     GET = 'GET'
@@ -225,7 +239,6 @@ class HttpVerb:
     OPTIONS = 'OPTIONS'
     ALL = '*'
     list = [GET, POST, PUT, PATCH, HEAD, DELETE, OPTIONS]
-
 
 
 class AuthPolicy(object):
@@ -266,9 +279,9 @@ class AuthPolicy(object):
         statement can be null.'''
         if verb != '*' and not hasattr(HttpVerb, verb):
             raise NameError('Invalid HTTP verb ' + verb + '. Allowed verbs in HttpVerb class')
-        resourcePattern = re.compile(self.pathRegex)
-        if not resourcePattern.match(resource):
-            raise NameError('Invalid resource path: ' + resource + '. Path should match ' + self.pathRegex)
+        # resourcePattern = re.compile(self.pathRegex)
+        # if not resourcePattern.match(resource):
+        #     raise NameError('Invalid resource path: ' + resource + '. Path should match ' + self.pathRegex)
 
         if resource[:1] == '/':
             resource = resource[1:]

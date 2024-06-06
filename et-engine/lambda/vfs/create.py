@@ -36,7 +36,6 @@ def handler(event, context):
     cursor = connection.cursor()
     try:
 
-        # TURN TO SQL QUERY
         print('Fetching Available Tools..')
 
         sql_query = f"""
@@ -45,7 +44,6 @@ def handler(event, context):
         cursor.execute(sql_query)
         available_vfs = [row[0] for row in cursor.fetchall()]
         print(f"Available VFS: {available_vfs}")
-
 
         if vfs_name in available_vfs:
             print(f"VFS {vfs_name} already exists")
@@ -58,19 +56,16 @@ def handler(event, context):
             }
         
         else:
-
             vfs_id = str(uuid.uuid4())
-
-            # >>>>> s3 bucket goes here
             cfn = boto3.client('cloudformation')
-
             parameters = [
                 {
                     'ParameterKey': 'vfsID',
                     'ParameterValue': vfs_id
                 }
             ]
-            print(vfs_id, parameters)
+            print("VFS ID:", vfs_id)
+            print("Stack Parameters:", parameters)
             
             cfn.create_stack(
                 StackName='vfs-' + vfs_id,
@@ -80,17 +75,9 @@ def handler(event, context):
             )
             print('CREATING STACK')
 
+            # >>>>> HERE I NEED TO ALSO ADD A POLICY THAT ALLOWS ACCESS TO THE TOOL
+            
             # =====
-            # bucket_name = "vfs-" + vfs_id
-            # s3 = boto3.client('s3')
-            # s3.create_bucket(
-            #     Bucket = bucket_name,
-            #     CreateBucketConfiguration={
-            #         'LocationConstraint': 'us-east-2'
-            #     },
-            # )
-            # <<<<<
-
             cursor.execute(
                 f"""
                 INSERT INTO VirtualFileSystems (vfsID, userID, name)
@@ -100,7 +87,7 @@ def handler(event, context):
             print("ROW INSERTED. NOT YET COMMITTED")
             connection.commit()
             print("ROW COMMITTED")
-
+            # <<<<<
 
             return {
                 'statusCode': 200,
@@ -117,7 +104,7 @@ def handler(event, context):
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps(f'Creation Error: {e}')
+            'body': json.dumps(f'Error creating VFS')
         }
     finally:
         cursor.close()

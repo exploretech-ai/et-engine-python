@@ -356,7 +356,7 @@ class API(Stack):
         key_authorizer_lambda = _lambda.Function(
             self, 'key-authorizer-lambda',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "key-authorizer.handler",
+            handler= "key_authorizer.handler",
             code=_lambda.Code.from_asset('lambda'),
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -371,7 +371,8 @@ class API(Stack):
         key_authorizer = apigateway.TokenAuthorizer(
             self,
             'key-authorizer',
-            handler=key_authorizer_lambda
+            handler=key_authorizer_lambda,
+            results_cache_ttl=Duration.seconds(0)
         )
 
 

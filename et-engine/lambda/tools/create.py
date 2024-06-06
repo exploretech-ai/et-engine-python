@@ -53,31 +53,6 @@ def handler(event, context):
         else:
 
             tool_id = str(uuid.uuid4())
-
-            # >>>>>
-            # print('Running Task')
-            # ecs_client = boto3.client('ecs')
-            # ecs_response = ecs_client.run_task(
-
-            #     # This will be determined by the Hardware
-            #     cluster="ETEngineAPI706397EC-ClusterEB0386A7-M0TrrRi5C32N",
-
-            #     # This will be determined by the Tool ID
-            #     taskDefinition="ETEngineAPIHelloWorldTaskCE8C2AEF",
-
-            #     # Seems to be working fine 
-            #     launchType='EC2'
-            # )
-            # print('Success!')
-            # task_arn = ecs_response['tasks'][0]['taskArn']
-            # return {
-            #     'statusCode': 200,
-            #     'body': json.dumps(f'Task started, ARN: {task_arn}')
-            # }
-
-
-            # =====
-            # # Use create_stack to create the codebuild workflow here
             cfn = boto3.client('cloudformation')
 
             parameters = [
@@ -94,10 +69,14 @@ def handler(event, context):
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
             
+            # >>>>> HERE I NEED TO ALSO ADD A POLICY THAT ALLOWS ACCESS TO THE TOOL
+
+            # =====
             sql_query = f"""
                 INSERT INTO Tools (toolID, userID, name, description)
                 VALUES ('{tool_id}', '{user}', '{tool_name}', '{tool_description}')
             """
+            # <<<<<
             cursor.execute(sql_query)
             connection.commit()
             
@@ -105,13 +84,12 @@ def handler(event, context):
                 'statusCode': 200,
                 'body': json.dumps(tool_id)
             }
-            # <<<<<
         
     except Exception as e:
         print(f'ERROR: {e}')
         return {
             'statusCode': 500,
-            'body': json.dumps(f'Creation Error: {e}')
+            'body': json.dumps(f'Error creating Tool')
         }
     
     finally:
