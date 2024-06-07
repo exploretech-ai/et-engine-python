@@ -46,11 +46,12 @@ def handler(event, context):
         }
         
     except Exception as e:
+        print('ERROR:', e)
         return {
             'statusCode': 500,
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps(f'Error: {e}')
+            'body': json.dumps(f'An error occurred while deleting the key')
         }
 

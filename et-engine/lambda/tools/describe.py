@@ -1,6 +1,4 @@
-import lambda_utils
 import json
-import os
 import boto3
 
 

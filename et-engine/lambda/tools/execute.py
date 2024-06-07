@@ -33,10 +33,6 @@ def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
     print('hardware: ', hardware)
     print('args: ', args)
 
-    # cursor.execute(f"""
-    #     DELETE FROM Tasks WHERE userID = '{user_id}'
-    # """)
-
     query = f"""
         INSERT INTO Tasks (taskID, taskArn, userID, toolID, logID, start_time, hardware, status, status_time, args)
         VALUES ('{task_id}', '{task_arn}', '{user_id}', '{tool_id}', '{log_id}', '{start_time}', '{hardware}', '{status}', '{status_time}', '{args}')

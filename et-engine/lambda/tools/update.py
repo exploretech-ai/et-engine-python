@@ -1,4 +1,3 @@
-import json
 import boto3
 import db
 import lambda_utils

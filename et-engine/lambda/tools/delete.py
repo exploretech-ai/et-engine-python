@@ -90,12 +90,13 @@ def handler(event, context):
             'body': json.dumps(f'Tool not found')
         }
     except Exception as e:
+        print('ERROR:', e)
         return {
             'statusCode': 503,
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps(f'Error: {e}')
+            'body': json.dumps(f'An unknown error occurred while deleting the tool')
         }
     finally:
         cursor.close()

@@ -1,6 +1,5 @@
 import json
 import boto3
-import lambda_utils
 
 
 def handler(event, context):
@@ -18,23 +17,6 @@ def handler(event, context):
         else:
             raise Exception
         
-        # >>>>>
-        # Create presigned url
-        # s3 = boto3.client('s3')
-        # bucket_name = "vfs-" + vfs_id
-        # presigned_url = s3.generate_presigned_url(
-        #     'get_object',
-        #     Params={'Bucket': bucket_name, 'Key': key},
-        #     ExpiresIn=60
-        # )
-        # return {
-        #     'statusCode': 200,
-        #     'headers': {
-        #         'Access-Control-Allow-Origin': '*'
-        #     },
-        #     'body' : json.dumps(presigned_url)
-        # }   
-        # =====
         lam = boto3.client('lambda')
 
         payload = json.dumps(
@@ -70,19 +52,17 @@ def handler(event, context):
             },
             'body' : json.dumps(body['presigned_url'])
         }   
-        # <<<<<
-        
+     
     
-    
-
     except Exception as e:
+        print('ERROR:', e)
         return {
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps(f"Error: {e}"),
+            'body': json.dumps(f"Error fetching file for download"),
         } 
 
     

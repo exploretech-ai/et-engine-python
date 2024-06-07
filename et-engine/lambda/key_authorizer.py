@@ -213,7 +213,7 @@ def check_engine_resource_access(resource, user_id):
     sql_query = "SELECT * FROM Sharing WHERE granteeID = %s AND resource_type = %s AND resourceID = %s"
     cursor.execute(sql_query, (user_id, resource_type, resource_id,))
     shared_rows = cursor.fetchall()
-    print(f"Found {len(shared_rows)} resources of type '{resource_type}' in Shared Resources with resource ID {resource_id}")
+    print(f"Found {len(shared_rows)} resources of type '{resource_type}' with resource ID {resource_id} granted to user {user_id}")
 
     if len(owned_rows) == 0 and len(shared_rows) == 0:
         return False

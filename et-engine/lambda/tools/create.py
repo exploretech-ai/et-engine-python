@@ -2,7 +2,6 @@
 import json
 import boto3
 import db
-import lambda_utils
 import uuid
 
 
@@ -11,8 +10,6 @@ def handler(event, context):
     creates a new filesystem under the specified user
     """
     
-
-    # Get user
     try:
         
         user = event['requestContext']['authorizer']['userID']
@@ -26,7 +23,7 @@ def handler(event, context):
         print(f'PARSE ERROR: {e}')
         return {
             'statusCode': 500,
-            'body': json.dumps(f'Parse Error: {e}')
+            'body': json.dumps(f'An error occurred while parsing the requested tool creation')
         }
 
 
@@ -69,14 +66,11 @@ def handler(event, context):
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
             
-            # >>>>> HERE I NEED TO ALSO ADD A POLICY THAT ALLOWS ACCESS TO THE TOOL
 
-            # =====
             sql_query = f"""
                 INSERT INTO Tools (toolID, userID, name, description)
                 VALUES ('{tool_id}', '{user}', '{tool_name}', '{tool_description}')
             """
-            # <<<<<
             cursor.execute(sql_query)
             connection.commit()
             

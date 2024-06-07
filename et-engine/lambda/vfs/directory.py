@@ -13,10 +13,8 @@ def handler(event, context):
     try:
         user_id = event['requestContext']['authorizer']['userID']
         vfs_id = event['pathParameters']['vfsID']
-        # 
 
-        # >>>>>
-        # 
+
         path = ""
         if event["queryStringParameters"] and event["queryStringParameters"]['path']:
             path = event["queryStringParameters"]['path']
@@ -56,16 +54,7 @@ def handler(event, context):
         if body['statusCode'] != 200:
             raise Exception('bad payload, status code not 200')
 
-
         print(body)
-        # =====
-        # s3 = boto3.client('s3')
-        # bucket_name = "vfs-" + vfs_id
-        # directory_contents = s3.list_objects_v2(
-        #     Bucket=bucket_name
-        # )
-        # <<<<<
-        # hierarchy = lambda_utils.to_hierarchy(directory_contents)
 
         return {
             'statusCode': 200,

@@ -3,7 +3,6 @@ import boto3
 import db
 
 
-
 def handler(event, context):
 
     connection = db.connect()

@@ -90,8 +90,6 @@ def handler(event, context):
         print('committed')
 
         
-        
-
         return {
             'statusCode': 200,
             'headers': {

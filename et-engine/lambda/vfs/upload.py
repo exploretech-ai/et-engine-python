@@ -1,6 +1,5 @@
 import json
 import boto3
-import lambda_utils
 
 
 def handler(event, context):
@@ -35,7 +34,6 @@ def handler(event, context):
         )    
 
 
-        
         return {
             'statusCode': 200,
             'headers': {

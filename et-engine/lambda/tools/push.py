@@ -5,7 +5,6 @@ import boto3
 def handler(event, context):
 
     try:
-        user = event['requestContext']['authorizer']['userID']
 
         # vfsID as a path parameter
         tool_id = event['pathParameters']['toolID'] 
@@ -25,12 +24,13 @@ def handler(event, context):
     
 
     except Exception as e:
+        print('ERROR:', e)
         return {
             'statusCode': 500,
             'headers': {
                 'Content-Type': 'application/json',
             },
-            'body': json.dumps(f"Error: {e}"),
+            'body': json.dumps(f"An error occurred when pushing the tool"),
         } 
 
     

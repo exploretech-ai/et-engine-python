@@ -75,9 +75,7 @@ def handler(event, context):
             )
             print('CREATING STACK')
 
-            # >>>>> HERE I NEED TO ALSO ADD A POLICY THAT ALLOWS ACCESS TO THE TOOL
             
-            # =====
             cursor.execute(
                 f"""
                 INSERT INTO VirtualFileSystems (vfsID, userID, name)
@@ -87,7 +85,6 @@ def handler(event, context):
             print("ROW INSERTED. NOT YET COMMITTED")
             connection.commit()
             print("ROW COMMITTED")
-            # <<<<<
 
             return {
                 'statusCode': 200,
