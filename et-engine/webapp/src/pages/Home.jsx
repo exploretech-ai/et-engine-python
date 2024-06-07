@@ -32,6 +32,9 @@ const Home = () => {
                             Python API
                         </li>
                         <li>
+                            Documentation (link)
+                        </li>
+                        <li>
                             Support (link)
                         </li>
                     </ul> 

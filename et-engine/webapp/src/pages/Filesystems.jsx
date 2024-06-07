@@ -181,7 +181,7 @@ const Filesystems = () => {
                     />
                     <FilesDragAndDrop activeVFS={activeVFS} idToken={idToken}>
                         <Directory 
-                            style={{flex: 5}} 
+                            style={{flex: 3}} 
                             idToken={idToken} 
                             resource={activeVFS} 
                             loading={filesLoading} 
