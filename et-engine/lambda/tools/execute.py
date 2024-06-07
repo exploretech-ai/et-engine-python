@@ -7,16 +7,34 @@ import datetime
 
 def fetch_available_vfs(user, cursor):
                     
-    sql_query = f"""
+    query = f"""
         SELECT name, vfsID FROM VirtualFilesystems WHERE userID = '{user}'
     """
-    cursor.execute(sql_query)
+
+    cursor.execute(query)
+    print(f'Found {cursor.rowcount} owned filesystems')
     available_vfs = cursor.fetchall()
+    print('Owned filesystems:', available_vfs)
+
+    query = """
+        SELECT 
+            name, vfsID 
+        FROM
+            VirtualFileSystems
+        INNER JOIN Sharing
+            ON VirtualFileSystems.vfsID = Sharing.resourceID AND Sharing.resource_type = 'vfs' AND Sharing.granteeID = %s
+    """
+    cursor.execute(query, (user,))
+    print(f'Found {cursor.rowcount} shared filesystems')
+    shared_vfs = cursor.fetchall()
+    print('Shared filesystems:', shared_vfs)
+
+    available_vfs.extend(shared_vfs)
 
     vfs_id_map = {}
     for row in available_vfs:
         vfs_id_map[row[0]] = row[1]
-    
+
     return vfs_id_map
 
 
@@ -235,7 +253,8 @@ def handler(event, context):
         task_arn = task['taskArn']
         print('Task Arn: ', task_arn)
 
-        args.pop(0)
+        if args:
+            args.pop(0)
         task_id = log_task(task_arn, user, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
         print('Executed query, waiting to commit...')
 

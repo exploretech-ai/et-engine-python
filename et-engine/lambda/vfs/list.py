@@ -37,7 +37,6 @@ def handler(event, context):
         available_vfs = cursor.fetchall()
         print('Owned filesystems:', available_vfs)
 
-        # >>>>> Listing shared VFS
         query = """
             SELECT 
                 name, vfsID 
@@ -55,10 +54,8 @@ def handler(event, context):
             vfs = vfs + ("owned",)
         for vfs in shared_vfs:
             vfs = vfs + ("shared",)
-            
-        available_vfs.extend(shared_vfs)
 
-        # <<<<<
+        available_vfs.extend(shared_vfs)
 
         return {
             'statusCode': 200,
