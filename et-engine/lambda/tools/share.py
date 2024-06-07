@@ -7,6 +7,8 @@ class SelfShareError(Exception):
     pass
 class AlreadyExistsError(Exception):
     pass
+class NotOwnerError(Exception):
+    pass
 
 def handler(event, context):
 
@@ -14,25 +16,31 @@ def handler(event, context):
         connection = db.connect()
         cursor = connection.cursor()
 
+        ownerID = event['requestContext']['authorizer']['userID']
+        resourceID = event['pathParameters']['toolID']
+        resource_type = "tools"
+
         if 'body' in event:
             body = json.loads(event['body'])
         else:
             raise Exception('request body empty')
         
         if 'grantee' in body:
-            grantee = body['grantee']
+            granteeID = body['grantee']
         else:
             raise Exception('request body does not contain key "grantee"')
         
-        # throws an error if poorly-formed UUID
-        uuid.UUID(grantee, version=4)
+        query = "SELECT * FROM Tools WHERE userID = %s AND toolID = %s"
+        cursor.execute(query, (ownerID, resourceID,))
+        if cursor.rowcount == 0:
+            raise NotOwnerError
+        print('Ownership verified')
         
-
+        # throws an error if poorly-formed UUID
+        uuid.UUID(granteeID, version=4)
+        print('Grantee ID formatted properly')
+        
         accessID = str(uuid.uuid4())
-        ownerID = event['requestContext']['authorizer']['userID']
-        granteeID = grantee
-        resource_type = "tools"
-        resourceID = event['pathParameters']['toolID']
         date_created = datetime.datetime.now()
         date_created = date_created.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -66,6 +74,16 @@ def handler(event, context):
             'body' : json.dumps("success")
         }
     
+    except NotOwnerError as e:
+        print('ERROR: MUST BE OWNER OF RESOURCE TO SHARE', e)
+        return {
+            'statusCode': 403,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body' : json.dumps("must be owner to share")
+        }
+
     except SelfShareError as e:
         print('TRIED TO SHARE WITH SELF, ABORTED:', e)
         return {
