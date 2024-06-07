@@ -30,31 +30,6 @@ DELETE/vfs/{vfsID}/{filepath+}      -               o                   o
 GET/vfs/{vfsID}/list                o               o                   o
 POST/vfs/{vfsID}/mkdir              -               o                   o
 
-
-Sample policy document:
-
-expected_response = {
-    'principalId': user_id,
-    'policyDocument': {
-        'Version': '2012-10-17', 
-        'Statement': [
-            {
-                'Action': 'execute-api:Invoke', 
-                'Effect': 'Allow', 
-                'Resource': [
-                    'arn:aws:execute-api:us-east-2:734818840861:t2pfsy11r1/prod/*/*'
-                ]
-            }
-        ]
-    }, 
-    'context': {
-        'userID': user_id, 
-        'source': 'api', 
-        'apiKey': api_key
-    }        
-}
-
-
 """
 
 
@@ -88,10 +63,11 @@ DENIED_TOOL_USE_ENDPOINTS = [
     [e for e in ENDPOINTS if 'PUT/tools' in e][0]
 ]
 
+
 @pytest.mark.parametrize("endpoint", ENDPOINTS)
 @patch('key_authorizer.decode_key')
-@patch('key_authorizer.get_policy_from_user')
-def test_full_access(mock_get_policy_from_user, mock_decode_key, endpoint):
+@patch('key_authorizer.check_engine_resource_access')
+def test_full_access(mock_check_engine_resource_access, mock_decode_key, endpoint):
     """
     Tests the authorizer to make sure that a user with full access can access all the endpoints
     """
@@ -102,7 +78,7 @@ def test_full_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     user_id = os.environ['ET_ENGINE_USER_ID']
 
     mock_decode_key.return_value = user_id
-    mock_get_policy_from_user.return_value = (True, True)
+    mock_check_engine_resource_access.return_value = True
 
     event = {
         'authorizationToken': api_key,
@@ -116,11 +92,25 @@ def test_full_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     assert response['policyDocument']['Statement'][0]['Effect'] == 'Allow'
     assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
 
+    # Check to make sure resources without proper access are denied
+    endpoint_resources = endpoint.split('/')
+    if len(endpoint_resources) > 2:
+        effect = "Deny"
+    else:
+        effect = "Allow"
+
+    mock_check_engine_resource_access.return_value = False
+    response = key_authorizer.handler(event, context, plan=plan)
+
+    assert len(response['policyDocument']['Statement']) == 1
+    assert response['policyDocument']['Statement'][0]['Effect'] == effect
+    assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
+
 
 @pytest.mark.parametrize("endpoint", ENDPOINTS)
 @patch('key_authorizer.decode_key')
-@patch('key_authorizer.get_policy_from_user')
-def test_results_access(mock_get_policy_from_user, mock_decode_key, endpoint):
+@patch('key_authorizer.check_engine_resource_access')
+def test_results_access(mock_check_engine_resource_access, mock_decode_key, endpoint):
     """
     Tests the authorizer to make sure that a user with full access can access all the endpoints
     """
@@ -137,7 +127,7 @@ def test_results_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     user_id = os.environ['ET_ENGINE_USER_ID']
 
     mock_decode_key.return_value = user_id
-    mock_get_policy_from_user.return_value = (True, True)
+    mock_check_engine_resource_access.return_value = True
 
     event = {
         'authorizationToken': api_key,
@@ -151,12 +141,25 @@ def test_results_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     assert response['policyDocument']['Statement'][0]['Effect'] == effect
     assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
 
+    # Check to make sure resources without proper access are denied
+    endpoint_resources = endpoint.split('/')
+    if len(endpoint_resources) <= 2 and endpoint in ALLOWED_RESULTS_ENDPOINTS:
+        effect = "Allow"
+    else:
+        effect = "Deny"
+
+    mock_check_engine_resource_access.return_value = False
+    response = key_authorizer.handler(event, context, plan=plan)
+    
+    assert len(response['policyDocument']['Statement']) == 1
+    assert response['policyDocument']['Statement'][0]['Effect'] == effect
+    assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
 
 
 @pytest.mark.parametrize("endpoint", ENDPOINTS)
 @patch('key_authorizer.decode_key')
-@patch('key_authorizer.get_policy_from_user')
-def test_tool_use_access(mock_get_policy_from_user, mock_decode_key, endpoint):
+@patch('key_authorizer.check_engine_resource_access')
+def test_tool_use_access(mock_check_engine_resource_access, mock_decode_key, endpoint):
     """
     Tests the authorizer to make sure that a user with full access can access all the endpoints
     """
@@ -173,7 +176,7 @@ def test_tool_use_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     user_id = os.environ['ET_ENGINE_USER_ID']
 
     mock_decode_key.return_value = user_id
-    mock_get_policy_from_user.return_value = (True, True)
+    mock_check_engine_resource_access.return_value = True
 
     event = {
         'authorizationToken': api_key,
@@ -186,3 +189,28 @@ def test_tool_use_access(mock_get_policy_from_user, mock_decode_key, endpoint):
     assert len(response['policyDocument']['Statement']) == 1
     assert response['policyDocument']['Statement'][0]['Effect'] == effect
     assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
+
+    # Check to make sure resources without proper access are denied
+    endpoint_resources = endpoint.split('/')
+    if len(endpoint_resources) > 2 or endpoint in DENIED_TOOL_USE_ENDPOINTS:
+        effect = "Deny"
+    else:
+        effect = "Allow"
+
+    mock_check_engine_resource_access.return_value = False
+    response = key_authorizer.handler(event, context, plan=plan)
+    
+    assert len(response['policyDocument']['Statement']) == 1
+    assert response['policyDocument']['Statement'][0]['Effect'] == effect
+    assert response['policyDocument']['Statement'][0]['Resource'] == [ARN_BASE + endpoint]
+
+
+@pytest.mark.parametrize("endpoint", ENDPOINTS)
+def test_resource_type_parser(endpoint):
+
+    endpoint_resources = endpoint.split('/')
+    resource = '/'.join(endpoint_resources[1:])
+
+    result = key_authorizer.get_resource_type(resource)
+
+    assert result == endpoint_resources[1]

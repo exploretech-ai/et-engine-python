@@ -9,12 +9,13 @@ from botocore.exceptions import ClientError
 def handler(event, context):
 
     connection = db.connect()
+    cursor = connection.cursor()
 
     print("initializing")
   
     try:
 
-        cursor = connection.cursor()
+        
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS VirtualFileSystems (
                 vfsID UUID PRIMARY KEY,
@@ -23,10 +24,8 @@ def handler(event, context):
             );
         """
         cursor.execute(create_table_sql)
-        connection.commit()
         print('Table "VirtualFileSystems" created successfully')
 
-        cursor = connection.cursor()
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS Tools (
                 toolID UUID PRIMARY KEY,
@@ -36,10 +35,8 @@ def handler(event, context):
             );
         """
         cursor.execute(create_table_sql)
-        connection.commit()
         print('Table "Tools" created successfully')
 
-        cursor = connection.cursor()
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS APIKeys (
                 keyID UUID PRIMARY KEY,
@@ -51,22 +48,8 @@ def handler(event, context):
             );
         """
         cursor.execute(create_table_sql)
-        connection.commit()
         print('Table "APIKeys" created successfully')
-
-
-        cursor = connection.cursor()
-        create_table_sql = """
-            CREATE TABLE IF NOT EXISTS Policies (
-                policyID UUID PRIMARY KEY,
-                userID UUID NOT NULL,
-                allow_tools BOOLEAN NOT NULL,
-                allow_vfs BOOLEAN NOT NULL
-            );
-        """
-        cursor.execute(create_table_sql)
-        connection.commit()
-        print('Table "Policies" created successfully')
+        
 
         create_table_sql = """
             CREATE TABLE IF NOT EXISTS Tasks (
@@ -85,35 +68,31 @@ def handler(event, context):
             );
         """
         cursor.execute(create_table_sql)
-        connection.commit()
         print('Table "Tasks" created successfully')
 
 
-        # =========================== TEMP ==============================
-        # import uuid
-        # policy_1 = str(uuid.uuid4())
-        # policy_2 = str(uuid.uuid4())
-
-        # cursor = connection.cursor()
-
-        # cursor.execute(f"""
-        #     INSERT INTO Policies (policyID, userID, allow_tools, allow_vfs)
-        #     VALUES ('{policy_1}', 'a9ae7c0d-8c5f-4bcf-8cb0-119a1fa8ca79', 'true', 'true')
-        # """)
-
-        # cursor.execute(f"""
-        #     INSERT INTO Policies (policyID, userID, allow_tools, allow_vfs)
-        #     VALUES ('{policy_2}', 'ed6bdfdb-28c9-41f3-8c73-0ad31c6aa2aa', 'true', 'true')
-        # """)
-        # print("policy initialization successful. changes not committed.")
-
-        # connection.commit()
-        # print("policy changes committed.")
-        # =========================== TEMP ==============================
+        create_table_sql = """
+            CREATE TABLE IF NOT EXISTS Sharing (
+                accessID UUID PRIMARY KEY,
+                ownerID UUID NOT NULL,
+                granteeID UUID NOT NULL,
+                resource_type VARCHAR(255) NOT NULL,
+                resourceID UUID NOT NULL,
+                date_granted TIMESTAMP NOT NULL
+            );
+        """
+        cursor.execute(create_table_sql)
+        print('Table "Sharing" created successfully')
 
 
+        connection.commit()
+
+
+
+
+        # =========== SCRATCH ===========
         # sql_query = "select * from information_schema.columns where table_schema = 'public'"
-        # sql_query = "DROP TABLE Tasks"
+        # sql_query = "DROP TABLE Policies"
         # cursor.execute(sql_query)
         # connection.commit()
         # print(cursor.fetchall())

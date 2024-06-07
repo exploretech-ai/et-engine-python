@@ -9,6 +9,7 @@ import re
 import urllib.request
 import traceback
 import sys
+import uuid
 
 region = 'us-east-2'
 userpoolId = 'us-east-2_c3KpcMfzh'
@@ -29,6 +30,7 @@ except:
 try:
     # These are wrapped in try/catch for unit testing purposes
     import db
+    from psycopg2 import sql
     connection = db.connect()
     cursor = connection.cursor()
 except Exception as e:
@@ -141,10 +143,11 @@ def handler(event, context, cursor=cursor, plan='FULL'):
             elif verb == 'POST' and resource == 'tools':
                 allow = False
 
-        # Check if user owns requested resource (tool/vfs/task)
-
-        # Check if user was given access to requested resource (tool/vfs sharing)
-        
+        # Check if "{vfsID}" or "{toolID}" or "{taskID}" are requested
+        is_engine_resource = "/" in resource
+        if allow and is_engine_resource:
+            allow = check_engine_resource_access(resource, user_id)
+            
 
         if allow:
             auth_policy.allowMethod(verb, resource)
@@ -178,6 +181,51 @@ def handler(event, context, cursor=cursor, plan='FULL'):
         }   
 
 
+def check_engine_resource_access(resource, user_id):
+    print(f'Checking whether user {user_id} has access to resource {resource}')
+    resource_type = get_resource_type(resource)
+    resource_id = resource.split("/")[1]
+
+    table_map = {
+        'vfs': 'VirtualFileSystems',
+        'tools': 'Tools',
+        'tasks': 'Tasks'
+    }
+    column_map = {
+        'vfs': 'vfsID',
+        'tools': 'toolID',
+        'tasks': 'taskID'
+    }
+    table_name = table_map[resource_type]
+    column_name = column_map[resource_type]
+
+    sql_query = sql.SQL(
+        "SELECT * FROM {table_name} WHERE userID = %s AND {column_name} = %s"
+    ).format(
+        table_name=sql.SQL(table_name), 
+        column_name=sql.SQL(column_name)
+    )
+    cursor.execute(sql_query, (user_id, resource_id,))
+    owned_rows = cursor.fetchall()
+    print(f"Found {len(owned_rows)} owned resources of type '{resource_type}' in table {table_name} with resource ID {resource_id}")
+    
+    
+    sql_query = "SELECT * FROM Sharing WHERE granteeID = %s AND resource_type = %s AND resourceID = %s"
+    cursor.execute(sql_query, (user_id, resource_type, resource_id,))
+    shared_rows = cursor.fetchall()
+    print(f"Found {len(shared_rows)} resources of type '{resource_type}' in Shared Resources with resource ID {resource_id}")
+
+    if len(owned_rows) == 0 and len(shared_rows) == 0:
+        return False
+    else:
+        return True
+
+def get_resource_type(resource):
+    if "/" not in resource:
+        return resource
+    else:
+        return resource.split('/')[0]
+    
 
 def decode_key(cursor, token):
     """
@@ -205,15 +253,15 @@ def decode_key(cursor, token):
     return user_id
 
 
-def get_policy_from_user(cursor, user_id):
-    """
-    Helper function to decode the API key. This is wrapped into a separate function to facilitate unit test mocking.
-    For this reason, note that this function is not covered by unit tests.
-    To implement unit tests, the try/catch statements above need to work on a local machine, which requires a big overhaul of the environment setup.
-    This is caused by the fact that psycopg2, cryptography, and jwt require binaries to be installed, which vary from machine to machine.
-    """
-    cursor.execute("SELECT allow_tools, allow_vfs FROM Policies WHERE userID = %s", (user_id,))
-    return cursor.fetchall()[0]
+# def get_policy_from_user(cursor, user_id):
+#     """
+#     Helper function to decode the API key. This is wrapped into a separate function to facilitate unit test mocking.
+#     For this reason, note that this function is not covered by unit tests.
+#     To implement unit tests, the try/catch statements above need to work on a local machine, which requires a big overhaul of the environment setup.
+#     This is caused by the fact that psycopg2, cryptography, and jwt require binaries to be installed, which vary from machine to machine.
+#     """
+#     cursor.execute("SELECT allow_tools, allow_vfs FROM Policies WHERE userID = %s", (user_id,))
+#     return cursor.fetchall()[0]
 
 
 def findJwkValue(keys, kid):
