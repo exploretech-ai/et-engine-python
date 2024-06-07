@@ -135,7 +135,7 @@ const Filesystems = () => {
                 const vfsIds = []
                 const vfsNames = []
                 const vfsMap = new Map()
-                for (const [name, id] of response) {
+                for (const [name, id, source] of response) {
                     vfsNames.push(name)
                     vfsMap.set(name, new VFS(name, id))
                 }

@@ -25,20 +25,17 @@ const ShareModal = ({resource, idToken, closeModal}) => {
                 grantee: grantee
             })
         }).then(response => {
-            if (response.ok) {
-                return response.json()
+            if (response.status === 200) {
+                return response.text()
             } else {
-                res.text().then(text => {
-                    throw new Error(text)
-                })
+                return response.text().then(text => { throw new Error(text) })
             }
         }).then(response => {
-            console.log(response)
+            console.log('success:', response)
             setShareResponseMessage("success")
         }).catch(error => {
             console.error(error)
             setShareResponseMessage("failed:" + error)
-            // Parse error and display on a page
         }).finally(() => {
             // setSharing(false)
         })
@@ -68,20 +65,20 @@ const DeleteModal = ({resource, idToken, closeModal}) => {
         if (idToken) {
             console.log('Delete requested for ' + resource.resource, resource.name )
 
-            // const url = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/" + resource.resource + "?" + new URLSearchParams({
-            //     name: resource.name
-            // })
-            // console.log(url)
-            // fetch(url, {
-            //     method: "DELETE",
-            //     headers: {
-            //         "Authorization": "Bearer " + idToken
-            //     }
-            // }).then(response => {
-            //     console.log('success: ', response)
-            // }).catch(error => {
-            //     console.log('error', error)
-            // })
+            const url = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/" + resource.resource + "?" + new URLSearchParams({
+                name: resource.name
+            })
+            console.log(url)
+            fetch(url, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": "Bearer " + idToken
+                }
+            }).then(response => {
+                console.log('success: ', response)
+            }).catch(error => {
+                console.log('error', error)
+            })
         } else {
             console.log('Delete requested, but ID token not found')
         }
