@@ -181,6 +181,7 @@ def handler(event, context, cursor=cursor, plan='FULL'):
         }   
 
 
+
 def check_engine_resource_access(resource, user_id):
     print(f'Checking whether user {user_id} has access to resource {resource}')
     resource_type = get_resource_type(resource)
@@ -205,13 +206,17 @@ def check_engine_resource_access(resource, user_id):
         table_name=sql.SQL(table_name), 
         column_name=sql.SQL(column_name)
     )
+    print("Executing query:", sql_query)
     cursor.execute(sql_query, (user_id, resource_id,))
+    print('...done')
     owned_rows = cursor.fetchall()
     print(f"Found {len(owned_rows)} owned resources of type '{resource_type}' in table {table_name} with resource ID {resource_id}")
     
     
     sql_query = "SELECT * FROM Sharing WHERE granteeID = %s AND resource_type = %s AND resourceID = %s"
+    print("Executing query:", sql_query)
     cursor.execute(sql_query, (user_id, resource_type, resource_id,))
+    print('...done')
     shared_rows = cursor.fetchall()
     print(f"Found {len(shared_rows)} resources of type '{resource_type}' with resource ID {resource_id} granted to user {user_id}")
 
