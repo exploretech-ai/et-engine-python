@@ -38,7 +38,33 @@ def handler(event, context):
             
 
         cursor.execute(query)
+        print(f'Found {cursor.rowcount} owned tools')
         available_tools = cursor.fetchall()
+        print('Owned tools:', available_tools)
+
+        # >>>>> Listing shared VFS
+        query = """
+            SELECT 
+                name, toolID 
+            FROM
+                Tools
+            INNER JOIN Sharing
+                ON Tools.toolID = Sharing.resourceID AND Sharing.resource_type = 'tools' AND Sharing.granteeID = %s
+        """
+        cursor.execute(query, (user,))
+        print(f'Found {cursor.rowcount} shared tools')
+        shared_tools = cursor.fetchall()
+        print('Shared tools:', shared_tools)
+        
+
+        for tool in available_tools:
+            tool = tool + ("owned",)
+        for tool in shared_tools:
+            tool = tool + ("shared",)
+
+        available_tools.extend(shared_tools)
+
+        # <<<<<
         return {
                 'statusCode': 200,
                 'headers': {

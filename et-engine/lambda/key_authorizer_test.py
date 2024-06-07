@@ -21,6 +21,7 @@ POST/tools                          -               -                   o
 GET/tools/{toolID}                  -               o                   o
 POST/tools/{toolID}                 -               o                   o
 PUT/tools/{toolID}                  -               -                   o
+POST/tools/{toolID}/share           -               -                   o
 DELETE/vfs                          -               o                   o
 GET/vfs                             o               o                   o
 POST/vfs                            -               o                   o
@@ -29,7 +30,7 @@ POST/vfs/{vfsID}                    -               o                   o
 DELETE/vfs/{vfsID}/{filepath+}      -               o                   o
 GET/vfs/{vfsID}/list                o               o                   o
 POST/vfs/{vfsID}/mkdir              -               o                   o
-
+POST/vfs/{vfsID}/share              -               -                   o
 """
 
 
@@ -47,6 +48,7 @@ ENDPOINTS = [
     'GET/tools/' + str(uuid.uuid4()),
     'POST/tools/' + str(uuid.uuid4()),
     'PUT/tools/' + str(uuid.uuid4()),
+    'POST/tools/' + str(uuid.uuid4()) + '/share',
     'DELETE/vfs',
     'GET/vfs',
     'POST/vfs',
@@ -54,16 +56,17 @@ ENDPOINTS = [
     'POST/vfs/' + str(uuid.uuid4()),
     f'DELETE/vfs/{str(uuid.uuid4())}/files/path/to/fake/file.txt',
     f'GET/vfs/{str(uuid.uuid4())}/list',
-    f'POST/vfs/{str(uuid.uuid4())}/mkdir'
+    f'POST/vfs/{str(uuid.uuid4())}/mkdir',
+    f'POST/vfs/{str(uuid.uuid4())}/share'
 ]
 ALLOWED_RESULTS_ENDPOINTS = [e for e in ENDPOINTS if 'GET/vfs' in e]
 DENIED_TOOL_USE_ENDPOINTS = [
     'DELETE/tools',
     'POST/tools',
-    [e for e in ENDPOINTS if 'PUT/tools' in e][0]
-]
+    [e for e in ENDPOINTS if 'PUT/tools' in e][0],
+] + [e for e in ENDPOINTS if '/share' in e]
 
-
+print(DENIED_TOOL_USE_ENDPOINTS)
 @pytest.mark.parametrize("endpoint", ENDPOINTS)
 @patch('key_authorizer.decode_key')
 @patch('key_authorizer.check_engine_resource_access')

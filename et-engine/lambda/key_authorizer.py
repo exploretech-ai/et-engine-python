@@ -135,12 +135,14 @@ def handler(event, context, cursor=cursor, plan='FULL'):
 
         # Check if requested method is in plan
         if plan == 'RESULTS':
-            if 'vfs' not in resource or verb != 'GET':
+            if 'vfs' not in resource or verb != 'GET' or '/share' in resource:
                 allow = False
         elif plan == 'TOOL_USE':
             if 'tools' in resource and (verb == 'DELETE' or verb == 'PUT'):
                 allow = False
             elif verb == 'POST' and resource == 'tools':
+                allow = False
+            if '/share' in resource:
                 allow = False
 
         # Check if "{vfsID}" or "{toolID}" or "{taskID}" are requested
@@ -199,6 +201,7 @@ def check_engine_resource_access(resource, user_id):
     }
     table_name = table_map[resource_type]
     column_name = column_map[resource_type]
+    print(f'Fetching column "{column_name}" from table "{table_name}" given resource type "{resource_type}"')
 
     sql_query = sql.SQL(
         "SELECT * FROM {table_name} WHERE userID = %s AND {column_name} = %s"

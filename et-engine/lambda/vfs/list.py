@@ -33,7 +33,33 @@ def handler(event, context):
             """
 
         cursor.execute(query)
+        print(f'Found {cursor.rowcount} owned filesystems')
         available_vfs = cursor.fetchall()
+        print('Owned filesystems:', available_vfs)
+
+        # >>>>> Listing shared VFS
+        query = """
+            SELECT 
+                name, vfsID 
+            FROM
+                VirtualFileSystems
+            INNER JOIN Sharing
+                ON VirtualFileSystems.vfsID = Sharing.resourceID AND Sharing.resource_type = 'vfs' AND Sharing.granteeID = %s
+        """
+        cursor.execute(query, (user,))
+        print(f'Found {cursor.rowcount} shared filesystems')
+        shared_vfs = cursor.fetchall()
+        print('Shared filesystems:', shared_vfs)
+        
+        for vfs in available_vfs:
+            vfs = vfs + ("owned",)
+        for vfs in shared_vfs:
+            vfs = vfs + ("shared",)
+            
+        available_vfs.extend(shared_vfs)
+
+        # <<<<<
+
         return {
             'statusCode': 200,
             'headers': {

@@ -81,6 +81,7 @@ def handler(event, context):
                 date_granted TIMESTAMP NOT NULL
             );
         """
+        # cursor.execute("DROP TABLE Sharing")
         cursor.execute(create_table_sql)
         print('Table "Sharing" created successfully')
 
@@ -92,7 +93,7 @@ def handler(event, context):
 
         # =========== SCRATCH ===========
         # sql_query = "select * from information_schema.columns where table_schema = 'public'"
-        # sql_query = "DROP TABLE Policies"
+        # sql_query = "DROP TABLE Sharing"
         # cursor.execute(sql_query)
         # connection.commit()
         # print(cursor.fetchall())

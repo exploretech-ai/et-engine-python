@@ -1,9 +1,6 @@
-import lambda_utils
 import json
-import os
 import boto3
 import db
-
 
 
 def handler(event, context):
@@ -20,17 +17,17 @@ def handler(event, context):
             path = event["queryStringParameters"]['path']
 
 
-        # Check if vfs exists
-        cursor.execute(
-        f"""
-        SELECT vfsID FROM VirtualFilesystems WHERE userID='{user_id}'
-        """
-        )
+        # # Check if vfs exists
+        # cursor.execute(
+        # f"""
+        # SELECT vfsID FROM VirtualFilesystems WHERE userID='{user_id}'
+        # """
+        # )
 
-        available_vfs = [row[0] for row in cursor.fetchall()]
-        if vfs_id not in available_vfs:
-            print(available_vfs, vfs_id)
-            raise NameError(f'VFS {vfs_id} not available')
+        # available_vfs = [row[0] for row in cursor.fetchall()]
+        # if vfs_id not in available_vfs:
+        #     print(available_vfs, vfs_id)
+        #     raise NameError(f'VFS {vfs_id} not available')
 
 
 
@@ -67,15 +64,15 @@ def handler(event, context):
             })
         }
         
-    except NameError as e:
-        print(e)
-        return {
-            'statusCode': 401,
-            'headers': {
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps(f'Could not access VFS')
-        }
+    # except NameError as e:
+    #     print(e)
+    #     return {
+    #         'statusCode': 401,
+    #         'headers': {
+    #             'Access-Control-Allow-Origin': '*'
+    #         },
+    #         'body': json.dumps(f'Could not access VFS')
+    #     }
     except Exception as e:
         print(f'500 Error: {e}')
         return {
@@ -90,26 +87,26 @@ def handler(event, context):
         connection.close()
 
     
-if __name__ == "__main__":
-    files = [
-    ]
+# if __name__ == "__main__":
+#     files = [
+#     ]
 
-    directory = []
-    for file in files:
-        directory.append(file.split('/'))
+#     directory = []
+#     for file in files:
+#         directory.append(file.split('/'))
 
 
-    hierarchy = {}
-    for file in directory:
-        current_branch = hierarchy
-        for component in file[:-1]:
-            if component in current_branch:
-                current_branch = current_branch[component]
-            else:
-                current_branch[component] = {}
-                current_branch = current_branch[component]
-        current_branch[file[-1]] = None
+#     hierarchy = {}
+#     for file in directory:
+#         current_branch = hierarchy
+#         for component in file[:-1]:
+#             if component in current_branch:
+#                 current_branch = current_branch[component]
+#             else:
+#                 current_branch[component] = {}
+#                 current_branch = current_branch[component]
+#         current_branch[file[-1]] = None
 
-    print(hierarchy)
+#     print(hierarchy)
 
         
