@@ -2,6 +2,8 @@ import json
 import lambda_utils
 import db
 
+class NotOwnerError(Exception):
+    pass
 
 def delete_tool(tool_id):
     tool_name = "tool-"+tool_id
@@ -27,6 +29,12 @@ def handler(event, context):
     try:
         user = event['requestContext']['authorizer']['userID']
         print(f'User ID: {user}')
+
+        is_owned = json.loads(event['requestContext']['authorizer']['isOwned'])
+
+        if not is_owned:
+            raise NotOwnerError
+        print(f'Ownership verified (isOwned = {is_owned})')
         
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
             
@@ -81,6 +89,16 @@ def handler(event, context):
                 'body': json.dumps("Error: must include query string")
             }
         
+    except NotOwnerError as e:
+        print('ERROR: MUST BE OWNER OF RESOURCE TO DELETE', e)
+        return {
+            'statusCode': 403,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body' : json.dumps("must be owner to delete")
+        }
+    
     except NameError as e:
         return {
             'statusCode': 404,

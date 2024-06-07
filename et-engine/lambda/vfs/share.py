@@ -19,6 +19,11 @@ def handler(event, context):
         ownerID = event['requestContext']['authorizer']['userID']
         resourceID = event['pathParameters']['vfsID']
         resource_type = "vfs"
+        is_owned = json.loads(event['requestContext']['authorizer']['isOwned'])
+
+        if not is_owned:
+            raise NotOwnerError
+        print(f'Ownership verified (isOwned = {is_owned})')
 
         if 'body' in event:
             body = json.loads(event['body'])
@@ -26,22 +31,15 @@ def handler(event, context):
             raise Exception('request body empty')
         
         if 'grantee' in body:
-            grantee = body['grantee']
+            granteeID = body['grantee']
         else:
             raise Exception('request body does not contain key "grantee"')
-        
-        query = "SELECT * FROM VirtualFileSystems WHERE userID = %s AND vfsID = %s"
-        cursor.execute(query, (ownerID, resourceID,))
-        if cursor.rowcount == 0:
-            raise NotOwnerError
-        print('Ownership verified')
 
         # throws an error if poorly-formed UUID
-        uuid.UUID(grantee, version=4)
+        uuid.UUID(granteeID, version=4)
         print('Grantee ID formatted properly')
         
         accessID = str(uuid.uuid4())
-        granteeID = grantee
         date_created = datetime.datetime.now()
         date_created = date_created.strftime('%Y-%m-%d %H:%M:%S')
 

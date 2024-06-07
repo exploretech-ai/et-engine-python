@@ -147,8 +147,9 @@ def handler(event, context, cursor=cursor, plan='FULL'):
 
         # Check if "{vfsID}" or "{toolID}" or "{taskID}" are requested
         is_engine_resource = "/" in resource
+        is_owned = False
         if allow and is_engine_resource:
-            allow = check_engine_resource_access(resource, user_id)
+            allow, is_owned = check_engine_resource_access(resource, user_id)
             
 
         if allow:
@@ -167,6 +168,8 @@ def handler(event, context, cursor=cursor, plan='FULL'):
         }
         if api_key is not None:
             response['context']['apiKey'] = api_key
+        
+        response['context']['isOwned'] = json.dumps(is_owned)
         
         print('Auth Policy: ', response)
         return response
@@ -212,21 +215,28 @@ def check_engine_resource_access(resource, user_id):
     print("Executing query:", sql_query)
     cursor.execute(sql_query, (user_id, resource_id,))
     print('...done')
-    owned_rows = cursor.fetchall()
-    print(f"Found {len(owned_rows)} owned resources of type '{resource_type}' in table {table_name} with resource ID {resource_id}")
+    n_owned = cursor.rowcount
+    print(f"Found {n_owned} owned resources of type '{resource_type}' in table {table_name} with resource ID {resource_id}")
     
     
     sql_query = "SELECT * FROM Sharing WHERE granteeID = %s AND resource_type = %s AND resourceID = %s"
     print("Executing query:", sql_query)
     cursor.execute(sql_query, (user_id, resource_type, resource_id,))
     print('...done')
-    shared_rows = cursor.fetchall()
-    print(f"Found {len(shared_rows)} resources of type '{resource_type}' with resource ID {resource_id} granted to user {user_id}")
+    n_shared = cursor.rowcount
+    print(f"Found {n_shared} resources of type '{resource_type}' with resource ID {resource_id} granted to user {user_id}")
 
-    if len(owned_rows) == 0 and len(shared_rows) == 0:
-        return False
+    if n_owned == 0 and n_shared == 0:
+        return False, False
     else:
-        return True
+        if n_owned > 0 and n_shared == 0:
+            is_owned = True
+        elif n_owned == 0 and n_shared > 0:
+            is_owned = False
+        else:
+            raise Exception('Resource is both owned and shared')
+        print('isOwned:', is_owned)
+        return True, is_owned
 
 def get_resource_type(resource):
     if "/" not in resource:

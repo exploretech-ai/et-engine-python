@@ -2,12 +2,20 @@ import json
 import lambda_utils
 import db
 
+class NotOwnerError(Exception):
+    pass
+
 def handler(event, context):
 
     connection = db.connect()
     cursor = connection.cursor()
     try:
         user = event['requestContext']['authorizer']['userID']
+        is_owned = json.loads(event['requestContext']['authorizer']['isOwned'])
+
+        if not is_owned:
+            raise NotOwnerError
+        print(f'Ownership verified (isOwned = {is_owned})')
         
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
 
@@ -21,7 +29,7 @@ def handler(event, context):
                 vfs_id = cursor.fetchall()
                 
                 if len(vfs_id) == 0:
-                    raise NameError('no tool id found')
+                    raise NameError('no vfs id found')
                 else:
                     vfs_id = vfs_id[0][0]
                     print(f"Delete Request for ID: {vfs_id}")
@@ -66,13 +74,24 @@ def handler(event, context):
                 'body': json.dumps("Error: must include query string")
             }
         
+    except NotOwnerError as e:
+        print('Not Owner: aborting', e)
+        return {
+            'statusCode': 403,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body': json.dumps('must be owner to delete')
+        }
+
     except Exception as e:
+        print(f'Error: {e}')
         return {
             'statusCode': 500,
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps(f'Error: {e}')
+            'body': json.dumps('could not delete vfs')
         }
     finally:
         cursor.close()

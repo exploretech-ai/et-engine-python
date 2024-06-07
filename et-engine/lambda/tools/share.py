@@ -19,6 +19,11 @@ def handler(event, context):
         ownerID = event['requestContext']['authorizer']['userID']
         resourceID = event['pathParameters']['toolID']
         resource_type = "tools"
+        is_owned = json.loads(event['requestContext']['authorizer']['isOwned'])
+
+        if not is_owned:
+            raise NotOwnerError
+        print(f'Ownership verified (isOwned = {is_owned})')
 
         if 'body' in event:
             body = json.loads(event['body'])
@@ -29,13 +34,7 @@ def handler(event, context):
             granteeID = body['grantee']
         else:
             raise Exception('request body does not contain key "grantee"')
-        
-        query = "SELECT * FROM Tools WHERE userID = %s AND toolID = %s"
-        cursor.execute(query, (ownerID, resourceID,))
-        if cursor.rowcount == 0:
-            raise NotOwnerError
-        print('Ownership verified')
-        
+                
         # throws an error if poorly-formed UUID
         uuid.UUID(granteeID, version=4)
         print('Grantee ID formatted properly')
