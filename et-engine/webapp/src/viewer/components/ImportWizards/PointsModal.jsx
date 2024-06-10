@@ -74,6 +74,9 @@ function Page2({parameters, layerName, setLayerName, toggleOpen}) {
   const [xColumn, setXColumn] = useState("")
   const [yColumn, setYColumn] = useState("")
   const [zColumn, setZColumn] = useState("")
+  const [useNoData, setUseNoData] = useState(false)
+  const [noData, setNoData] = useState(null)
+
 
   async function submitParameters() {
     const newParameters = {...parameters}
@@ -81,6 +84,7 @@ function Page2({parameters, layerName, setLayerName, toggleOpen}) {
     newParameters.xColumn = xColumn
     newParameters.yColumn = yColumn
     newParameters.zColumn = zColumn
+    newParameters.noData = Number(noData)
     
     await addCheckbox(newParameters)
   }
@@ -118,32 +122,52 @@ function Page2({parameters, layerName, setLayerName, toggleOpen}) {
     )
   }
 
+  const handleNoDataChange = (e) => {
+    if (useNoData) {
+      setNoData(null)
+    }
+    setUseNoData(!useNoData)
+  }
+
 
   return(
     <div>
       <form>
         <label htmlFor="layerNameInput">Layer Name</label>
         <input type="text" id="layerNameInput" value={layerName} onChange={(e) => setLayerName(e.target.value)}/><br/>
+
         <label htmlFor="xColumnInput">X Column</label>
         <select id="xColumnInput" value={xColumn} onChange={e => setXColumn(e.target.value)}>
             {columnOptions}  
         </select> <br/>
+
         <label htmlFor="yColumnInput">Y Column</label>
         <select id="yColumnInput" value={yColumn} onChange={e => setYColumn(e.target.value)}>
             {columnOptions}  
         </select> <br/>
+
         <label htmlFor="zColumnInput">Z Column</label>
         <select id="zColumnInput" value={zColumn} onChange={e => setZColumn(e.target.value)}>
             {columnOptions}  
         </select> <br/>
-      </form>
+
+        <label htmlFor="useNoData">Use No-Data Value?</label>
+        <input type="checkbox" id="useNoData" name="useNoData" checked={useNoData} onChange={handleNoDataChange}/><br/>
+
+        {useNoData && 
+        <>          
+          <label htmlFor="noData">No-Data Value</label>
+          <input type="text" value={noData} onChange={(e) => setNoData(e.target.value)}/>
+        </>
+        }
+      </form><br/>
       <input type="submit" onClick={async () => await submitParameters()}/>
     </div>
   )
 }
 
 
-async function importPoints(fileText, xColumn, yColumn, zColumn) {
+async function importPoints(fileText, xColumn, yColumn, zColumn, noData) {
     const lines = fileText.split("\n");
 
     // 5. map through all the lines and split each line by comma.
@@ -157,6 +181,7 @@ async function importPoints(fileText, xColumn, yColumn, zColumn) {
         xColumn: xColumn,
         yColumn: yColumn,
         zColumn: zColumn,
+        noData: Number(noData),
         points: data,
         fields: fields
     }

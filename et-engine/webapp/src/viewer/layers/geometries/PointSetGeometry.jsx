@@ -3,7 +3,7 @@ import * as THREE from 'three'
 
 class PointSetGeometry extends THREE.BufferGeometry {
 
-	constructor({points, xColumn, yColumn, zColumn, radius = 100, widthSegments = 32, heightSegments = 16, phiStart = 0, phiLength = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI} = {}) {
+	constructor({points, xColumn, yColumn, zColumn, noData, radius = 100, widthSegments = 32, heightSegments = 16, phiStart = 0, phiLength = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI} = {}) {
 		
 		super()
 		this.type = 'PointSetGeometry';
@@ -11,6 +11,8 @@ class PointSetGeometry extends THREE.BufferGeometry {
 		this.xIndex = points[0].findIndex((col) => col == xColumn)
         this.yIndex = points[0].findIndex((col) => col == yColumn)
         this.zIndex = points[0].findIndex((col) => col == zColumn)
+
+		this.noData = noData
 
 		this.valIndex = null
 
@@ -49,7 +51,16 @@ class PointSetGeometry extends THREE.BufferGeometry {
 			const x = Number(this.points[i][this.xIndex])
 			const y = Number(this.points[i][this.yIndex])
 			const z = Number(this.points[i][this.zIndex])
-            this.appendSphere(x, y, z)
+
+			if (this.valIndex != null & this.noData != null) {
+				const v = Number(this.points[i][this.valIndex])
+				if (v != this.noData) {
+					this.appendSphere(x, y, z)
+				}
+			} else {
+				this.appendSphere(x, y, z)
+			}
+            
         }
 		
 		// build geometry
@@ -147,6 +158,8 @@ class PointSetGeometry extends THREE.BufferGeometry {
      */
 	setColors(cmap) {
 
+		this.updateGeometry()
+
         // Initialize color variables that will be used to set the vertex colors
         const color = new THREE.Color()
         const colors = []
@@ -157,13 +170,18 @@ class PointSetGeometry extends THREE.BufferGeometry {
             // Get elevation & normalize
             const val = Number(this.points[index][this.valIndex])
 
-            // Map elevation to color
-            color.setHex(cmap.eval(val).getHex())
-			for ( let iy = 0; iy <= this.heightSegments; iy ++ ) { 
-				for ( let ix = 0; ix <= this.widthSegments; ix ++ ) {
-					colors.push(color.r, color.g, color.b);
+			if (this.noData != null && val != this.noData) {
+
+				// Map value to color
+				color.setHex(cmap.eval(val).getHex())
+				for ( let iy = 0; iy <= this.heightSegments; iy ++ ) { 
+					for ( let ix = 0; ix <= this.widthSegments; ix ++ ) {
+						colors.push(color.r, color.g, color.b);
+					}
 				}
-			}
+			} 
+
+            
         }
 
         // Set colors as a new attribute

@@ -4,12 +4,13 @@ import { TerrainColormap } from './geometries/Colormaps'
 import { PointSetGeometry } from './geometries/PointSetGeometry'
 
 class Points extends Layer {
-    constructor({points, fields, xColumn, yColumn, zColumn}) {
+    constructor({points, fields, xColumn, yColumn, zColumn, noData}) {
         super()
         this.parameters = {
             xColumn: xColumn,
             yColumn: yColumn,
             zColumn: zColumn,
+            noData: noData,
             points: points,
             fields: fields
         }
