@@ -5,6 +5,7 @@ import SurfaceModal from './SurfaceModal'
 import LinesModal from './LinesModal'
 import EnsembleModal from './EnsembleModal'
 import DrillholeModal from './DrillholeModal'
+import PointsModal from './PointsModal'
 
 const ImportWizard = ({modalKey, toggleOpen}) => {
 
@@ -20,6 +21,8 @@ const ImportWizard = ({modalKey, toggleOpen}) => {
         return <EnsembleModal toggleOpen={toggleOpen}/>
       case "Drillhole":
         return <DrillholeModal toggleOpen={toggleOpen}/>
+      case "Points":
+        return <PointsModal toggleOpen={toggleOpen}/>
       default:
         console.log(`Object key ${key} not recognized`)
         return null

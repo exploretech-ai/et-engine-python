@@ -33,6 +33,7 @@ function NewObjectMenu({style}) {
                 </Dropdown.Button>
                 <Dropdown.Menu className="dropdown-content">
                     <Dropdown.Item onClick={() => startWizard("Surface")}>Surface</Dropdown.Item>
+                    <Dropdown.Item onClick={() => startWizard("Points")}>Points</Dropdown.Item>
                     <Dropdown.Item onClick={() => startWizard("Lines")}>Lines</Dropdown.Item>
                     <Dropdown.Item onClick={() => startWizard("Ensemble")}>Ensemble</Dropdown.Item>
                     <Dropdown.Item onClick={() => startWizard("Drillhole")}>Drillhole</Dropdown.Item>
