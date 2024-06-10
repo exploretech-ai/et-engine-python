@@ -31,6 +31,8 @@ class PointSetGeometry extends THREE.BufferGeometry {
 
 		this.updateGeometry()
 
+		console.log(this)
+
 
 	}
 

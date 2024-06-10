@@ -26,6 +26,7 @@ class Points extends Layer {
             colorMap: TerrainColormap,
             radius: 100
         }
+        console.log(this)
     }
 
     async initialize() {
@@ -79,15 +80,17 @@ class Points extends Layer {
         // Get the index of the field
         const valIndex = this.parameters.fields.findIndex((col) => col == field)
 
-        // Initialize min and max
-        let minVal = Number(this.parameters.points[1][valIndex])
-        let maxVal = minVal
+        // Initialize min, max as undefined
+        let minVal
+        let maxVal
 
         // Iterate through all the data and set min and max accordingly
-        for (let i=2; i < this.parameters.points.length; i++) {
+        for (let i=1; i < this.parameters.points.length; i++) {
             const val = Number(this.parameters.points[i][valIndex])
-            if (val > maxVal) maxVal = val
-            if (val < minVal) minVal = val
+            if (this.parameters.noData != null && val != this.parameters.noData) {
+                if (val > maxVal || maxVal == null) maxVal = val
+                if (val < minVal || minVal == null) minVal = val
+            }
         }
         return [minVal, maxVal]
     }
