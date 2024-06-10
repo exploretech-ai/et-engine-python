@@ -4,6 +4,8 @@ import SurfaceStyler from "./stylers/SurfaceStyler";
 import MultiVolumeStyler from "./stylers/MultiVolumeStyler";
 import EnsembleStyler from "./stylers/EnsembleStyler";
 import DrillholeStyler from "./stylers/DrillholeStyler";
+import PointsStyler from "./stylers/PointsStyler";
+
 import "./Styler.css"
 
 /**
@@ -35,6 +37,9 @@ function Styler({checkboxProps, checkboxPropSetter}) {
             break
         case "Drillhole": 
             styler = <DrillholeStyler checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} />
+            break
+        case "Points":
+            styler = <PointsStyler checkboxProps={checkboxProps} checkboxPropSetter={checkboxPropSetter} />
             break
     }
 

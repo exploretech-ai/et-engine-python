@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { PointGeometry } from './PointGeometry';
 
 
 class PointSetGeometry extends THREE.BufferGeometry {
@@ -13,7 +12,7 @@ class PointSetGeometry extends THREE.BufferGeometry {
         this.yIndex = points[0].findIndex((col) => col == yColumn)
         this.zIndex = points[0].findIndex((col) => col == zColumn)
 
-		this.valIndex = 0
+		this.valIndex = null
 
 		this.points = points
 
@@ -68,10 +67,6 @@ class PointSetGeometry extends THREE.BufferGeometry {
      * @param {Number} z z-coordinate of the center
      */
     appendSphere(x, y, z) {
-
-		
-		
-		
 
         // Initialize placeholders
         const vertex = new THREE.Vector3();
@@ -146,23 +141,29 @@ class PointSetGeometry extends THREE.BufferGeometry {
 		}
     }
 
+	/**
+     * Re-calculates colors at each mesh node and sets it as a buffer attribute
+     * @param {Colormap} cmap a Colormap object used to set colors
+     */
 	setColors(cmap) {
 
         // Initialize color variables that will be used to set the vertex colors
         const color = new THREE.Color()
         const colors = []
-        const count = this.points.length - 1
 
         // Loop through each vertex and assign a color
-        for (let index = 1; index < count; index++) {
+        for (let index = 1; index < this.points.length; index++) {
 
             // Get elevation & normalize
             const val = Number(this.points[index][this.valIndex])
 
             // Map elevation to color
             color.setHex(cmap.eval(val).getHex())
-            colors.push(color.r, color.g, color.b);
-            colors.push(color.r, color.g, color.b);
+			for ( let iy = 0; iy <= this.heightSegments; iy ++ ) { 
+				for ( let ix = 0; ix <= this.widthSegments; ix ++ ) {
+					colors.push(color.r, color.g, color.b);
+				}
+			}
         }
 
         // Set colors as a new attribute
