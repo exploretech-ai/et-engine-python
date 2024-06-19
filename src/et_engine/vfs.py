@@ -188,16 +188,27 @@ class VirtualFileSystem:
             data=json.dumps({"path": path}),
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
-        response.raise_for_status()
 
-    def list(self):
+        # >>>>> HERE CHANGE THIS SO "ALREADY EXISTS" DOESN'T THROW ERROR
+
+        # =====
+        response.raise_for_status()
+        # <<<<<
+
+    def list(self, path=None):
+
+        params = {}
+        if path is not None:
+            params['path'] = path
+
         status = requests.get(	
             self.url + "/list", 
+            params=params,
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
         )	
 
         if status.ok:
-            return status
+            return status.json()
         else:
             print(status)
             raise Exception('List failed')

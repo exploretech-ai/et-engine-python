@@ -18,7 +18,9 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   'requests',
-  'boto3'
+  'boto3',
+  'aiohttp',
+  'tqdm'
 ]
 
 [tool.setuptools.packages.find]

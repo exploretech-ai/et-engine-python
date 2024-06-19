@@ -3,8 +3,15 @@ import requests
 import json
 import os
 from .tasks import Task
+import asyncio, aiohttp
+from tqdm import tqdm
+import time
 
 API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+
+class MaxRetriesExceededError(Exception):
+    pass
+
 
 def connect(tool_name):
     # Make API call to GET vfs?name={vfs_name}
@@ -53,6 +60,7 @@ def delete(name):
     else:
         raise Exception('Delete failed')
 
+
 def create(name, description):	
     """Creates a new Tool	
         
@@ -89,6 +97,17 @@ def create(name, description):
         raise Exception('Create failed')
 
 
+def parse_kwargs(**kwargs):
+        if kwargs:
+            if 'hardware' in kwargs:
+                assert isinstance(kwargs['hardware'], Hardware)
+                kwargs['hardware'] = kwargs['hardware'].to_dict()
+
+            return json.dumps(kwargs)
+
+        else:
+            return None
+        
 
 class Tool:
     """Class for interacting with a Tool
@@ -119,55 +138,79 @@ class Tool:
         """Makes the object callable like a function
         
         Keyword arguments are passed to the Tool as environment variables
-
-        This API call triggers a SSM command that does:
-            1. docker pull <TOOL_IMAGE>     // from ECR
-            2. docker run ...
-
-        To trigger the API call, I need to know the instance-id to run something like this
-
-            ssm_client = boto3.client('ssm')
-            instance_id = 'your-instance-id'
-            docker_command = 'docker run -d your-docker-image'
-            
-            # Send command to EC2 instance
-            response = ssm_client.send_command(
-                InstanceIds=[instance_id],
-                DocumentName="AWS-RunShellScript",
-                Parameters={'commands': [docker_command]},
-            )
-
-        The instance_id is provided in the path
-
         If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so 
 
-        """
+        """  
 
-        # If hardware is in kwargs:
+        n_tries = 0
+        while n_tries < 300:
+            try:
+                task = asyncio.run(self.execute(**kwargs))
+                print(f'Successfully launched task {task.id}')
+                return task
+            
+            except Exception as e:
+                n_tries += 1
+                print(f'Failed attempts: {n_tries}. Waiting 1 minute and trying again...')
+                time.sleep(60)
+
+        raise MaxRetriesExceededError(f'failed to execute {n_tries} times')
+
+
+    async def execute(self, **kwargs):
+
+        # async def make_request():
+        data = parse_kwargs(**kwargs)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}) as status:
+                if status.ok:
+                    return Task(await status.json())
+                else:
+                    print(await status.text())
+                    print(kwargs)
+                    # return None
+                    raise Exception('Execute failed')
+            
+                
+
+    async def execute_one(self, session, **kwargs):
+        data = parse_kwargs(**kwargs)
+        async with session.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}) as status:
+            if status.ok:
+                return Task(await status.json())
+            else:
+                return None
+                
+
+    async def parallel(self, kwarg_list):
+
+        async with aiohttp.ClientSession() as session:
+            tasks = set()
+            for i, kwargs in enumerate(kwarg_list):
+                task = asyncio.create_task(self.execute_one(session, **kwargs))
+                tasks.add(task)
+
+            results = []
+            for t in tqdm(asyncio.as_completed(tasks), total=len(tasks)):
+                results.append(await t)
+
+        return results
+
+
+    def monte_carlo(self,kwarg_list):
+        task_list = asyncio.run(self.parallel(kwarg_list)) 
+        n_fails = 0
+        for t in task_list:                
+            if t is None:
+                n_fails += 1
+                task_list.remove(t)
+        print(f'Successfully launched {(1 - (n_fails) / len(task_list))*100}% of tasks ({n_fails} failed).')
+        return task_list
+
         
 
-        if kwargs:
-            if 'hardware' in kwargs:
-                assert isinstance(kwargs['hardware'], Hardware)
-                kwargs['hardware'] = kwargs['hardware'].to_json()
 
-            data = json.dumps(kwargs)
 
-        else:
-            data = None
-
-        # NOTE: see here for asynchronous request sending https://stackoverflow.com/questions/74567219/how-do-i-get-python-to-send-as-many-concurrent-http-requests-as-possible
-        status = requests.post(
-            self.url, 
-            data=data,
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-        )
-
-        if status.ok:
-            return Task(status.json())
-        else:
-            print(status.text)
-            raise Exception('Execute failed')
 
 
     def push(self, folder):
@@ -219,15 +262,18 @@ class Hardware:
         self.cpu = cpu
         self.gpu = gpu
 
-    def to_json(self):
-        """
-        Converts the class instance to a json string that can be passed to The Engine
-        """
-        json_dict = {
+    def to_dict(self):
+        return {
             'filesystems': self.filesystems,
             'memory': self.memory,
             'cpu': self.cpu,
             'gpu': self.gpu
         }
-        return json.dumps(json_dict)
+
+    def to_json(self):
+        """
+        Converts the class instance to a json string that can be passed to The Engine
+        """
+        
+        return json.dumps(self.to_dict)
 
