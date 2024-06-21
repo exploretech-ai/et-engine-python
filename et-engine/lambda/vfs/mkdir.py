@@ -2,6 +2,8 @@ import json
 import boto3
 import db
 
+class AlreadyExistsError(Exception):
+    pass
 
 def handler(event, context):
 
@@ -47,11 +49,13 @@ def handler(event, context):
         msg = payload.read()
         msg = msg.decode("utf-8")
         body = json.loads(msg)
+        
+        if body['statusCode'] == 200:
+            response = "directory created"
+        else:
+            response = "directory already exists"
 
-        if body['statusCode'] != 200:
-            raise Exception('bad payload, status code not 200')
-
-
+        print(response)
         print(body)
 
         return {
@@ -59,7 +63,7 @@ def handler(event, context):
             'headers': {
                 'Access-Control-Allow-Origin': '*'
             },
-            'body': json.dumps('success')
+            'body': json.dumps(response)
         }
         
     except NameError as e:
@@ -71,6 +75,8 @@ def handler(event, context):
             },
             'body': json.dumps(f'Could not access VFS')
         }
+    
+    
     except Exception as e:
         print(f'500 Error: {e}')
         return {

@@ -247,7 +247,7 @@ class API(Stack):
             instance_type=ec2.InstanceType("t2.xlarge"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux(),
             min_capacity=0,
-            max_capacity=5,
+            max_capacity=250,
             group_metrics=[autoscaling.GroupMetrics.all()],
             key_name="hpc-admin",
             vpc_subnets=ec2.SubnetSelection(
@@ -256,14 +256,18 @@ class API(Stack):
             block_devices=[
                 autoscaling.BlockDevice(
                     device_name="/dev/xvdcz",
-                    volume=autoscaling.BlockDeviceVolume.ebs(64)
+                    volume=autoscaling.BlockDeviceVolume.ebs(256)
+                ),
+                autoscaling.BlockDevice(
+                    device_name="/dev/xvda",
+                    volume=autoscaling.BlockDeviceVolume.ebs(1024)
                 )
             ]
             # key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin")
         )
         auto_scaling_group.add_user_data(
-            'echo "ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=1s" >> /etc/ecs/ecs.config',
-            'echo "ECS_IMAGE_PULL_BEHAVIOR=always" >> /etc/ecs/ecs.config'
+            'echo "ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=10m" >> /etc/ecs/ecs.config',
+            'echo "ECS_IMAGE_PULL_BEHAVIOR=once" >> /etc/ecs/ecs.config'
         )
         auto_scaling_group.protect_new_instances_from_scale_in()
         capacity_provider = ecs.AsgCapacityProvider(self, "AsgCapacityProvider",
@@ -641,7 +645,7 @@ class API(Stack):
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= "vfs.download.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
+            timeout = Duration.minutes(5),
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
                 subnets=database.vpc.select_subnets(

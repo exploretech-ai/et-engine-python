@@ -12,13 +12,14 @@ def handler(event, context):
         user = event['requestContext']['authorizer']['userID']
         
         query = None
+        vfs_name = None
         if 'queryStringParameters' in event and event['queryStringParameters'] is not None:
 
             if 'name' in event['queryStringParameters']:
                 vfs_name = event['queryStringParameters']['name']
-                query = f"""
-                    SELECT name, vfsID FROM VirtualFileSystems WHERE userID = '{user}' AND name = '{vfs_name}'
-                """
+                # query = f"""
+                #     SELECT name, vfsID FROM VirtualFileSystems WHERE userID = '{user}' AND name = '{vfs_name}'
+                # """
             else:
                 return {
                     'statusCode': 500,
@@ -27,10 +28,10 @@ def handler(event, context):
                     },
                     'body': json.dumps("Error: Invalid query string")
                 }
-        else:
-            query = f"""
-                SELECT name, vfsID FROM VirtualFilesystems WHERE userID = '{user}'
-            """
+        # else:
+        query = f"""
+            SELECT name, vfsID FROM VirtualFilesystems WHERE userID = '{user}'
+        """
 
         cursor.execute(query)
         print(f'Found {cursor.rowcount} owned filesystems')
@@ -56,6 +57,11 @@ def handler(event, context):
             vfs = vfs + ("shared",)
 
         available_vfs.extend(shared_vfs)
+
+        if vfs_name is not None:
+            print(f'VFS {vfs_name} requested, filtering available VFS...')
+            available_vfs = [row for row in available_vfs if row[0] == vfs_name]
+            print(f'...returning {available_vfs}')
 
         return {
             'statusCode': 200,

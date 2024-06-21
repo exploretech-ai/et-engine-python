@@ -12,7 +12,7 @@ const FileComponent = ({name, path, vfsId, idToken, fetchContents, setLoading}) 
             key = name
         }
         else {
-            key = path.slice(1) + "/" + name
+            key = path.slice(1,path.length).join("/") + "/" + name
         }
         fetch(
             "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/vfs/" + vfsId + "?" + new URLSearchParams({
