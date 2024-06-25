@@ -256,11 +256,11 @@ class API(Stack):
             block_devices=[
                 autoscaling.BlockDevice(
                     device_name="/dev/xvdcz",
-                    volume=autoscaling.BlockDeviceVolume.ebs(256)
+                    volume=autoscaling.BlockDeviceVolume.ebs(64)
                 ),
                 autoscaling.BlockDevice(
                     device_name="/dev/xvda",
-                    volume=autoscaling.BlockDeviceVolume.ebs(1024)
+                    volume=autoscaling.BlockDeviceVolume.ebs(64)
                 )
             ]
             # key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin")
@@ -1253,86 +1253,6 @@ class API(Stack):
             )
         )
         
-
-
-class WebApp(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)
-        bucket = s3.Bucket(
-            self, 
-            'webapp-bucket',
-            website_index_document='index.html',
-            # website_error_document="error.html",
-            auto_delete_objects=True,
-            removal_policy=cdk.RemovalPolicy.DESTROY,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS,
-            access_control = s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL
-        )
-
-        bucket.add_to_resource_policy(
-            iam.PolicyStatement(
-                effect = iam.Effect.ALLOW,
-                actions = ['s3:GetObject'],
-                resources = [f"{bucket.bucket_arn}/*"],
-                principals = [iam.AnyPrincipal()]
-            )
-        )
-
-        hosted_zone = route53.HostedZone.from_lookup(
-            self, 
-            'exploretech-ai', 
-            domain_name='exploretech.ai'
-        )
-        
-        store = cloudfront.KeyValueStore(self, "KeyValueStore")
-        client_side_routing_function = cloudfront.Function(
-            self, 
-            "ClientSideRouting",
-            code=cloudfront.FunctionCode.from_inline("""function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
-  var paths = ['assets', 'app.webmanifest']
-  var isServerPath = (path) => uri.includes(path);
-
-  if (!paths.some(isServerPath)) {
-    request.uri = '/';
-  }
-
-  return request;
-}
-"""),
-            runtime=cloudfront.FunctionRuntime.JS_2_0,
-            key_value_store=store
-        )
-        function_association = cloudfront.FunctionAssociation(
-            event_type=cloudfront.FunctionEventType.VIEWER_REQUEST,
-            function=client_side_routing_function
-        )
-        
-        cloudfront_distribution = cloudfront.Distribution(self, 'WebsiteDistribution',
-            default_behavior=cloudfront.BehaviorOptions(
-                origin=origins.S3Origin(bucket),
-                function_associations = [function_association]
-            ),
-            domain_names=['engine.exploretech.ai'],
-            certificate=certificatemanager.Certificate.from_certificate_arn(
-                self,
-                id="54682f3a-faa2-4b82-a79b-0c598baa6724",
-                certificate_arn='arn:aws:acm:us-east-1:734818840861:certificate/54682f3a-faa2-4b82-a79b-0c598baa6724'
-            )
-        )
-        route53.ARecord(self, 'WebsiteAliasRecord',
-            zone=hosted_zone,
-            target=route53.RecordTarget.from_alias(targets.CloudFrontTarget(cloudfront_distribution)),
-            record_name='engine',  # Replace with your subdomain
-        )
-
-        CfnOutput(
-            self,
-            'WebAppBucket',
-            value = bucket.bucket_name
-        )
-
       
 class ETEngine(Stack):
 
@@ -1340,9 +1260,7 @@ class ETEngine(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         database = MasterDB(self, "MasterDB")
-        api = API(self, "API", database)
-        webapp = WebApp(self, 'WebApp', env = cdk.Environment(account="734818840861", region="us-east-2"))
-        
+        api = API(self, "API", database)      
 
         CfnOutput(
             self,
