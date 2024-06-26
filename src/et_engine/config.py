@@ -1,2 +1,2 @@
 
-API_ENDPOINT = "https://ficwbyarel.execute-api.us-east-2.amazonaws.com/prod/"
+API_ENDPOINT = "https://api.exploretech.ai/"
