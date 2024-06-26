@@ -1,7 +1,7 @@
 import requests
 import json
 import os
-from . import API_ENDPOINT
+from .config import API_ENDPOINT
 
 def create(name):	
     """Creates a new Tool	

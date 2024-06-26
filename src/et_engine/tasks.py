@@ -2,7 +2,7 @@ import requests
 import json
 import os
 import time
-from . import API_ENDPOINT
+from .config import API_ENDPOINT
 
 class Task:
     def __init__(self, task_id):

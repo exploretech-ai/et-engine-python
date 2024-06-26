@@ -6,7 +6,7 @@ from .tasks import Task
 import asyncio, aiohttp
 from tqdm import tqdm
 import time
-from . import API_ENDPOINT
+from .config import API_ENDPOINT
 
 class MaxRetriesExceededError(Exception):
     pass
