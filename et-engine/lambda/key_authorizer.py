@@ -11,9 +11,10 @@ import traceback
 import sys
 import uuid
 
+
 region = 'us-east-2'
 userpoolId = 'us-east-2_c3KpcMfzh'
-appClientId = '7veifuegtpskqerl7b2lakdfdn' 
+appClientId = '2ttoam3d4k75fcf2106nmpned' 
 keysUrl = 'https://cognito-idp.{}.amazonaws.com/{}/.well-known/jwks.json'.format(region, userpoolId)
 fernet_key = b'IGE3pGK7ih1vDm4na0EmW-rYCqfnZKMaNR7ea1ose2s='
 

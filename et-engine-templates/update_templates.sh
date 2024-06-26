@@ -7,7 +7,7 @@ BUCKET_NAME="et-engine-templates"
 BASE_CDK_DIR=$(pwd)
 
 # List of your CDK project directories, relative to the base directory
-CDK_PROJECTS=("efs-basic")
+CDK_PROJECTS=("efs-basic" "compute-basic")
 
 # Loop through each project
 for PROJECT_DIR in "${CDK_PROJECTS[@]}"; do

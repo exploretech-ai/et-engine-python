@@ -174,8 +174,8 @@ class EfsBasicStack(Stack):
             self,
             "vfsID"
         ).value_as_string
-        security_group_id = "sg-0afc14daded6d39d0"
-        vpc_id = "vpc-007a045e34604d503"
+        security_group_id = "sg-08ad2fb3a42e5ce01"
+        vpc_id = "vpc-05c602ef885d449bc"
 
         vpc = ec2.Vpc.from_lookup(
             self,
@@ -184,7 +184,7 @@ class EfsBasicStack(Stack):
         )
         security_group = ec2.SecurityGroup.from_security_group_id(
             self,
-            "ClusterSG",
+            "ClusterSG2",
             security_group_id = security_group_id
         )
 
@@ -216,8 +216,6 @@ class EfsBasicStack(Stack):
                 gid="0"
             )
         )
-
-        
         
         list_lambda_function = _lambda.Function(
             self,
@@ -233,8 +231,7 @@ class EfsBasicStack(Stack):
                 "/mnt/efs"
             ),
         )
-        # TODO
-        # - S3 buckets and trigger
+
         upload_bucket = s3.Bucket(
             self,
             "UploadBucket",

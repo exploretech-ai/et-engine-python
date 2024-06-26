@@ -6,12 +6,12 @@ Parameters:
     Default: /cdk-bootstrap/hnb659fds/version
     Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
 Resources:
-  ClusterSGfromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049F8DB3346:
+  ClusterSG2fromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049386C227F:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: from EfsBasicStackVFSLambdaSecurityGroup907B6CFC:2049
       FromPort: 2049
-      GroupId: sg-0afc14daded6d39d0
+      GroupId: sg-08ad2fb3a42e5ce01
       IpProtocol: tcp
       SourceSecurityGroupId:
         Fn::GetAtt:
@@ -19,7 +19,7 @@ Resources:
           - GroupId
       ToPort: 2049
     Metadata:
-      aws:cdk:path: EfsBasicStack/ClusterSG/from EfsBasicStackVFSLambdaSecurityGroup907B6CFC:2049
+      aws:cdk:path: EfsBasicStack/ClusterSG2/from EfsBasicStackVFSLambdaSecurityGroup907B6CFC:2049
   vfs0804DAB7:
     Type: AWS::EFS::FileSystem
     Properties:
@@ -57,8 +57,8 @@ Resources:
       FileSystemId:
         Ref: vfs0804DAB7
       SecurityGroups:
-        - sg-0afc14daded6d39d0
-      SubnetId: subnet-0f2aacdfca19331f7
+        - sg-08ad2fb3a42e5ce01
+      SubnetId: subnet-02dfa489e5a01d330
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet1
   vfsEfsMountTargetPrivateSubnet2E813BC5E:
@@ -67,8 +67,8 @@ Resources:
       FileSystemId:
         Ref: vfs0804DAB7
       SecurityGroups:
-        - sg-0afc14daded6d39d0
-      SubnetId: subnet-00eeb19f8c08802bd
+        - sg-08ad2fb3a42e5ce01
+      SubnetId: subnet-022ee067d2b1ebe0c
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet2
   vfsvfsAccessPointA97EC7A7:
@@ -167,7 +167,7 @@ Resources:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
-      VpcId: vpc-007a045e34604d503
+      VpcId: vpc-05c602ef885d449bc
     DependsOn:
       - vfsEfsMountTargetPrivateSubnet12A54EF59
       - vfsEfsMountTargetPrivateSubnet2E813BC5E
@@ -473,10 +473,10 @@ Resources:
               - VFSLambdaSecurityGroupD84993EA
               - GroupId
         SubnetIds:
-          - subnet-0f2aacdfca19331f7
-          - subnet-00eeb19f8c08802bd
+          - subnet-02dfa489e5a01d330
+          - subnet-022ee067d2b1ebe0c
     DependsOn:
-      - ClusterSGfromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049F8DB3346
+      - ClusterSG2fromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049386C227F
       - vfsEfsMountTargetPrivateSubnet12A54EF59
       - vfsEfsMountTargetPrivateSubnet2E813BC5E
       - VFSLambdaServiceRoleDefaultPolicyDCB78257

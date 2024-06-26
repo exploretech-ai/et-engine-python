@@ -64,8 +64,8 @@ def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
 def handler(event, context):
 
     # Cluster Properties
-    role_arn = "arn:aws:iam::734818840861:role/ETEngineAPI706397EC-ECSTaskRoleF2ADB362-6bXEZofBdhmg"
-    cluster="ETEngineAPI706397EC-ClusterEB0386A7-M0TrrRi5C32N"
+    role_arn = "arn:aws:iam::734818840861:role/ETEngineComputeCluster067C306F-ECSTaskRoleF2ADB362-9jjMMNT9Fcam"
+    cluster="ETEngineComputeCluster067C306F-ClusterEB0386A7-SSXARi0qkB2F"
     
     try:
         user = event['requestContext']['authorizer']['userID']
