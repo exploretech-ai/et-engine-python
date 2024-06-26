@@ -4,7 +4,9 @@ from aws_cdk import (
     aws_apigateway as apigateway,
     aws_lambda as _lambda,
     aws_ec2 as ec2,
-    aws_iam as iam,
+    aws_certificatemanager as ctf,
+    aws_route53 as route53,
+    aws_route53_targets as r53t
 )
 from constructs import Construct
 
@@ -24,6 +26,25 @@ class API(Stack):
                 allow_origins=apigateway.Cors.ALL_ORIGINS,
                 allow_methods=apigateway.Cors.ALL_METHODS
             )
+        )
+
+        zone = route53.HostedZone.from_hosted_zone_attributes(self, "zone", 
+            hosted_zone_id="Z07247471MNWCOVOV0VX5",
+            zone_name="exploretech.ai"
+        )
+        certificate = ctf.Certificate(self, "apiCert", 
+            domain_name="api.exploretech.ai",
+            validation=ctf.CertificateValidation.from_dns(zone)
+        )
+        
+        self.api.add_domain_name("ApiDomain",
+            certificate=certificate,
+            domain_name="api.exploretech.ai"
+        )
+        route53.ARecord(self, "apiDNS",
+            zone=zone,
+            record_name="api",
+            target=route53.RecordTarget.from_alias(r53t.ApiGateway(self.api))
         )
 
         authorizer = apigateway.CognitoUserPoolsAuthorizer(

@@ -13,7 +13,7 @@ from .user_pool import UserPool
 
 class ETEngine(Stack):
 
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         database = MasterDB(self, "MasterDB")
