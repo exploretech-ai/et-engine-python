@@ -2,10 +2,7 @@ import requests
 import json
 import os
 import time
-
-
-API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
-
+from . import API_ENDPOINT
 
 class Task:
     def __init__(self, task_id):

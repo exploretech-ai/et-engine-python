@@ -1,8 +1,7 @@
 import requests
 import json
 import os
-
-API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+from . import API_ENDPOINT
 
 def create(name):	
     """Creates a new Tool	
@@ -41,15 +40,7 @@ def create(name):
 
 
 def connect(vfs_name):
-    # How to know whether the request is from a Tool or not?
-    #     - 
-    # IF it's from a Tool, then fetch the filesystem DNS from the api
-    #    - next, run something like 'sudo mount -t nfs4 <FILE_SYSTEM_DNS>:/ <DEFAULT_MOUNT_POINT>'
-    #    - When you call vfs.file('file_name'), it returns <DEFAULT_MOUNT_POINT>/$file_name
-    # 
 
-    # ================================================================================
-    # =========================== IF DEVICE IS NOT TOOL ==============================
     status = requests.get(
             API_ENDPOINT + "vfs", 
             params={'name':vfs_name},
@@ -64,20 +55,8 @@ def connect(vfs_name):
         print(status)
         print(status.reason)
         raise NameError(f'Filesystem "{vfs_name}" does not exist')
-    # =========================== IF DEVICE IS NOT TOOL ==============================
-    # ================================================================================
-    
 
-    # ================================================================================
-    # ============================= IF DEVICE IS TOOL ================================
 
-    # self.get_dns()       # <-- calls the api and fetches the dns name from the requested vfs name
-    # self.mount(self.dns) # <-- runs something like 'sudo mount -t nfs4 <FILE_SYSTEM_DNS>:/ <DEFAULT_MOUNT_POINT>'
-    # now, you can access files by writing vfs.file('file_name')
-
-    # ============================= IF DEVICE IS TOOL ================================
-    # ================================================================================
-    
 def delete(name):	
     """deletes the specified VFS	
         

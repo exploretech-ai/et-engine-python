@@ -6,8 +6,7 @@ from .tasks import Task
 import asyncio, aiohttp
 from tqdm import tqdm
 import time
-
-API_ENDPOINT = "https://t2pfsy11r1.execute-api.us-east-2.amazonaws.com/prod/"
+from . import API_ENDPOINT
 
 class MaxRetriesExceededError(Exception):
     pass
