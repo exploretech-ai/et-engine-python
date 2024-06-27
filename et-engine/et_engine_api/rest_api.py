@@ -1,6 +1,7 @@
 from aws_cdk import (
     Stack,
     Duration,
+    CfnOutput,
     aws_apigateway as apigateway,
     aws_lambda as _lambda,
     aws_ec2 as ec2,
@@ -16,11 +17,14 @@ from .api_methods.tool_methods import ToolMethods
 from .api_methods.task_methods import TaskMethods
 
 class API(Stack):
-    def __init__(self, scope: Construct, construct_id: str, database, user_pool, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, database, user_pool, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        env = config['env']
+        subdomain = config['subdomain']
+
         self.api = apigateway.RestApi(self, 'API',
-            rest_api_name='ETEngineAPI',
+            rest_api_name=f'ETEngineAPI-{env}',
             description='Core API for provisioning resources and running workflows',
             default_cors_preflight_options=apigateway.CorsOptions(
                 allow_origins=apigateway.Cors.ALL_ORIGINS,
@@ -33,17 +37,17 @@ class API(Stack):
             zone_name="exploretech.ai"
         )
         certificate = ctf.Certificate(self, "apiCert", 
-            domain_name="api.exploretech.ai",
+            domain_name=f"{subdomain}.exploretech.ai",
             validation=ctf.CertificateValidation.from_dns(zone)
         )
         
         self.api.add_domain_name("ApiDomain",
             certificate=certificate,
-            domain_name="api.exploretech.ai"
+            domain_name=f"{subdomain}.exploretech.ai"
         )
         route53.ARecord(self, "apiDNS",
             zone=zone,
-            record_name="api",
+            record_name=subdomain,
             target=route53.RecordTarget.from_alias(r53t.ApiGateway(self.api))
         )
 
@@ -80,3 +84,4 @@ class API(Stack):
         ToolMethods(self, "ToolMethods", database, self.api, key_authorizer)
         TaskMethods(self, "TaskMethods", database, self.api, key_authorizer)
 
+        CfnOutput(self, "ApiUrl", value = self.api.url)

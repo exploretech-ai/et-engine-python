@@ -13,3 +13,4 @@ with open(config_file_path) as stream:
     config = yaml.safe_load(stream)
 
 ETEngine(app, "ETEngine", config)
+app.synth()

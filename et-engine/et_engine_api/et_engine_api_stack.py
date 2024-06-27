@@ -16,13 +16,14 @@ class ETEngine(Stack):
     def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        env = config['env']
+
         database = MasterDB(self, "MasterDB")
         templates = Templates(self, "Templates", database)
         compute = ComputeCluster(self, "ComputeCluster")
         user_pool = UserPool(self, "UserPool")
-        api = API(self, "API", database, user_pool.user_pool)      
+        api = API(self, f"API{env}", database, user_pool.user_pool, config)      
 
-        CfnOutput(self, "APIURL", value = api.api.url)
         CfnOutput(self, "UserPoolID", value=user_pool.user_pool.user_pool_id)
         CfnOutput(self, "APIClientID", value=user_pool.api_client.user_pool_client_id)
         CfnOutput(self, "WebAppClientID", value=user_pool.webapp_client.user_pool_client_id)
