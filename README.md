@@ -1,32 +1,24 @@
 # ET-Engine
 
-The main API for developing and running probabilistic computing algorithms
+The backend behind The Engine. Components include:
 
-## Installation:
+- The master relational database
+- A managed Cognito User Pool
+- Templates for Tools and VFS
+- The compute cluster
+- The API
 
-```
-conda create -n et-engine python=3.8
-conda activate et-engine
-pip install -e et-engine
-```
+# Using CDK
 
-Run the dev script with:
-
-```
-python et-engine/dev.py
-```
-
-## Deploying infra
-
-Make sure you have the aws cdk installed
-```
-cd et-engine-api
-cdk synth
-cdk deploy
-```
-
-Test updates with the dev script
+Note that there are 3 environments: `dev`, `stage`, and `prod`. Use only `dev` when making changes, and then when you're ready for prime time you can switch to prod. To deploy changes to `dev` use the following command:
 
 ```
-python ../et-engine/dev.py
+cdk deploy --all -c env=dev
+```
+
+and similarly for `stage` and `prod` use 
+
+```
+cdk deploy --all -c env=stage
+cdk deploy --all -c env=prod
 ```
