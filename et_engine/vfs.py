@@ -1,7 +1,12 @@
 import requests
 import json
 import os
-from .config import API_ENDPOINT
+from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES
+from math import ceil
+from pathlib import Path
+from tqdm import tqdm
+import time
+
 
 def create(name):	
     """Creates a new Tool	
@@ -39,22 +44,27 @@ def create(name):
         raise Exception('Create failed')
 
 
+def list_all():
+    status = requests.get(
+        API_ENDPOINT + "vfs", 
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
+    if status.ok:
+        vfs_list = status.json()
+        return vfs_list
+    else:
+        raise Exception("unknown error occurred while listing VFS")
+
+
 def connect(vfs_name):
 
-    status = requests.get(
-            API_ENDPOINT + "vfs", 
-            params={'name':vfs_name},
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-        )
-    if status.ok:
+    vfs_list = list_all()
 
-        vfs_id = status.json()[0][1]
-        return VirtualFileSystem(vfs_id)
+    for row in vfs_list:
+        if row[0] == vfs_name:
+            return VirtualFileSystem(row[1])
     
-    else:
-        print(status)
-        print(status.reason)
-        raise NameError(f'Filesystem "{vfs_name}" does not exist')
+    raise NameError(f'Filesystem "{vfs_name}" does not exist')
 
 
 def delete(name):	
@@ -76,10 +86,6 @@ def delete(name):
     else:
         raise Exception('Delete failed')
         
-
-
-
-
 
 class VirtualFileSystem:
     """Object for interacting with the ET Engine VFS API
@@ -191,4 +197,92 @@ class VirtualFileSystem:
         else:
             print(status)
             raise Exception('List failed')
+
+
+class ChunkTooSmallError(Exception):
+    pass
+
+
+def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
+    """Performs a multipart upload to s3
+    
+    Steps:
+    1. Check the file's size and determine the number of parts needed
+    2. Prepare the multipart upload with a POST request to Engine
+    3. Upload the parts with asynchronous POST requests to s3 with the presigned urls
+    4. Complete the multipart upload with another POST request to Engine with query string param ?complete=true
+    
+    """
+    if chunk_size < MIN_CHUNK_SIZE_BYTES:
+        raise ChunkTooSmallError("chunk size is too small")
+    url = API_ENDPOINT + "tmp"
+
+
+    # Step 1: determine parts
+    file_size_bytes = os.stat(local_file).st_size
+    num_parts = ceil(file_size_bytes / chunk_size)
+
+    # Step 2: Get presigned urls
+    response = requests.post(
+        url, 
+        data=json.dumps({
+            "key": remote_file,
+            "num_parts": num_parts
+        }),
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
+    if response.ok:
+        response = response.json()
+        upload_id = response["UploadId"]
+        urls = response["urls"]
+    else:
+        raise Exception("Error creating multipart upload")
+    
+    # Step 3: Upload parts
+    parts = []
+    with Path.open(local_file, "rb") as f:
+        for part_number, presigned_url in tqdm(urls, desc=f"uploading {num_parts} parts"):
+            chunk = f.read(chunk_size)
+            status = requests.put(presigned_url, data=chunk)
+
+            if not status.ok:
+                raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
+
+            parts.append({"ETag": status.headers["ETag"], "PartNumber": part_number})
+
+    # Step 4: Complete upload
+    complete = requests.post(
+        url, 
+        data=json.dumps({
+            "key": remote_file,
+            "complete": "true",
+            "parts": parts,
+            "UploadId": upload_id
+        }),
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
+    
+    if not complete.ok:
+        print(complete, complete.reason, complete.text)
+        raise Exception("Error completing upload")
+
+
+
+
+def multipart_download(remote_file, local_file):
+    url = API_ENDPOINT + "tmp"
+    response = requests.get(
+        url, 
+        params={"key": remote_file},
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
+    print(response)
+    presigned_url = response.json()
+    
+    
+    with requests.get(presigned_url, stream=True) as r:
+        # r.raise_for_status()
+        with open(local_file, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=None):
+                f.write(chunk)
 

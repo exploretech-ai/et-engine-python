@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0.0"]
 backend = "setuptools.build_meta"
 
 [project]
-name = "et-engine"
+name = "et_engine"
 authors = [
     {name = "Alex Miltenberger", email = "alex@exploretech.ai"},
 ]
@@ -24,4 +24,9 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["et_engine"]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
