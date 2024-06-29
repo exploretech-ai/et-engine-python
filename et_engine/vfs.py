@@ -203,23 +203,39 @@ class ChunkTooSmallError(Exception):
     pass
 
 
-async def upload_part(local_file, part_number, chunk_size, presigned_url):
-    
+async def upload_part(local_file, part_number, chunk_size, presigned_url, session):
+    """
+    Uploads one part in a multipart upload
+    """
     starting_byte = part_number * chunk_size
     with open(local_file, 'rb') as file:
         file.seek(starting_byte)
         chunk = file.read(chunk_size)
-        status = requests.post(presigned_url, data=chunk)
-    # async with session.post(presigned_url, data=chunk) as status:
-    #     if not status.ok:
-    #         raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
+        # status = requests.post(presigned_url, data=chunk)
+        async with session.post(presigned_url, data=chunk) as status:
+            if not status.ok:
+                raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
 
-        return {"ETag": status.headers["ETag"], "PartNumber": part_number}
+            return {"ETag": status.headers["ETag"], "PartNumber": part_number}
     
-# async def upload_parts_parallel(f, ):
-#     async with aiohttp.ClientSession() as session:
-#         tasks = set()
-        
+async def upload_parts_in_parallel(local_file, urls, chunk_size):
+    """
+    Sends upload HTTP requests asynchronously to speed up file transfer
+    """
+    async with aiohttp.ClientSession() as session:
+        upload_part_tasks = set()
+        for part_number, presigned_url in urls: 
+            task = asyncio.create_task(
+                upload_part(local_file, part_number, chunk_size, presigned_url, session)
+            )
+            upload_part_tasks.add(task)
+
+        parts = []
+        for t in tqdm(asyncio.as_completed(upload_part_tasks), total=len(upload_part_tasks)):
+            parts.append(await t)
+
+        return parts
+    
 def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
     """Performs a multipart upload to s3
     
@@ -257,10 +273,7 @@ def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
     
     # Step 3: Upload parts
     parts = []
-    with Path.open(local_file, "rb") as f:
-        for part_number, presigned_url in tqdm(urls, desc=f"uploading {num_parts} parts"):
-            part = upload_part(f, presigned_url, part_number, chunk_size, session)
-            parts.append(part)
+    upload_parts_in_parallel(local_file, urls, chunk_size)
 
     # Step 4: Complete upload
     complete = requests.post(
