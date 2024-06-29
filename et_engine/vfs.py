@@ -5,7 +5,7 @@ from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES
 from math import ceil
 from pathlib import Path
 from tqdm import tqdm
-import time
+import asyncio, aiohttp
 
 
 def create(name):	
@@ -203,6 +203,16 @@ class ChunkTooSmallError(Exception):
     pass
 
 
+def upload_part(f, presigned_url, part_number, chunk_size):
+    chunk = f.read(chunk_size)
+    status = requests.put(presigned_url, data=chunk)
+
+    if not status.ok:
+        raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
+
+    return {"ETag": status.headers["ETag"], "PartNumber": part_number}
+    
+
 def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
     """Performs a multipart upload to s3
     
@@ -242,13 +252,8 @@ def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
     parts = []
     with Path.open(local_file, "rb") as f:
         for part_number, presigned_url in tqdm(urls, desc=f"uploading {num_parts} parts"):
-            chunk = f.read(chunk_size)
-            status = requests.put(presigned_url, data=chunk)
-
-            if not status.ok:
-                raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
-
-            parts.append({"ETag": status.headers["ETag"], "PartNumber": part_number})
+            part = upload_part(f, presigned_url, part_number, chunk_size)
+            parts.append(part)
 
     # Step 4: Complete upload
     complete = requests.post(
