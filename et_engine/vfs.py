@@ -5,7 +5,7 @@ from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, MAX_CHUNK_SIZE_BYTES
 from math import ceil
 from pathlib import Path
 from tqdm import tqdm
-import asyncio, aiohttp
+import asyncio, aiohttp, aiofiles
 
 
 def create(name):	
@@ -208,18 +208,17 @@ async def upload_part(local_file, part_number, chunk_size, presigned_url, sessio
     Uploads one part in a multipart upload
     """
     starting_byte = part_number * chunk_size
-    with open(local_file, 'rb') as file:
-        file.seek(starting_byte)
-        chunk = file.read(chunk_size)
-        # status = requests.post(presigned_url, data=chunk)
+    async with aiofiles.open(local_file, mode='rb') as file:
+        await file.seek(starting_byte)
+        chunk = await file.read(chunk_size)
         async with session.put(presigned_url, data=chunk) as status:
             if not status.ok:
                 raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
-
+            
             return {"ETag": status.headers["ETag"], "PartNumber": part_number}
+        
     
-    
-async def upload_parts_in_parallel(local_file, urls, chunk_size, timeout=3600):
+async def upload_parts_in_parallel(local_file, urls, chunk_size, file_size, timeout=3600):
     """
     Sends upload HTTP requests asynchronously to speed up file transfer
     """
@@ -234,7 +233,7 @@ async def upload_parts_in_parallel(local_file, urls, chunk_size, timeout=3600):
             upload_part_tasks.add(task)
 
         parts = []
-        for task in tqdm(asyncio.as_completed(upload_part_tasks), desc=f"Uploading '{local_file}'", total=len(upload_part_tasks)):
+        for task in tqdm(asyncio.as_completed(upload_part_tasks), desc=f"[{file_size / 1024 / 1024 // 1} MB] '{local_file}'", total=len(upload_part_tasks)):
             completed_part = await task
             parts.append(completed_part)
 
@@ -312,12 +311,12 @@ def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES, t
     # Step 2: Get presigned urls
     upload_id, urls, chunk_size = request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
     
-    # Step 3: Upload parts
-    uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, timeout=timeout))
+    # Step 3: Upload part
+    uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, file_size_bytes, timeout=timeout))
     # upladed_parts = upload_parts_sequential(local_file, urls, chunk_size)
 
     # Step 4: Complete upload
-    uploaded_parts = sorted(uploaded_parts, key=lambda x: x['PartNumber'])
+    # uploaded_parts = sorted(uploaded_parts, key=lambda x: x['PartNumber'])
     complete = requests.post(
         url, 
         data=json.dumps({

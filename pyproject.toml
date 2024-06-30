@@ -20,6 +20,7 @@ dependencies = [
   'requests',
   'boto3',
   'aiohttp',
+  'aiofiles',
   'tqdm'
 ]
 
