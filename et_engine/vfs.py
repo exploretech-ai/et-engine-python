@@ -1,7 +1,7 @@
 import requests
 import json
 import os
-from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES
+from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, MAX_CHUNK_SIZE_BYTES
 from math import ceil
 from pathlib import Path
 from tqdm import tqdm
@@ -212,17 +212,20 @@ async def upload_part(local_file, part_number, chunk_size, presigned_url, sessio
         file.seek(starting_byte)
         chunk = file.read(chunk_size)
         # status = requests.post(presigned_url, data=chunk)
-        async with session.post(presigned_url, data=chunk) as status:
+        async with session.put(presigned_url, data=chunk) as status:
             if not status.ok:
                 raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
 
             return {"ETag": status.headers["ETag"], "PartNumber": part_number}
     
-async def upload_parts_in_parallel(local_file, urls, chunk_size):
+    
+async def upload_parts_in_parallel(local_file, urls, chunk_size, timeout=3600):
     """
     Sends upload HTTP requests asynchronously to speed up file transfer
     """
-    async with aiohttp.ClientSession() as session:
+
+    client_timeout = aiohttp.ClientTimeout(total=timeout)
+    async with aiohttp.ClientSession(timeout=client_timeout) as session:
         upload_part_tasks = set()
         for part_number, presigned_url in urls: 
             task = asyncio.create_task(
@@ -231,12 +234,63 @@ async def upload_parts_in_parallel(local_file, urls, chunk_size):
             upload_part_tasks.add(task)
 
         parts = []
-        for t in tqdm(asyncio.as_completed(upload_part_tasks), total=len(upload_part_tasks)):
-            parts.append(await t)
+        for task in tqdm(asyncio.as_completed(upload_part_tasks), desc=f"Uploading '{local_file}'", total=len(upload_part_tasks)):
+            completed_part = await task
+            parts.append(completed_part)
 
         return parts
     
-def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
+
+def upload_parts_sequential(local_file, urls, chunk_size):
+    parts = []
+    print('in sequence')
+    for part_number, presigned_url in tqdm(urls, total=len(urls)):
+        starting_byte = part_number * chunk_size
+        with open(local_file, 'rb') as file:
+            file.seek(starting_byte)
+            chunk = file.read(chunk_size)
+            status = requests.put(presigned_url, data=chunk)
+            if not status.ok:
+                raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
+
+        parts.append({"ETag": status.headers["ETag"], "PartNumber": part_number})
+
+    return parts
+
+
+def request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size):
+    response = requests.post(
+        url, 
+        data=json.dumps({
+            "key": remote_file,
+            "num_parts": num_parts
+        }),
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
+
+    if response.status_code == 504:
+        chunk_size = chunk_size * 2
+        num_parts = ceil(file_size_bytes / chunk_size)
+
+        if chunk_size > MAX_CHUNK_SIZE_BYTES:
+            raise Exception("Chunk Size Too Large")
+        print(f"Increasing chunk size to {chunk_size / 1024 / 1024} MB")
+        return request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
+    
+    if response.ok:
+        response = response.json()
+        upload_id = response["UploadId"]
+        urls = response["urls"]
+    else:
+        raise Exception(f"Error creating multipart upload: {response}, {response.reason}")
+    
+    return upload_id, urls, chunk_size
+
+class PayloadTooLargeError(Exception):
+    pass
+
+
+def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES, timeout=7200):
     """Performs a multipart upload to s3
     
     Steps:
@@ -256,42 +310,27 @@ def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
     num_parts = ceil(file_size_bytes / chunk_size)
 
     # Step 2: Get presigned urls
-    response = requests.post(
-        url, 
-        data=json.dumps({
-            "key": remote_file,
-            "num_parts": num_parts
-        }),
-        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-    )
-    if response.ok:
-        response = response.json()
-        upload_id = response["UploadId"]
-        urls = response["urls"]
-    else:
-        raise Exception("Error creating multipart upload")
+    upload_id, urls, chunk_size = request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
     
     # Step 3: Upload parts
-    parts = []
-    upload_parts_in_parallel(local_file, urls, chunk_size)
+    uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, timeout=timeout))
+    # upladed_parts = upload_parts_sequential(local_file, urls, chunk_size)
 
     # Step 4: Complete upload
+    uploaded_parts = sorted(uploaded_parts, key=lambda x: x['PartNumber'])
     complete = requests.post(
         url, 
         data=json.dumps({
             "key": remote_file,
             "complete": "true",
-            "parts": parts,
+            "parts": uploaded_parts,
             "UploadId": upload_id
         }),
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
     )
     
     if not complete.ok:
-        print(complete, complete.reason, complete.text)
-        raise Exception("Error completing upload")
-
-
+        raise Exception(f"Error completing upload: {complete}, {complete.reason}, {complete.text}")
 
 
 def multipart_download(remote_file, local_file):
