@@ -114,7 +114,7 @@ def handler(event, context):
         
             multipart_upload = s3.create_multipart_upload(Bucket=bucket_name, Key=key)
             upload_id = multipart_upload["UploadId"]
-            # Generate the presigned URL for each part
+
             urls = []
             for part_number in range(1, num_parts + 1): # parts start at 1
                 url = s3.generate_presigned_url(

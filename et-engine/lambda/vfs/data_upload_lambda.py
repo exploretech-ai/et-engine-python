@@ -113,6 +113,7 @@ def handler(event, _context):
                 ]
             }
         )
+        print("ECS Launch Response:", ecs_response)
 
     except Exception as e:
         print("ERROR:", e)

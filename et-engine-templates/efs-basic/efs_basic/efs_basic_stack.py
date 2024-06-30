@@ -53,35 +53,6 @@ def make_dir(event):
     else:
         return {"message": "directory creation successful", "statusCode": 200}
 
-
-def upload(event):
-    print("UPLOAD REQUESTED")
-    print(event)
-
-    s3_bucket = event['Records'][0]['s3']['bucket']['name']
-    s3_key = event['Records'][0]['s3']['object']['key']
-
-    print('bucket: ', s3_bucket)
-    print('key: ', s3_key)
-
-    # Set the download path in the /tmp directory
-    # download_path = '/tmp/' + os.path.basename(s3_key)
-    destination_path = '/mnt/efs/' + s3_key[2:]
-    # print('local path: ', download_path)
-
-    # Create an S3 client
-    s3_client = boto3.client('s3')
-
-    try:
-        # Download the file from S3
-        print('Dowloading...')
-        s3_client.download_file(s3_bucket, s3_key, destination_path)
-        print(f"success")
-        return {'message': 'successfully transfered file to EFS', 'statusCode': 200}
-    except Exception as e:
-        print(f"Error downloading file: {str(e)}")
-        return {'message': 'failed while downloading file to EFS', 'statusCode': 500}
-
           
 def download(event):
 
@@ -147,9 +118,6 @@ def handler(event, _context):
         return {"message": "missing required parameter: operation", "statusCode": 400}
     else:
         print("Operation Type: ", operation_type)
-        if operation_type == 'upload':
-            upload_result = upload(event)
-            return upload_result
         if operation_type == 'list':
             path = event['path']
             list_result = list(path)
@@ -272,6 +240,7 @@ class EfsBasicStack(Stack):
                 s3.HttpMethods.HEAD,
             ],
             allowed_headers=["*"],
+            exposed_headers=["ETag"],
             max_age=3000,
         )
 
