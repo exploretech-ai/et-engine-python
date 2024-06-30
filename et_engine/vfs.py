@@ -145,10 +145,8 @@ class VirtualFileSystem:
         
         # Step 3: Upload part
         uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, file_size_bytes, timeout=timeout))
-        # upladed_parts = upload_parts_sequential(local_file, urls, chunk_size)
 
         # Step 4: Complete upload
-        # uploaded_parts = sorted(uploaded_parts, key=lambda x: x['PartNumber'])
         complete = requests.post(
             self.url, 
             data=json.dumps({
@@ -247,17 +245,18 @@ def request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk
         response = response.json()
         upload_id = response["UploadId"]
         urls = response["urls"]
+        return upload_id, urls, chunk_size
     else:
         raise Exception(f"Error creating multipart upload: {response}, {response.reason}")
     
-    return upload_id, urls, chunk_size
+    
 
 
 async def upload_part(local_file, part_number, chunk_size, presigned_url, session):
     """
     Uploads one part in a multipart upload
     """
-    starting_byte = part_number * chunk_size
+    starting_byte = (part_number - 1) * chunk_size
     async with aiofiles.open(local_file, mode='rb') as file:
         await file.seek(starting_byte)
         chunk = await file.read(chunk_size)
@@ -289,21 +288,3 @@ async def upload_parts_in_parallel(local_file, urls, chunk_size, file_size, time
 
         return parts
     
-
-def upload_parts_sequential(local_file, urls, chunk_size):
-    parts = []
-    print('in sequence')
-    for part_number, presigned_url in tqdm(urls, total=len(urls)):
-        starting_byte = part_number * chunk_size
-        with open(local_file, 'rb') as file:
-            file.seek(starting_byte)
-            chunk = file.read(chunk_size)
-            status = requests.put(presigned_url, data=chunk)
-            if not status.ok:
-                raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
-
-        parts.append({"ETag": status.headers["ETag"], "PartNumber": part_number})
-
-    return parts
-
-
