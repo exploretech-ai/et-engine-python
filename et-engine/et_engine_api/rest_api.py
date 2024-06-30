@@ -72,7 +72,7 @@ class API(Stack):
             timeout = Duration.seconds(30)            
         )
         database.grant_access(key_authorizer_lambda)
-        key_authorizer = apigateway.TokenAuthorizer(
+        self.key_authorizer = apigateway.TokenAuthorizer(
             self,
             'key-authorizer',
             handler=key_authorizer_lambda,
@@ -80,8 +80,8 @@ class API(Stack):
         )
 
         ApiKeyMethods(self, "ApiKeyMethods", database, self.api, authorizer)
-        VfsMethods(self, "VfsMethods", database, self.api, key_authorizer)
-        ToolMethods(self, "ToolMethods", database, self.api, key_authorizer)
-        TaskMethods(self, "TaskMethods", database, self.api, key_authorizer)
+        VfsMethods(self, "VfsMethods", database, self.api, self.key_authorizer)
+        ToolMethods(self, "ToolMethods", database, self.api, self.key_authorizer)
+        TaskMethods(self, "TaskMethods", database, self.api, self.key_authorizer)
 
         CfnOutput(self, "ApiUrl", value = self.api.url)

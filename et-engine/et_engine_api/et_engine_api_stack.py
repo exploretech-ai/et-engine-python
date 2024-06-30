@@ -10,6 +10,7 @@ from .templates import Templates
 from .compute_cluster import ComputeCluster
 from .user_pool import UserPool
 
+from .data_transfer import DataTransfer
 
 class ETEngine(Stack):
 
@@ -30,5 +31,23 @@ class ETEngine(Stack):
         CfnOutput(self, "ComputeClusterVpcID", value=compute.vpc.vpc_id)
         CfnOutput(self, "ClusterName", value=compute.ecs_cluster.cluster_name)
         CfnOutput(self, "TaskExecutionRoleArn", value=compute.task_role.role_arn)
+
+        
+        DataTransfer(self, f"DataTransfer{env}", api)
+
+
+        # New VFS template stack goes here
+        # > Takes a VPC and Security group as params
+        # > Lambda function w/ code for interacting with EFS
+        # > EFS + access point
+        # > Upload bucket
+        # >> Download bucket
+        # >> HOW TO SYNC EFS WITH DOWNLOAD BUCKET?
+        
+
+        # Add testing method to API here
+        
+
+        
 
 
