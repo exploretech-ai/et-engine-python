@@ -574,28 +574,17 @@ Resources:
         LambdaFunctionConfigurations:
           - Events:
               - s3:ObjectCreated:*
-            Filter:
-              Key:
-                FilterRules:
-                  - Name: prefix
-                    Value: ./
-            LambdaFunctionArn:
-              Fn::GetAtt:
-                - VFSLambda5FAABBC2
-                - Arn
+            LambdaFunctionArn: arn:aws:lambda:us-east-2:734818840861:function:ETEngineDataTransferdev92-vfstransfertasklauncherE-wPbS6NnkYsLO
       Managed: true
     DependsOn:
-      - UploadBucketAllowBucketNotificationsToEfsBasicStackVFSLambda7A462EF437A72EF7
+      - UploadBucketAllowBucketNotificationsToEfsBasicStackS3toEfs0FAE2EB2A0FCD266
     Metadata:
       aws:cdk:path: EfsBasicStack/UploadBucket/Notifications/Resource
-  UploadBucketAllowBucketNotificationsToEfsBasicStackVFSLambda7A462EF437A72EF7:
+  UploadBucketAllowBucketNotificationsToEfsBasicStackS3toEfs0FAE2EB2A0FCD266:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName:
-        Fn::GetAtt:
-          - VFSLambda5FAABBC2
-          - Arn
+      FunctionName: arn:aws:lambda:us-east-2:734818840861:function:ETEngineDataTransferdev92-vfstransfertasklauncherE-wPbS6NnkYsLO
       Principal: s3.amazonaws.com
       SourceAccount: "734818840861"
       SourceArn:
@@ -603,7 +592,7 @@ Resources:
           - UploadBucketD2C1DA78
           - Arn
     Metadata:
-      aws:cdk:path: EfsBasicStack/UploadBucket/AllowBucketNotificationsToEfsBasicStackVFSLambda7A462EF4
+      aws:cdk:path: EfsBasicStack/UploadBucket/AllowBucketNotificationsToEfsBasicStackS3toEfs0FAE2EB2
   CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092:
     Type: AWS::IAM::Role
     Properties:
@@ -786,7 +775,7 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/11QUU/DIBj8LXunaLtEn7clGh+MpPXdMPqt+2yBhQ80DeG/SzszW5/ujjuOcBUvqwd+v5HfVKi2LwY88th4qXp2OBkhndTgwbEayAangOXgRwRV8Zj9BlRw6MdnZ8PlxXQOiNjqkP1PJQYn4vEJB2hG8qCnxFq92mD8u3QdeLZTKncKi8ZP1kImNkh9bGXuCkZ5tGZuWnABTiNRVomh1DzWdoDJmFHYAdU452aWGG153AfVw/zUL7vCX3ipU2KHQN7q2zpT+Y2vLOHsF7bg9pKA7YjA55U7NN105y34S8g/EqM/W3O35WXJHzefhFi4vAVq4PUVfwBqqAGksAEAAA==
+      Analytics: v2:deflate64:H4sIAAAAAAAA/21Qy07DMBD8lt4dQ1MJzi0SiAPCSrgj19mmS2K78q5BUZR/x3FBTRGn2dmZfZZyXd7J25X+osI0XdHjXo41a9OJh4NTOmgLDEEk/X3std03Wo6P0RlG73aaQPyS2b+MFQSLRIlNAkwpx5SrwcSAPDwFH0/Prg1AJK6S4q8rFR8ojcQe6oEYbJ5zxV58dPymQwsstsaknsqj41la0EmgtnKsfA+zklH5Hs2Qt83RJGgjx100HeTyn+gMF/OST5OogHwMJrWNxN5eaJryv6SC/8QGQn7glgg4vbxF1841r5FPMa2rBj56d7OR67W8X30QYhHSoWhBVmf8BsTfEdK9AQAA
     Metadata:
       aws:cdk:path: EfsBasicStack/CDKMetadata/Default
 Outputs:

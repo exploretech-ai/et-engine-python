@@ -139,8 +139,8 @@ class VfsMethods(Stack):
         vfs_upload_lambda = _lambda.Function(
             self, 'vfs-upload',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.upload.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            handler= "upload.handler",
+            code=_lambda.Code.from_asset('lambda/vfs'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
             vpc_subnets=ec2.SubnetSelection(
@@ -169,7 +169,7 @@ class VfsMethods(Stack):
         vfs_upload_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    's3:PutObject'
+                    's3:*'
                 ],
                 resources=['*']
             )

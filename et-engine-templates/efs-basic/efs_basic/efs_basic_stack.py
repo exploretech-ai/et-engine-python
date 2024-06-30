@@ -176,6 +176,8 @@ class EfsBasicStack(Stack):
         ).value_as_string
         security_group_id = "sg-08ad2fb3a42e5ce01"
         vpc_id = "vpc-05c602ef885d449bc"
+        launch_download_from_s3_to_efs_arn = "arn:aws:lambda:us-east-2:734818840861:function:ETEngineDataTransferdev92-vfstransfertasklauncherE-wPbS6NnkYsLO"
+        launch_download_from_s3_to_efs = _lambda.Function.from_function_arn(self, "S3toEfs", launch_download_from_s3_to_efs_arn)
 
         vpc = ec2.Vpc.from_lookup(
             self,
@@ -246,10 +248,8 @@ class EfsBasicStack(Stack):
         )
         upload_bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED, 
-            s3n.LambdaDestination(list_lambda_function),
-            s3.NotificationKeyFilter(
-                prefix="./"
-            )
+            s3n.LambdaDestination(launch_download_from_s3_to_efs),
+
         )
         list_lambda_function.add_to_role_policy(
             iam.PolicyStatement(

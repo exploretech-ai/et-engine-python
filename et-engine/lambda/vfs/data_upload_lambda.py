@@ -5,10 +5,8 @@ import boto3
 
 def handler(event, _context):
 
-    vfs_id = "427e2294-1365-4b95-9237-a0314463c5bd"
     capacity_provider_name = "AsgCapacityProvider"
-    cluster="ETEngineComputeCluster067C306F-ClusterEB0386A7-SSXARi0qkB2F"
-    data_transfer_stack_name="ETEngineDataTransferdev92E98E73"
+    engine_stack_name = "ETEngine"
     
     print("UPLOAD REQUESTED")
     print(event)
@@ -17,9 +15,11 @@ def handler(event, _context):
 
         s3_bucket = event['Records'][0]['s3']['bucket']['name']
         s3_key = event['Records'][0]['s3']['object']['key']
+        vfs_id = s3_bucket[4:]
 
         print('bucket: ', s3_bucket)
         print('key: ', s3_key)
+        print('VFS Id:', vfs_id)
 
         vfs_name = "vfs-" + vfs_id
         container_mount_base = "/mnt/efs"
@@ -29,13 +29,14 @@ def handler(event, _context):
             'readOnly': False
         }]
 
-        vfs_stack_outputs = lambda_utils.get_stack_outputs(vfs_name)
-        file_system_id = lambda_utils.get_component_from_outputs(vfs_stack_outputs, "FileSystemId")
-        access_point_id = lambda_utils.get_component_from_outputs(vfs_stack_outputs, "AccessPointId")
+        vfs_stack = lambda_utils.get_stack_outputs(vfs_name)
+        file_system_id = lambda_utils.get_component_from_outputs(vfs_stack, "FileSystemId")
+        access_point_id = lambda_utils.get_component_from_outputs(vfs_stack, "AccessPointId")
 
-        data_transfer_stack_outputs = lambda_utils.get_stack_outputs(data_transfer_stack_name)
-        image = lambda_utils.get_component_from_outputs(data_transfer_stack_outputs, "UploadContainerUri")
-        role_arn = lambda_utils.get_component_from_outputs(data_transfer_stack_outputs, "UploadRoleArn")
+        engine_stack = lambda_utils.get_stack_outputs(engine_stack_name)
+        cluster = lambda_utils.get_component_from_outputs(engine_stack, "ClusterName")
+        image = lambda_utils.get_component_from_outputs(engine_stack, "UploadContainerUri")
+        role_arn = lambda_utils.get_component_from_outputs(engine_stack, "UploadRoleArn")
 
         volumes = [{
             'name': vfs_name,
