@@ -1,7 +1,10 @@
+import os
+
 from aws_cdk import (
     Stack,
-    CfnOutput
+    CfnOutput,
 )
+import aws_cdk as cdk
 from constructs import Construct
 
 from .master_database import MasterDB
@@ -33,7 +36,7 @@ class ETEngine(Stack):
         CfnOutput(self, "TaskExecutionRoleArn", value=compute.task_role.role_arn)
 
         
-        DataTransfer(self, f"DataTransfer{env}", api)
+        DataTransfer(self, f"DataTransfer{env}", api, env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),)
 
 
         # New VFS template stack goes here

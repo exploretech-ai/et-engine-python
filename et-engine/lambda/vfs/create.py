@@ -2,7 +2,6 @@
 import json
 import boto3
 import db
-import lambda_utils
 import uuid
 
 # def get_user(event):

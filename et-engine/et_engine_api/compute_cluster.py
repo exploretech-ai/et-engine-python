@@ -27,7 +27,7 @@ class ComputeCluster(Stack):
         auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
             vpc=self.vpc,
             instance_type=ec2.InstanceType("t2.xlarge"),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux(),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=0,
             max_capacity=250,
             group_metrics=[autoscaling.GroupMetrics.all()],
