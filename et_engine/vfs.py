@@ -1,11 +1,18 @@
 import requests
 import json
 import os
-from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, MAX_CHUNK_SIZE_BYTES
 from math import ceil
-from pathlib import Path
 from tqdm import tqdm
 import asyncio, aiohttp, aiofiles
+from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, MAX_CHUNK_SIZE_BYTES
+
+
+class PayloadTooLargeError(Exception):
+    pass
+
+
+class ChunkTooSmallError(Exception):
+    pass
 
 
 def create(name):	
@@ -98,6 +105,7 @@ class VirtualFileSystem:
         VFS API endpoint
     """
 
+
     def __init__(self, vfs_id):
         """Creates a new object connected to the VFS
         
@@ -109,39 +117,54 @@ class VirtualFileSystem:
         self.id = vfs_id
         self.url = API_ENDPOINT + f"vfs/{vfs_id}"
 
+
     def file_exists(self):
         pass
 
-    def upload(self, local_file, remote_file):
-        """Uploads a file to the VFS
 
-        Parameters
-        ----------
-        local_file : string
-            path to the local copy of the file to upload
-        remote_file : string
-            path to the remote copy of the uploaded file inside the VFS
-
+    def upload(self, local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES, timeout=7200):
+        """Performs a multipart upload to s3
+        
+        Steps:
+        1. Check the file's size and determine the number of parts needed
+        2. Prepare the multipart upload with a POST request to Engine
+        3. Upload the parts with asynchronous POST requests to s3 with the presigned urls
+        4. Complete the multipart upload with another POST request to Engine with query string param ?complete=true
         
         """
-        response = requests.post(
+        if chunk_size < MIN_CHUNK_SIZE_BYTES:
+            raise ChunkTooSmallError("chunk size is too small")
+
+
+        # Step 1: determine parts
+        file_size_bytes = os.stat(local_file).st_size
+        num_parts = ceil(file_size_bytes / chunk_size)
+
+        # Step 2: Get presigned urls
+        upload_id, urls, chunk_size = request_multipart_upload(self.url, remote_file, num_parts, file_size_bytes, chunk_size)
+        
+        # Step 3: Upload part
+        uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, file_size_bytes, timeout=timeout))
+        # upladed_parts = upload_parts_sequential(local_file, urls, chunk_size)
+
+        # Step 4: Complete upload
+        # uploaded_parts = sorted(uploaded_parts, key=lambda x: x['PartNumber'])
+        complete = requests.post(
             self.url, 
-            data=json.dumps({"key": remote_file}),
+            data=json.dumps({
+                "key": remote_file,
+                "complete": "true",
+                "parts": uploaded_parts,
+                "UploadId": upload_id
+            }),
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
-        response.raise_for_status()
-        presigned_post = json.loads(response.text)
-        # print(presigned_post)
         
-        with open(local_file, 'rb') as f:
-            files = {'file': (local_file, f)}
-            upload_response = requests.post(
-                presigned_post['url'], 
-                data=presigned_post['fields'], 
-                files=files
-            )
+        if complete.status_code != 200:
+            raise Exception(f"Error completing upload: {complete}, {complete.reason}, {complete.text}")
 
-        return upload_response
+        # return Upload(complete.json())
+    
     
     def download(self, remote_file, local_file):
         """Downloads a copy of a VFS file to the local machine
@@ -167,6 +190,7 @@ class VirtualFileSystem:
                 for chunk in r.iter_content(chunk_size=None):
                     f.write(chunk)
 
+
     def mkdir(self, path):
         response = requests.post(
             self.url + "/mkdir", 
@@ -179,6 +203,7 @@ class VirtualFileSystem:
         # =====
         response.raise_for_status()
         # <<<<<
+
 
     def list(self, path=None):
 
@@ -199,8 +224,33 @@ class VirtualFileSystem:
             raise Exception('List failed')
 
 
-class ChunkTooSmallError(Exception):
-    pass
+def request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size):
+    response = requests.post(
+        url, 
+        data=json.dumps({
+            "key": remote_file,
+            "num_parts": num_parts
+        }),
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
+
+    if response.status_code == 504:
+        chunk_size = chunk_size * 2
+        num_parts = ceil(file_size_bytes / chunk_size)
+
+        if chunk_size > MAX_CHUNK_SIZE_BYTES:
+            raise Exception("Chunk Size Too Large")
+        print(f"Increasing chunk size to {chunk_size / 1024 / 1024} MB")
+        return request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
+    
+    if response.ok:
+        response = response.json()
+        upload_id = response["UploadId"]
+        urls = response["urls"]
+    else:
+        raise Exception(f"Error creating multipart upload: {response}, {response.reason}")
+    
+    return upload_id, urls, chunk_size
 
 
 async def upload_part(local_file, part_number, chunk_size, presigned_url, session):
@@ -256,96 +306,4 @@ def upload_parts_sequential(local_file, urls, chunk_size):
 
     return parts
 
-
-def request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size):
-    response = requests.post(
-        url, 
-        data=json.dumps({
-            "key": remote_file,
-            "num_parts": num_parts
-        }),
-        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-    )
-
-    if response.status_code == 504:
-        chunk_size = chunk_size * 2
-        num_parts = ceil(file_size_bytes / chunk_size)
-
-        if chunk_size > MAX_CHUNK_SIZE_BYTES:
-            raise Exception("Chunk Size Too Large")
-        print(f"Increasing chunk size to {chunk_size / 1024 / 1024} MB")
-        return request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
-    
-    if response.ok:
-        response = response.json()
-        upload_id = response["UploadId"]
-        urls = response["urls"]
-    else:
-        raise Exception(f"Error creating multipart upload: {response}, {response.reason}")
-    
-    return upload_id, urls, chunk_size
-
-class PayloadTooLargeError(Exception):
-    pass
-
-
-def multipart_upload(local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES, timeout=7200):
-    """Performs a multipart upload to s3
-    
-    Steps:
-    1. Check the file's size and determine the number of parts needed
-    2. Prepare the multipart upload with a POST request to Engine
-    3. Upload the parts with asynchronous POST requests to s3 with the presigned urls
-    4. Complete the multipart upload with another POST request to Engine with query string param ?complete=true
-    
-    """
-    if chunk_size < MIN_CHUNK_SIZE_BYTES:
-        raise ChunkTooSmallError("chunk size is too small")
-    url = API_ENDPOINT + "tmp"
-
-
-    # Step 1: determine parts
-    file_size_bytes = os.stat(local_file).st_size
-    num_parts = ceil(file_size_bytes / chunk_size)
-
-    # Step 2: Get presigned urls
-    upload_id, urls, chunk_size = request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
-    
-    # Step 3: Upload part
-    uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, file_size_bytes, timeout=timeout))
-    # upladed_parts = upload_parts_sequential(local_file, urls, chunk_size)
-
-    # Step 4: Complete upload
-    # uploaded_parts = sorted(uploaded_parts, key=lambda x: x['PartNumber'])
-    complete = requests.post(
-        url, 
-        data=json.dumps({
-            "key": remote_file,
-            "complete": "true",
-            "parts": uploaded_parts,
-            "UploadId": upload_id
-        }),
-        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-    )
-    
-    if not complete.ok:
-        raise Exception(f"Error completing upload: {complete}, {complete.reason}, {complete.text}")
-
-
-def multipart_download(remote_file, local_file):
-    url = API_ENDPOINT + "tmp"
-    response = requests.get(
-        url, 
-        params={"key": remote_file},
-        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-    )
-    print(response)
-    presigned_url = response.json()
-    
-    
-    with requests.get(presigned_url, stream=True) as r:
-        # r.raise_for_status()
-        with open(local_file, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=None):
-                f.write(chunk)
 
