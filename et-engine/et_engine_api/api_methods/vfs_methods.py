@@ -10,7 +10,7 @@ from aws_cdk import (
 from constructs import Construct
   
 class VfsMethods(Stack):
-    def __init__(self, scope: Construct, construct_id: str, database, api, key_authorizer, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, database, api, key_authorizer, compute, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         vfs = api.root.add_resource("vfs")
@@ -370,3 +370,31 @@ class VfsMethods(Stack):
                 resources=['*']
             )
         )
+
+
+        
+
+        # integration = apigateway.Integration(
+        #     type=apigateway.IntegrationType.HTTP_PROXY,
+        #     uri="http://" + load_balancer.load_balancer_dns_name,
+        #     integration_http_method="ANY",
+        #     options=apigateway.IntegrationOptions(
+        #         connection_type=apigateway.ConnectionType.VPC_LINK,
+        #         vpc_link=vpc_link
+        #     )
+        # )
+        # vfs_files.add_method(
+        #     "GET",
+        #     integration=integration,
+        #     method_responses=[{
+        #         'statusCode': '200',
+        #         'responseParameters': {
+        #             'method.response.header.Content-Type': True,
+        #         },
+        #         'responseModels': {
+        #             'application/json': apigateway.Model.EMPTY_MODEL,
+        #         },
+        #     }],
+        #     authorizer = key_authorizer,
+        #     authorization_type = apigateway.AuthorizationType.CUSTOM,
+        # )

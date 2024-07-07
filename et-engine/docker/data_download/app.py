@@ -22,6 +22,10 @@ def hello_world():
     print("Hello logs!")
     return "Hello, World!"
 
+@app.route('/<path:subpath>')
+def show_subpath(subpath):
+    return f'Subpath: {subpath}'
+
 if __name__ == '__main__':
     print("initiating server")
     app.run(host='0.0.0.0', port=80)

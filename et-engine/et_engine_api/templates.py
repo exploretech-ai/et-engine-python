@@ -83,7 +83,7 @@ class VfsTemplate(Stack):
         
         vfs_update_lambda = _lambda.Function(
             self, 'vfs-template-update',
-            description="Script to update computing templates",
+            description="Script to update storage templates",
             runtime=_lambda.Runtime.PYTHON_3_8,
             handler= "vfs.update.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
@@ -100,7 +100,7 @@ class VfsTemplate(Stack):
         vfs_update_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    'cloudformation:UpdateStack',
+                    'cloudformation:*',
                     'lambda:*',
                     's3:*',
                     'efs:*',

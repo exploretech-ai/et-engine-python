@@ -16,8 +16,9 @@ from .api_methods.vfs_methods import VfsMethods
 from .api_methods.tool_methods import ToolMethods
 from .api_methods.task_methods import TaskMethods
 
+
 class API(Stack):
-    def __init__(self, scope: Construct, construct_id: str, database, user_pool, config, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, database, user_pool, compute, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         env = config['env']
@@ -80,7 +81,7 @@ class API(Stack):
         )
 
         ApiKeyMethods(self, "ApiKeyMethods", database, self.api, authorizer)
-        VfsMethods(self, "VfsMethods", database, self.api, self.key_authorizer)
+        VfsMethods(self, "VfsMethods", database, self.api, self.key_authorizer, compute)
         ToolMethods(self, "ToolMethods", database, self.api, self.key_authorizer)
         TaskMethods(self, "TaskMethods", database, self.api, self.key_authorizer)
 

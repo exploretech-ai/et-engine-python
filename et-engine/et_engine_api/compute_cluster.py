@@ -8,15 +8,17 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+from .data_transfer.download_files import DownloadFiles
+from .data_transfer.upload_files import UploadFiles
 
 class ComputeCluster(Stack):
-    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         self.vpc = ec2.Vpc(
             self,
-            "ClusterVpc2",
-            vpc_name='ClusterVpc2'
+            "ClusterVpc",
+            vpc_name='ClusterVpc'
         )
         self.ecs_cluster = ecs.Cluster(
             self, 
@@ -84,16 +86,19 @@ class ComputeCluster(Stack):
         logs.LogGroup(
             self,
             "LogGroup",
-            log_group_name="EngineLogGroup"
+            # log_group_name="EngineLogGroup"
         )
 
-        security_group = ec2.SecurityGroup(
+        self.security_group = ec2.SecurityGroup(
             self,
             "EFSSG",
             vpc=self.vpc,
             allow_all_outbound = True,
         )
-        security_group.add_ingress_rule(
+        self.security_group.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(2049)
         )
+
+        self.upload_files = UploadFiles(self, "UploadFilesInfra")
+        # self.download_files = DownloadFiles(self, "DownloadFilesInfra", self.vpc, self.ecs_cluster)

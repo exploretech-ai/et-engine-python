@@ -140,9 +140,26 @@ def compute_template_parameters(tool_id):
     ]
 
 def vfs_template_parameters(vfs_id):
+    engine_stack_outputs = get_stack_outputs("ETEngine")
+    vpc_id = get_component_from_outputs(engine_stack_outputs, "ComputeClusterVpcID")
+    sg_id = get_component_from_outputs(engine_stack_outputs, "ComputeClusterSgID")
+    launch_download_from_s3_to_efs_arn = get_component_from_outputs(engine_stack_outputs, "DownloadS3ToEfsFunctionArn")
+
     return [
         {
             'ParameterKey': 'vfsID',
             'ParameterValue': vfs_id
-        }
+        },
+        {
+            'ParameterKey': 'sgID',
+            'ParameterValue': sg_id
+        },
+        {
+            'ParameterKey': 'vpcID',
+            'ParameterValue': vpc_id
+        },
+        {
+            'ParameterKey': 'launchDownloadFromS3ToEfsArn',
+            'ParameterValue': launch_download_from_s3_to_efs_arn
+        },
     ]

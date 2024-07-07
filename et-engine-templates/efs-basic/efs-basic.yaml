@@ -1,6 +1,12 @@
 Parameters:
   vfsID:
     Type: String
+  sgID:
+    Type: String
+  vpcID:
+    Type: String
+  launchDownloadFromS3ToEfsArn:
+    Type: String
   BootstrapVersion:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /cdk-bootstrap/hnb659fds/version
@@ -11,7 +17,8 @@ Resources:
     Properties:
       Description: from EfsBasicStackVFSLambdaSecurityGroup907B6CFC:2049
       FromPort: 2049
-      GroupId: sg-08ad2fb3a42e5ce01
+      GroupId:
+        Ref: sgID
       IpProtocol: tcp
       SourceSecurityGroupId:
         Fn::GetAtt:
@@ -57,8 +64,8 @@ Resources:
       FileSystemId:
         Ref: vfs0804DAB7
       SecurityGroups:
-        - sg-08ad2fb3a42e5ce01
-      SubnetId: subnet-02dfa489e5a01d330
+        - Ref: sgID
+      SubnetId: subnet-02977e5fc737bc049
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet1
   vfsEfsMountTargetPrivateSubnet2E813BC5E:
@@ -67,8 +74,8 @@ Resources:
       FileSystemId:
         Ref: vfs0804DAB7
       SecurityGroups:
-        - sg-08ad2fb3a42e5ce01
-      SubnetId: subnet-022ee067d2b1ebe0c
+        - Ref: sgID
+      SubnetId: subnet-08780bdffbf1f8f96
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet2
   vfsvfsAccessPointA97EC7A7:
@@ -167,7 +174,7 @@ Resources:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
-      VpcId: vpc-05c602ef885d449bc
+      VpcId: vpc-0015b52fa62629c3b
     DependsOn:
       - vfsEfsMountTargetPrivateSubnet12A54EF59
       - vfsEfsMountTargetPrivateSubnet2E813BC5E
@@ -416,8 +423,8 @@ Resources:
               - VFSLambdaSecurityGroupD84993EA
               - GroupId
         SubnetIds:
-          - subnet-02dfa489e5a01d330
-          - subnet-022ee067d2b1ebe0c
+          - subnet-02977e5fc737bc049
+          - subnet-08780bdffbf1f8f96
     DependsOn:
       - ClusterSG2fromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049386C227F
       - vfsEfsMountTargetPrivateSubnet12A54EF59
@@ -519,25 +526,11 @@ Resources:
         LambdaFunctionConfigurations:
           - Events:
               - s3:ObjectCreated:*
-            LambdaFunctionArn: arn:aws:lambda:us-east-2:734818840861:function:ETEngineDataTransferdev92-vfstransfertasklauncherE-wPbS6NnkYsLO
+            LambdaFunctionArn:
+              Ref: launchDownloadFromS3ToEfsArn
       Managed: true
-    DependsOn:
-      - UploadBucketAllowBucketNotificationsToEfsBasicStackS3toEfs0FAE2EB2A0FCD266
     Metadata:
       aws:cdk:path: EfsBasicStack/UploadBucket/Notifications/Resource
-  UploadBucketAllowBucketNotificationsToEfsBasicStackS3toEfs0FAE2EB2A0FCD266:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: arn:aws:lambda:us-east-2:734818840861:function:ETEngineDataTransferdev92-vfstransfertasklauncherE-wPbS6NnkYsLO
-      Principal: s3.amazonaws.com
-      SourceAccount: "734818840861"
-      SourceArn:
-        Fn::GetAtt:
-          - UploadBucketD2C1DA78
-          - Arn
-    Metadata:
-      aws:cdk:path: EfsBasicStack/UploadBucket/AllowBucketNotificationsToEfsBasicStackS3toEfs0FAE2EB2
   CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092:
     Type: AWS::IAM::Role
     Properties:
@@ -720,7 +713,7 @@ Resources:
   CDKMetadata:
     Type: AWS::CDK::Metadata
     Properties:
-      Analytics: v2:deflate64:H4sIAAAAAAAA/21Qy07DMBD8lt4dQ1MJzi0SiAPCSrgj19mmS2K78q5BUZR/x3FBTRGn2dmZfZZyXd7J25X+osI0XdHjXo41a9OJh4NTOmgLDEEk/X3std03Wo6P0RlG73aaQPyS2b+MFQSLRIlNAkwpx5SrwcSAPDwFH0/Prg1AJK6S4q8rFR8ojcQe6oEYbJ5zxV58dPymQwsstsaknsqj41la0EmgtnKsfA+zklH5Hs2Qt83RJGgjx100HeTyn+gMF/OST5OogHwMJrWNxN5eaJryv6SC/8QGQn7glgg4vbxF1841r5FPMa2rBj56d7OR67W8X30QYhHSoWhBVmf8BsTfEdK9AQAA
+      Analytics: v2:deflate64:H4sIAAAAAAAA/21Qy07DMBD8lt4dQ1IJzi0SiAMiSrgj19mGJbFdedegyMq/47hUbRGn2dmZfVayrO7k7Up9U6G7oRhxJ2PLSg/iYW9r5ZUBBi+S/h5HZXadkvExWM3o7FYRiBNZ/Kd4FqArGVOmBR088vTkXTg8294DkbhKir+uVLynNARHaCdiMLnzFXtxwfKb8j2w2GidetYOLS/SBZ0FKiNj40ZYlIy1G1FP+bYczYLWMm6DHiCX/0ZHOJsv+TyLBsgFr1PbQOzMmaYp/0u1d1/Ygc8v2xABpyf3aPul5jXwIaR164k/nL1Zy7KU96tPQix8OhQNyOaIP/LlCLKvAQAA
     Metadata:
       aws:cdk:path: EfsBasicStack/CDKMetadata/Default
 Outputs:

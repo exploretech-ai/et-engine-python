@@ -26,13 +26,14 @@ def handler(event, context):
         vfs_stack_name = "vfs-" + vfs_id
 
         try:
-
-            print(vfs_stack_name)
+            parameters = lambda_utils.vfs_template_parameters(vfs_id)
+            print("Stack to be updated:", vfs_stack_name)
+            print("Parameters:", parameters)
 
             cloudformation.update_stack(
                 StackName=vfs_stack_name, 
                 TemplateURL='https://et-engine-templates.s3.us-east-2.amazonaws.com/efs-basic.yaml',
-                Parameters=lambda_utils.vfs_template_parameters(vfs_id),
+                Parameters=parameters,
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
 

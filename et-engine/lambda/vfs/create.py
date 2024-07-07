@@ -3,6 +3,7 @@ import json
 import boto3
 import db
 import uuid
+import lambda_utils
 
 # def get_user(event):
 #     cognito = boto3.client('cognito-idp')
@@ -35,7 +36,7 @@ def handler(event, context):
     cursor = connection.cursor()
     try:
 
-        print('Fetching Available Tools..')
+        print('Fetching Available VFS..')
 
         sql_query = f"""
             SELECT name FROM VirtualFilesystems WHERE userID = '{user}'
@@ -57,12 +58,7 @@ def handler(event, context):
         else:
             vfs_id = str(uuid.uuid4())
             cfn = boto3.client('cloudformation')
-            parameters = [
-                {
-                    'ParameterKey': 'vfsID',
-                    'ParameterValue': vfs_id
-                }
-            ]
+            parameters = lambda_utils.vfs_template_parameters(vfs_id)
             print("VFS ID:", vfs_id)
             print("Stack Parameters:", parameters)
             
