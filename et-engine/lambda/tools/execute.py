@@ -51,13 +51,22 @@ def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
     print('hardware: ', hardware)
     print('args: ', args)
 
-    query = f"""
+    cursor.execute("""
         INSERT INTO Tasks (taskID, taskArn, userID, toolID, logID, start_time, hardware, status, status_time, args)
-        VALUES ('{task_id}', '{task_arn}', '{user_id}', '{tool_id}', '{log_id}', '{start_time}', '{hardware}', '{status}', '{status_time}', '{args}')
-    """
-    print(query)
-    cursor.execute(query)
-    
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        task_id,
+        task_arn,
+        user_id,
+        tool_id,
+        log_id,
+        start_time,
+        hardware,
+        status,
+        status_time,
+        args
+    ))
+
     return task_id
     
 
@@ -74,7 +83,7 @@ def handler(event, context):
         print(f'Execute Requested on Tool {tool_id}')
 
         image = "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-" + tool_id + ':latest'
-        container_mount_base = "/mnt/"
+        container_mount_base = "/mnt/efs"
         args = []
 
         # This eventually gets replaced with something more dynamic
@@ -156,7 +165,7 @@ def handler(event, context):
                 mount_points.append(
                     {
                         'sourceVolume': volume_name,
-                        "containerPath": container_mount_base + vfs_id,
+                        "containerPath": container_mount_base,
                         'readOnly': False
                     }
                 )

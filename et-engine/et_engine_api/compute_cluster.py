@@ -24,17 +24,17 @@ class ComputeCluster(Stack):
             vpc=self.vpc
         )
 
-        auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
+        self.auto_scaling_group = autoscaling.AutoScalingGroup(self, "ASG",
             vpc=self.vpc,
             instance_type=ec2.InstanceType("t2.xlarge"),
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
             min_capacity=0,
             max_capacity=250,
             group_metrics=[autoscaling.GroupMetrics.all()],
-            key_name="hpc-admin",
-            vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PUBLIC
-            ),
+            # key_name="hpc-admin",
+            # vpc_subnets=ec2.SubnetSelection(
+            #     subnet_type=ec2.SubnetType.PUBLIC
+            # ),
             block_devices=[
                 autoscaling.BlockDevice(
                     device_name="/dev/xvdcz",
@@ -47,22 +47,23 @@ class ComputeCluster(Stack):
             ]
             # key_pair=ec2.KeyPair.from_key_pair_name(self, "my-key", "hpc-admin")
         )
-        auto_scaling_group.add_user_data(
+        self.auto_scaling_group.add_user_data(
             'echo "ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=10m" >> /etc/ecs/ecs.config',
             'echo "ECS_IMAGE_PULL_BEHAVIOR=once" >> /etc/ecs/ecs.config'
         )
-        auto_scaling_group.protect_new_instances_from_scale_in()
-        capacity_provider = ecs.AsgCapacityProvider(self, "AsgCapacityProvider",
-            auto_scaling_group=auto_scaling_group,
+        self.auto_scaling_group.protect_new_instances_from_scale_in()
+        self.capacity_provider = ecs.AsgCapacityProvider(self, "AsgCapacityProvider",
+            auto_scaling_group=self.auto_scaling_group,
             capacity_provider_name="AsgCapacityProvider"
         )
-        self.ecs_cluster.add_asg_capacity_provider(capacity_provider)
+        self.ecs_cluster.add_asg_capacity_provider(self.capacity_provider)
         self.ecs_cluster.add_default_capacity_provider_strategy([
             ecs.CapacityProviderStrategy(
-                capacity_provider=capacity_provider.capacity_provider_name
+                capacity_provider=self.capacity_provider.capacity_provider_name
             )
         ])
 
+        self.ecs_cluster.enable_fargate_capacity_providers()
         
         self.task_role = iam.Role(
             self,
