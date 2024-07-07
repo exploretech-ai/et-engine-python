@@ -22,7 +22,7 @@ def hello_world():
     print("Hello logs!")
     return "Hello, World!"
 
-@app.route('/<path:subpath>')
+@app.route('/files/<path:subpath>')
 def show_subpath(subpath):
     return f'Subpath: {subpath}'
 

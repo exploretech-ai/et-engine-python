@@ -19,16 +19,16 @@ class DownloadFiles(Stack):
             platform=ecr_assets.Platform.LINUX_AMD64
         )   
         download_task_fargate = ecs.FargateTaskDefinition(self, "DownloadTaskDefinition")
-        # download_task_fargate.add_volume(
-        #     name="EfsVolume",
-        #     efs_volume_configuration=ecs.EfsVolumeConfiguration(
-        #         file_system_id="fs-09e0c241485f4226e",
-        #         authorization_config=ecs.AuthorizationConfig(
-        #             access_point_id="fsap-021d0d9759a6302fd"
-        #         ),
-        #         transit_encryption="ENABLED"
-        #     )
-        # )
+        download_task_fargate.add_volume(
+            name="EfsVolume",
+            efs_volume_configuration=ecs.EfsVolumeConfiguration(
+                file_system_id="fs-09e0c241485f4226e",
+                authorization_config=ecs.AuthorizationConfig(
+                    access_point_id="fsap-021d0d9759a6302fd"
+                ),
+                transit_encryption="ENABLED"
+            )
+        )
         download_container = download_task_fargate.add_container("DownloadContainer",
             image=ecs.ContainerImage.from_docker_image_asset(self.download_image)
         )

@@ -15,6 +15,8 @@ class ComputeCluster(Stack):
     def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        env = config['env']
+
         self.vpc = ec2.Vpc(
             self,
             "ClusterVpc",
@@ -101,4 +103,4 @@ class ComputeCluster(Stack):
         )
 
         self.upload_files = UploadFiles(self, "UploadFilesInfra")
-        # self.download_files = DownloadFiles(self, "DownloadFilesInfra", self.vpc, self.ecs_cluster)
+        self.download_files = DownloadFiles(self, f"DownloadFilesInfra{env}", self.vpc, self.ecs_cluster)
