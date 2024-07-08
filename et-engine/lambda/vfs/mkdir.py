@@ -12,13 +12,7 @@ def handler(event, context):
     try:
         user_id = event['requestContext']['authorizer']['userID']
         vfs_id = event['pathParameters']['vfsID']
-
-        path = ""
-        if 'body' in event:
-            body = json.loads(event['body'])
-            path=body['path']
-        else:
-            raise Exception
+        path=event['pathParameters']['filepath']
 
 
         # Check if vfs exists

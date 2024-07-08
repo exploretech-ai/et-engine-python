@@ -10,26 +10,7 @@ def handler(event, context):
     try:
         user_id = event['requestContext']['authorizer']['userID']
         vfs_id = event['pathParameters']['vfsID']
-
-
-        path = ""
-        if event["queryStringParameters"] and event["queryStringParameters"]['path']:
-            path = event["queryStringParameters"]['path']
-
-
-        # # Check if vfs exists
-        # cursor.execute(
-        # f"""
-        # SELECT vfsID FROM VirtualFilesystems WHERE userID='{user_id}'
-        # """
-        # )
-
-        # available_vfs = [row[0] for row in cursor.fetchall()]
-        # if vfs_id not in available_vfs:
-        #     print(available_vfs, vfs_id)
-        #     raise NameError(f'VFS {vfs_id} not available')
-
-
+        path = event["queryStringParameters"]['path']
 
         # If so, call the lambda with the request type: "list"
         lam = boto3.client('lambda')

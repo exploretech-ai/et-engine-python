@@ -14,6 +14,7 @@ def handler(event, context):
 
     vfs_id = event['pathParameters']['vfsID'] 
     bucket_name = "vfs-" + vfs_id
+    key = event['pathParameters']['filepath']
 
     s3 = boto3.client('s3', region_name="us-east-2")
 
@@ -30,7 +31,6 @@ def handler(event, context):
 
     try:
         body = json.loads(event['body'])
-        key = body['key']
         print("Request Body:", body)
 
     except KeyError as e:

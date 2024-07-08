@@ -5,19 +5,41 @@ https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lamb
 """
 
 import json
-import re
 import urllib.request
 import traceback
-import sys
-import uuid
+import boto3
+from botocore.exceptions import ClientError
 
+
+def get_secret():
+
+    secret_name = "api_key_fernet_key"
+    region_name = "us-east-2"
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+
+    secret = get_secret_value_response['SecretString']
+    return secret
 
 region = 'us-east-2'
 userpoolId = 'us-east-2_c3KpcMfzh'
 appClientId = '2ttoam3d4k75fcf2106nmpned' 
 keysUrl = 'https://cognito-idp.{}.amazonaws.com/{}/.well-known/jwks.json'.format(region, userpoolId)
-fernet_key = b'IGE3pGK7ih1vDm4na0EmW-rYCqfnZKMaNR7ea1ose2s='
-
+fernet_key = get_secret().encode("UTF-8")
   
 try:
     # These are wrapped in try/catch for unit testing purposes

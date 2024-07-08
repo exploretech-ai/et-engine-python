@@ -7,7 +7,8 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_certificatemanager as ctf,
     aws_route53 as route53,
-    aws_route53_targets as r53t
+    aws_route53_targets as r53t,
+    aws_iam as iam
 )
 from constructs import Construct
 
@@ -73,12 +74,21 @@ class API(Stack):
             timeout = Duration.seconds(30)            
         )
         database.grant_access(key_authorizer_lambda)
+        key_authorizer_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'secretsmanager:GetSecretValue'
+                ],
+                resources=['arn:aws:secretsmanager:us-east-2:734818840861:secret:api_key_fernet_key-bjdEbo']
+            )
+        )
         self.key_authorizer = apigateway.TokenAuthorizer(
             self,
             'key-authorizer',
             handler=key_authorizer_lambda,
             results_cache_ttl=Duration.seconds(0)
         )
+        
 
         ApiKeyMethods(self, "ApiKeyMethods", database, self.api, authorizer)
         VfsMethods(self, "VfsMethods", database, self.api, self.key_authorizer, compute)

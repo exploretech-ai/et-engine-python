@@ -19,12 +19,18 @@ EFS_MOUNT_POINT = '/mnt/efs'
 
 @app.route("/")
 def hello_world():
-    print("Hello logs!")
-    return "Hello, World!"
+    url = request.url
+    return f"Here's the URL: {url}"
 
-@app.route('/files/<path:subpath>')
-def show_subpath(subpath):
-    return f'Subpath: {subpath}'
+@app.route('/vfs/<vfsID>/files/<path:subpath>')
+def show_subpath(vfsID, subpath):
+    return f'Subpath: {request.url}'
+
+
+@app.route('/<path:subpath>')
+def show_subpath2(subpath):
+    return f'Subpath2: {request.url}'
+
 
 if __name__ == '__main__':
     print("initiating server")

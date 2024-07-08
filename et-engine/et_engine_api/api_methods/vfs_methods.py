@@ -12,7 +12,22 @@ from constructs import Construct
 class VfsMethods(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, api, key_authorizer, compute, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-        
+
+        method_responses = [{
+            'statusCode': '200',
+            'responseParameters': {
+                'method.response.header.Content-Type': True,
+            },
+            'responseModels': {
+                'application/json': apigateway.Model.EMPTY_MODEL,
+            },
+        }]
+        database_subnets = ec2.SubnetSelection(
+            subnets=database.vpc.select_subnets(
+                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
+            ).subnets
+        )
+
         vfs = api.root.add_resource("vfs")
         vfs_create_lambda = _lambda.Function(
             self, 'vfs-create',
@@ -21,25 +36,13 @@ class VfsMethods(Stack):
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
+            vpc_subnets=database_subnets,
             security_groups=[database.sg]
         )
         vfs.add_method(
             "POST",
             integration=apigateway.LambdaIntegration(vfs_create_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
@@ -66,25 +69,13 @@ class VfsMethods(Stack):
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
+            vpc_subnets=database_subnets,
             security_groups=[database.sg]
         )
         vfs.add_method(
             "GET",
             integration=apigateway.LambdaIntegration(vfs_list_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
@@ -97,25 +88,13 @@ class VfsMethods(Stack):
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
+            vpc_subnets=database_subnets,
             security_groups=[database.sg]
         )
         vfs.add_method(
             "DELETE",
             integration=apigateway.LambdaIntegration(vfs_delete_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
@@ -134,8 +113,12 @@ class VfsMethods(Stack):
             )
         )
 
-
         vfs_id = vfs.add_resource("{vfsID}")
+
+
+        vfs_files = vfs_id.add_resource("files")
+        vfs_file_path = vfs_files.add_resource("{filepath+}")
+        
         vfs_upload_lambda = _lambda.Function(
             self, 'vfs-upload',
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -143,25 +126,13 @@ class VfsMethods(Stack):
             code=_lambda.Code.from_asset('lambda/vfs'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
+            vpc_subnets=database_subnets,
             security_groups=[database.sg]
         )
-        vfs_id.add_method(
+        vfs_file_path.add_method(
             "POST",
             integration=apigateway.LambdaIntegration(vfs_upload_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
@@ -174,164 +145,34 @@ class VfsMethods(Stack):
                 resources=['*']
             )
         )
-        
-        vfs_download_lambda = _lambda.Function(
-            self, 'vfs-download',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.download.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.minutes(5),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
+
+        forwarded_uri = "http://" + compute.download_files.load_balancer.load_balancer_dns_name + "/vfs/{vfsID}/files/{filepath}"
+        integration = apigateway.Integration(
+            type=apigateway.IntegrationType.HTTP_PROXY,
+            uri=forwarded_uri,
+            integration_http_method="ANY",
+            options=apigateway.IntegrationOptions(
+                connection_type=apigateway.ConnectionType.VPC_LINK,
+                vpc_link=compute.download_files.vpc_link,
+                request_parameters = {
+                    "integration.request.path.vfsID": "method.request.path.vfsID",
+                    "integration.request.path.filepath": "method.request.path.filepath"
+                }
+            )
         )
-        vfs_id.add_method(
+        vfs_file_path.add_method(
             "GET",
-            integration=apigateway.LambdaIntegration(vfs_download_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            integration=integration,
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(vfs_download_lambda)
-        vfs_download_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:GetObject',
-                    'lambda:*'
-                ],
-                resources=['*']
-            )
-        )
+            request_parameters={
+                "method.request.path.vfsID": True,
+                "method.request.path.filepath": True,
+            },
 
-        vfs_id_list = vfs_id.add_resource("list")
-        vfs_id_list_lambda = _lambda.Function(
-            self, 'vfs-list-directory',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.directory.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
         )
-        vfs_id_list.add_method(
-            "GET",
-            integration=apigateway.LambdaIntegration(vfs_id_list_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-            authorizer = key_authorizer,
-            authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(vfs_id_list_lambda)
-        vfs_id_list_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:ListBucket',
-                    'lambda:InvokeFunction'
-                ],
-                resources=['*']
-            )
-        )
-
-        vfs_id_mkdir = vfs_id.add_resource("mkdir")
-        vfs_id_mkdir_lambda = _lambda.Function(
-            self, 'vfs-mkdir-directory',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.mkdir.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
-        )
-        vfs_id_mkdir.add_method(
-            "POST",
-            integration=apigateway.LambdaIntegration(vfs_id_mkdir_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-            authorizer = key_authorizer,
-            authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(vfs_id_mkdir_lambda)
-        vfs_id_mkdir_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    's3:ListBucket',
-                    'lambda:InvokeFunction'
-                ],
-                resources=['*']
-            )
-        )
-
-        vfs_id_share = vfs_id.add_resource("share")
-        vfs_id_share_lambda = _lambda.Function(
-            self, 'vfs-share',
-            runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.share.handler",
-            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
-            timeout = Duration.seconds(30),
-            vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
-            security_groups=[database.sg]
-        )
-        vfs_id_share.add_method(
-            "POST",
-            integration=apigateway.LambdaIntegration(vfs_id_share_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
-            authorizer = key_authorizer,
-            authorization_type = apigateway.AuthorizationType.CUSTOM,
-        )
-        database.grant_access(vfs_id_share_lambda)
         
-
-        vfs_files = vfs_id.add_resource("files")
-        vfs_file_path = vfs_files.add_resource("{filepath+}")
         vfs_file_delete_lambda = _lambda.Function(
             self, 'vfs-file-delete',
             runtime=_lambda.Runtime.PYTHON_3_8,
@@ -339,25 +180,13 @@ class VfsMethods(Stack):
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
-            vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-                ).subnets
-            ),
+            vpc_subnets=database_subnets,
             security_groups=[database.sg]
         )
         vfs_file_path.add_method(
             "DELETE",
             integration=apigateway.LambdaIntegration(vfs_file_delete_lambda),
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
@@ -372,27 +201,92 @@ class VfsMethods(Stack):
         )
 
 
-        integration = apigateway.Integration(
-            type=apigateway.IntegrationType.HTTP_PROXY,
-            uri="http://" + compute.download_files.load_balancer.load_balancer_dns_name,
-            integration_http_method="ANY",
-            options=apigateway.IntegrationOptions(
-                connection_type=apigateway.ConnectionType.VPC_LINK,
-                vpc_link=compute.download_files.vpc_link
-            )
+        vfs_id_list = vfs_id.add_resource("list")
+        vfs_list_path = vfs_id_list.add_resource("{filepath+}")
+
+        vfs_id_list_lambda = _lambda.Function(
+            self, 'vfs-list-directory',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.directory.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=database_subnets,
+            security_groups=[database.sg]
         )
-        vfs_files.add_method(
+        vfs_list_path.add_method(
             "GET",
-            integration=integration,
-            method_responses=[{
-                'statusCode': '200',
-                'responseParameters': {
-                    'method.response.header.Content-Type': True,
-                },
-                'responseModels': {
-                    'application/json': apigateway.Model.EMPTY_MODEL,
-                },
-            }],
+            integration=apigateway.LambdaIntegration(vfs_id_list_lambda),
+            method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
+        database.grant_access(vfs_id_list_lambda)
+        vfs_id_list_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket',
+                    'lambda:InvokeFunction'
+                ],
+                resources=['*']
+            )
+        )
+
+
+        vfs_id_mkdir = vfs_id.add_resource("mkdir")
+        vfs_mkdir_path = vfs_id_mkdir.add_resource("{filepath+}")
+
+        vfs_id_mkdir_lambda = _lambda.Function(
+            self, 'vfs-mkdir-directory',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.mkdir.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=database_subnets,
+            security_groups=[database.sg]
+        )
+        vfs_mkdir_path.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(vfs_id_mkdir_lambda),
+            method_responses=method_responses,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(vfs_id_mkdir_lambda)
+        vfs_id_mkdir_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket',
+                    'lambda:InvokeFunction'
+                ],
+                resources=['*']
+            )
+        )
+
+
+        vfs_id_share = vfs_id.add_resource("share")
+
+        vfs_id_share_lambda = _lambda.Function(
+            self, 'vfs-share',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.share.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=database_subnets,
+            security_groups=[database.sg]
+        )
+        vfs_id_share.add_method(
+            "POST",
+            integration=apigateway.LambdaIntegration(vfs_id_share_lambda),
+            method_responses=method_responses,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        database.grant_access(vfs_id_share_lambda)
+        
+
+        
+
+        
