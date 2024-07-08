@@ -135,20 +135,21 @@ class VirtualFileSystem:
         if chunk_size < MIN_CHUNK_SIZE_BYTES:
             raise ChunkTooSmallError("chunk size is too small")
 
+        url = f"{self.url}/{remote_file}"
 
         # Step 1: determine parts
         file_size_bytes = os.stat(local_file).st_size
         num_parts = ceil(file_size_bytes / chunk_size)
 
         # Step 2: Get presigned urls
-        upload_id, urls, chunk_size = request_multipart_upload(self.url, remote_file, num_parts, file_size_bytes, chunk_size)
+        upload_id, urls, chunk_size = request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk_size)
         
         # Step 3: Upload part
         uploaded_parts = asyncio.run(upload_parts_in_parallel(local_file, urls, chunk_size, file_size_bytes, timeout=timeout))
 
         # Step 4: Complete upload
         complete = requests.post(
-            self.url, 
+            url, 
             data=json.dumps({
                 "key": remote_file,
                 "complete": "true",
@@ -175,8 +176,10 @@ class VirtualFileSystem:
             path to the destination of the downloaded file
         
         """
+        url = f"{self.url}/{remote_file}"
+
         response = requests.get(
-            self.url, 
+            url, 
             params={"key": remote_file},
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
@@ -191,8 +194,7 @@ class VirtualFileSystem:
 
     def mkdir(self, path):
         response = requests.post(
-            self.url + "/mkdir", 
-            data=json.dumps({"path": path}),
+            self.url + "/mkdir/" + path, 
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
 
@@ -206,12 +208,12 @@ class VirtualFileSystem:
     def list(self, path=None):
 
         params = {}
+        url = self.url + "/list/"
         if path is not None:
-            params['path'] = path
+            url += path
 
         status = requests.get(	
-            self.url + "/list", 
-            params=params,
+            url, 
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
         )	
 
@@ -262,7 +264,7 @@ async def upload_part(local_file, part_number, chunk_size, presigned_url, sessio
         chunk = await file.read(chunk_size)
         async with session.put(presigned_url, data=chunk) as status:
             if not status.ok:
-                raise Exception(f"Error uploading part: {status.status_code} {status.reason} {status.text}")
+                raise Exception(f"Error uploading part: {status}")
             
             return {"ETag": status.headers["ETag"], "PartNumber": part_number}
         

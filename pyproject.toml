@@ -18,14 +18,13 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   'requests',
-  'boto3',
   'aiohttp',
   'aiofiles',
   'tqdm'
 ]
 
 [tool.setuptools.packages.find]
-where = ["et_engine"]
+where = ["."]
 
 [tool.pytest.ini_options]
 pythonpath = [

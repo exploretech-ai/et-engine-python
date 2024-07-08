@@ -163,4 +163,4 @@ cython_debug/
 *.DS_STORE
 
 # Custom Ignores
-et_engine/et-engine-api.code-workspace
+*.code-workspace

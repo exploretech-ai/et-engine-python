@@ -8,6 +8,7 @@ from tqdm import tqdm
 import time
 from .config import API_ENDPOINT
 
+
 class MaxRetriesExceededError(Exception):
     pass
 
@@ -142,7 +143,7 @@ class Tool:
         """  
 
         n_tries = 0
-        while n_tries < 300:
+        while n_tries < 5:
             try:
                 task = asyncio.run(self.execute(**kwargs))
                 print(f'Successfully launched task {task.id}')
@@ -174,11 +175,17 @@ class Tool:
 
     async def execute_one(self, session, **kwargs):
         data = parse_kwargs(**kwargs)
-        async with session.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}) as status:
-            if status.ok:
-                return Task(await status.json())
-            else:
-                return None
+
+        n_tries = 0
+        while n_tries < 100:
+            async with session.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}) as status:
+                if status.ok:
+                    return Task(await status.json())
+                else:
+                    # print("Task failed:", status, n_tries)
+                    n_tries += 1
+        
+        return None
                 
 
     async def parallel(self, kwarg_list):
@@ -203,15 +210,10 @@ class Tool:
             if t is None:
                 n_fails += 1
                 task_list.remove(t)
-        print(f'Successfully launched {(1 - (n_fails) / len(task_list))*100}% of tasks ({n_fails} failed).')
+        print(f'Successfully launched {(1 - (n_fails) / len(kwarg_list))*100}% of tasks ({n_fails} failed).')
         return task_list
 
         
-
-
-
-
-
     def push(self, folder):
         """Update the tool code
         
@@ -232,8 +234,8 @@ class Tool:
         """
 
         # ZIP folder
-        zip_file = f"./{folder}.zip"
-        shutil.make_archive(f"./{folder}", 'zip', folder)
+        zip_file = f"{folder}.zip"
+        shutil.make_archive(folder, 'zip', folder)
 
         response = requests.put(
             self.url, 
