@@ -135,7 +135,7 @@ class VirtualFileSystem:
         if chunk_size < MIN_CHUNK_SIZE_BYTES:
             raise ChunkTooSmallError("chunk size is too small")
 
-        url = f"{self.url}/{remote_file}"
+        url = f"{self.url}/files/{remote_file}"
 
         # Step 1: determine parts
         file_size_bytes = os.stat(local_file).st_size
@@ -176,7 +176,7 @@ class VirtualFileSystem:
             path to the destination of the downloaded file
         
         """
-        url = f"{self.url}/{remote_file}"
+        url = f"{self.url}/files/{remote_file}"
 
         response = requests.get(
             url, 
