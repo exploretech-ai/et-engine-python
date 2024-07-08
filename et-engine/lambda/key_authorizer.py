@@ -153,7 +153,6 @@ def handler(event, context, cursor=cursor, plan='FULL'):
         auth_policy.stage = apiGatewayArnTmp[1]
 
 
-        # >>>>> MODIFY POLICY HERE
         allow = True
 
         # Check if requested method is in plan
@@ -182,7 +181,6 @@ def handler(event, context, cursor=cursor, plan='FULL'):
             auth_policy.denyMethod(verb, resource)
             print('REQUEST DENIED')
         
-        # <<<<<
 
         response = auth_policy.build()
         response['context'] = {

@@ -37,6 +37,14 @@ def handler(event, context):
                 Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
             )
 
+            # https://stackoverflow.com/questions/69830579/aws-ecs-using-boto3-to-update-a-task-definition
+            # 1. Describe the existing task defintion
+            # 2. Drop any unnecessary parameters
+            # 3. Add volumes and mount points
+            # 4. Register new task definition
+            # 5. ECS should automatically update since I have rolling deployment
+
+
         except Exception as e:
             print(f"Error: {e}")
 
