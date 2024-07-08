@@ -1,13 +1,13 @@
 import json
 import boto3
-import db
 
-
+class NotOwnerError(Exception):
+    pass
 
 def handler(event, context):
 
-    connection = db.connect()
-    cursor = connection.cursor()
+    # connection = db.connect()
+    # cursor = connection.cursor()
     try:
         user_id = event['requestContext']['authorizer']['userID']
         vfs_id = event['pathParameters']['vfsID']
@@ -17,25 +17,10 @@ def handler(event, context):
         print(f"on VFS {vfs_id}")
         print(f"by User {user_id}")
 
-        # file = ""
-        # if 'body' in event:
-        #     body = json.loads(event['body'])
-        #     file=body['file']
-        # else:
-        #     raise Exception
+        is_owned = json.loads(event['requestContext']['authorizer']['isOwned'])
+        if not is_owned:
+            raise NotOwnerError
 
-
-        # Check if vfs exists
-        cursor.execute(
-        f"""
-        SELECT vfsID FROM VirtualFilesystems WHERE userID='{user_id}'
-        """
-        )
-
-        available_vfs = [row[0] for row in cursor.fetchall()]
-        if vfs_id not in available_vfs:
-            print(available_vfs, vfs_id)
-            raise NameError(f'VFS {vfs_id} not available')
 
         # If so, call the lambda with the request type: "list"
         lam = boto3.client('lambda')
@@ -77,6 +62,17 @@ def handler(event, context):
             },
             'body': json.dumps(f'Could not access VFS')
         }
+    
+    except NotOwnerError as e:
+        print('ERROR: MUST BE OWNER OF RESOURCE TO DELETE', e)
+        return {
+            'statusCode': 403,
+            'headers': {
+                'Access-Control-Allow-Origin': '*'
+            },
+            'body' : json.dumps("must be owner to delete")
+        }
+    
     except Exception as e:
         print(f'500 Error: {e}')
         return {
@@ -86,9 +82,7 @@ def handler(event, context):
             },
             'body': json.dumps(f'Uncaught Error')
         }
-    finally:
-        cursor.close()
-        connection.close()
+    
 
     
 

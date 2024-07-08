@@ -202,12 +202,39 @@ class VfsMethods(Stack):
 
 
         vfs_id_list = vfs_id.add_resource("list")
+        vfs_id_list_lambda = _lambda.Function(
+            self, 'vfs-list-root-directory',
+            runtime=_lambda.Runtime.PYTHON_3_8,
+            handler= "vfs.list_root_directory.handler",
+            code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
+            timeout = Duration.seconds(30),
+            vpc=database.vpc,
+            vpc_subnets=database_subnets,
+            security_groups=[database.sg]
+        )
+        vfs_id_list.add_method(
+            "GET",
+            integration=apigateway.LambdaIntegration(vfs_id_list_lambda),
+            method_responses=method_responses,
+            authorizer = key_authorizer,
+            authorization_type = apigateway.AuthorizationType.CUSTOM,
+        )
+        vfs_id_list_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:ListBucket',
+                    'lambda:InvokeFunction'
+                ],
+                resources=['*']
+            )
+        )
+
         vfs_list_path = vfs_id_list.add_resource("{filepath+}")
 
-        vfs_id_list_lambda = _lambda.Function(
+        vfs_path_list_lambda = _lambda.Function(
             self, 'vfs-list-directory',
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.directory.handler",
+            handler= "vfs.list_directory.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
             vpc=database.vpc,
@@ -216,13 +243,12 @@ class VfsMethods(Stack):
         )
         vfs_list_path.add_method(
             "GET",
-            integration=apigateway.LambdaIntegration(vfs_id_list_lambda),
+            integration=apigateway.LambdaIntegration(vfs_path_list_lambda),
             method_responses=method_responses,
             authorizer = key_authorizer,
             authorization_type = apigateway.AuthorizationType.CUSTOM,
         )
-        database.grant_access(vfs_id_list_lambda)
-        vfs_id_list_lambda.add_to_role_policy(
+        vfs_path_list_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     's3:ListBucket',

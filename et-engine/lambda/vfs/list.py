@@ -1,8 +1,6 @@
 import db
 import json
 
-# NOTE:
-# Need to figure out how to fetch VFS that have been shared
 
 def handler(event, context):
 

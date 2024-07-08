@@ -294,17 +294,6 @@ def decode_key(cursor, token):
     return user_id
 
 
-# def get_policy_from_user(cursor, user_id):
-#     """
-#     Helper function to decode the API key. This is wrapped into a separate function to facilitate unit test mocking.
-#     For this reason, note that this function is not covered by unit tests.
-#     To implement unit tests, the try/catch statements above need to work on a local machine, which requires a big overhaul of the environment setup.
-#     This is caused by the fact that psycopg2, cryptography, and jwt require binaries to be installed, which vary from machine to machine.
-#     """
-#     cursor.execute("SELECT allow_tools, allow_vfs FROM Policies WHERE userID = %s", (user_id,))
-#     return cursor.fetchall()[0]
-
-
 def findJwkValue(keys, kid):
     for key in keys:
         if key['kid'] == kid:

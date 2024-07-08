@@ -5,12 +5,6 @@ import db
 import uuid
 import lambda_utils
 
-# def get_user(event):
-#     cognito = boto3.client('cognito-idp')
-#     response = cognito.get_user(
-#         AccessToken=event['authorizationToken']
-#     )
-
 def handler(event, context):
     """
     creates a new filesystem under the specified user

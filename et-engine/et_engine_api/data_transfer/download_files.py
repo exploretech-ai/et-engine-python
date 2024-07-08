@@ -1,5 +1,6 @@
 from aws_cdk import (
     Stack,
+    Size,
     aws_ecr_assets as ecr_assets,
     aws_ecs as ecs,
     aws_apigateway as apigateway,
@@ -20,7 +21,7 @@ class DownloadFiles(Stack):
         )   
         download_task_fargate = ecs.FargateTaskDefinition(self, "DownloadTaskDefinition")
         download_task_fargate.add_volume(
-            name="EfsVolume",
+            name="vfs-cafc9439-02ef-4c86-9110-6abff2c05b68",
             efs_volume_configuration=ecs.EfsVolumeConfiguration(
                 file_system_id="fs-09e0c241485f4226e",
                 authorization_config=ecs.AuthorizationConfig(
@@ -30,7 +31,19 @@ class DownloadFiles(Stack):
             )
         )
         download_container = download_task_fargate.add_container("DownloadContainer",
-            image=ecs.ContainerImage.from_docker_image_asset(self.download_image)
+            image=ecs.ContainerImage.from_docker_image_asset(self.download_image),
+            logging=ecs.LogDrivers.aws_logs(
+                stream_prefix="DownloadContainer",
+                mode=ecs.AwsLogDriverMode.NON_BLOCKING,
+                max_buffer_size=Size.mebibytes(25)
+            )
+        )
+        download_container.add_mount_points(
+            ecs.MountPoint(
+                container_path="/mnt/cafc9439-02ef-4c86-9110-6abff2c05b68",
+                read_only=False,
+                source_volume="vfs-cafc9439-02ef-4c86-9110-6abff2c05b68"
+            )
         )
         download_container.add_port_mappings(
             ecs.PortMapping(
