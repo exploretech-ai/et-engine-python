@@ -59,8 +59,8 @@ class MasterDB(Stack):
             'Fargate Service to Postgres database'
         )
         self.fargate_service_security_group.add_ingress_rule(
-            ec2.Port.tcp(80),
             ec2.Peer.any_ipv4(),
+            ec2.Port.tcp(80),
             'Load balancer to fargate service'
         )
         

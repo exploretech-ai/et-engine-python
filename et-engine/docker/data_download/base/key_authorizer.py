@@ -4,56 +4,21 @@ https://stackoverflow.com/questions/49082620/how-to-verify-the-signature-of-a-jw
 https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-use-lambda-authorizer.html
 """
 from werkzeug.wrappers import Request, Response
+
 import json
-import boto3
-from botocore.exceptions import ClientError
 import urllib.request
-import os
 import logging
-import psycopg2
+
+from psycopg2 import sql
+from cryptography.fernet import Fernet 
+import jwt
+from jwt.algorithms import RSAAlgorithm
+
+from . import FERNET_KEY, CONNECTION_POOL
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-
-
-def initialize():
-    database_secret_name = os.environ['DATABASE_SECRET_NAME']
-    database_name = os.environ['DATABASE_NAME']
-    fernet_key_secret_name = os.environ['FERNET_KEY_SECRET_NAME']
-    region_name = os.environ['SECRET_REGION']
-
-    # Create a Secrets Manager client
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
-
-    try:
-        response_database_secret = client.get_secret_value(
-            SecretId=database_secret_name
-        )
-        response_fernet_key_secret = client.get_secret_value(
-            SecretId=fernet_key_secret_name
-        )
-    except ClientError as e:
-        raise e
-    
-    database_secret = json.loads(response_database_secret['SecretString'])
-    fernet_key_secret = json.loads(response_fernet_key_secret['SecretString'])
-    
-    connection = psycopg2.connect(
-        host=database_secret['host'],
-        port=database_secret['port'],
-        user=database_secret['username'],
-        password=database_secret['password'],
-        database=database_name
-    )
-    return fernet_key_secret, connection
-
-
-FERNET_KEY, CONNECTION = initialize()
 
 RESOURCE_TO_TABLE_NAME = {
     'vfs': 'VirtualFileSystems',
@@ -67,26 +32,6 @@ RESOURCE_TO_TABLE_COLUMN = {
     'tasks': 'taskID',
     'keys': 'keyID' # ?????
 }
-
-
-try:
-    # These are wrapped in try/catch for unit testing purposes
-    from cryptography.fernet import Fernet 
-    import jwt
-    from jwt.algorithms import RSAAlgorithm
-except:
-    print('WARNING: could not import cryptography packages')
-
- 
-# try:
-#     # These are wrapped in try/catch for unit testing purposes
-#     import db
-#     from psycopg2 import sql
-#     connection = db.connect()
-#     cursor = connection.cursor()
-# except Exception as e:
-#     print('WARNING: Could not connect to database', e)
-#     cursor = None
 
 
 class AuthMiddleware:
@@ -158,9 +103,11 @@ class AuthMiddleware:
     def authenticate_api_key(self, auth_token):
 
         try:
-            user_id = self.decode_api_key(cursor, auth_token)
+            user_id = self.decode_api_key(auth_token)
+
         except NameError as e:
             return False, Response("User not found", status=401)
+        
         except Exception as e:
             return False, Response("Unknown authentication error in API key", status=401)
         
@@ -174,6 +121,7 @@ class AuthMiddleware:
 
         try:
             user_id = self.decode_bearer_token(bearer_token)
+
         except Exception as e:
             return False, Response("Unknown authentication error in Bearer token", status=401)
         
@@ -198,7 +146,7 @@ class AuthMiddleware:
             return False, authorization_error_response
         
     
-    def decode_api_key(self, cursor, token):
+    def decode_api_key(self, token):
         """
         Helper function to decode the API key. This is wrapped into a separate function to facilitate unit test mocking.
         For this reason, note that this function is not covered by unit tests.
@@ -206,40 +154,49 @@ class AuthMiddleware:
         This is caused by the fact that psycopg2, cryptography, and jwt require binaries to be installed, which vary from machine to machine.
         """
 
-        print("Decrypting key...")
         f = Fernet(self.fernet_key)
         key_id = f.decrypt(token).decode()
 
-        api_key = token
+        connection = CONNECTION_POOL.getconn()
+        cursor = connection.cursor()
 
-        print('Fetching userID associated with key ', api_key)
+        try:
+            
+            cursor.execute("SELECT userID FROM APIKeys WHERE keyID = %s", (key_id,))
+            
+            if cursor.rowcount == 0:
+                raise NameError(f'no user not associated with key {key_id}')      
+            
+            else:
+                user_id = cursor.fetchall()[0][0]   
 
-        cursor.execute("SELECT userID FROM APIKeys WHERE keyID = %s", (key_id,))
-        if cursor.rowcount == 0:
-            raise NameError(f'no user not associated with key {key_id}')      
-        else:
-            user_id = cursor.fetchall()[0][0]   
-            print('User ID found: ', user_id) 
-
-        return user_id
-
+            return user_id
+        
+        except Exception as e:
+            raise e
+        
+        finally:
+            cursor.close()
+            CONNECTION_POOL.putconn(connection)
+             
 
     def decode_bearer_token(self, bearer_token):
+
+        # Load JSON keys
         response = urllib.request.urlopen(self.keys_url)
         keys = json.loads(response.read())['keys']
 
+        # Extract header
         jwt_token = bearer_token.split(' ')[-1]
         header = jwt.get_unverified_header(jwt_token)
         kid = header['kid']
 
-        print('Decoding token...')
+        # Decode remainder of token
         jwk_value = self.find_jwk_value(keys, kid)
         public_key = RSAAlgorithm.from_jwk(json.dumps(jwk_value))
-
         decoded = self.decode_jwt_token(jwt_token, public_key)
-        user_id = decoded['cognito:username']
-        print('User ID found: ', user_id)
 
+        user_id = decoded['cognito:username']
         return user_id
     
 
@@ -250,11 +207,12 @@ class AuthMiddleware:
 
 
     def decode_jwt_token(self, token, public_key):
+        
         try:
             decoded=jwt.decode(token, public_key, algorithms=['RS256'], audience=self.app_client_id)
             return decoded
+        
         except Exception as e:
-            print(e)
             raise
 
 
@@ -263,10 +221,13 @@ def get_user_plan(user_id):
 
 
 def check_plan_access(user_id, resource, verb):
+    """
+    Plans are 'FULL', 'RESULTS', and 'TOOL_USE'
+    * NOTE: only FULL is implemented, but this method could be configured for different plans
+    """
 
     user_plan = get_user_plan(user_id)
 
-    # Check if requested method is in plan
     allow = True
 
     if user_plan == 'RESULTS':
@@ -286,42 +247,60 @@ def check_plan_access(user_id, resource, verb):
 
 def check_engine_resource_access(resource, user_id):
 
+    # Split path up by slashes
     resource_path = resource.strip("/").split("/")
 
-    # Allows any user that's made it this far access to access root
+    # Allows any user that's made it this far access to access base methods
     if not resource_path[0] or len(resource_path) == 1:
         return True, None
 
+    # Extract useful parameters from path
     resource_type = resource_path[0]
     resource_id = resource_path[1]
 
     table_name = RESOURCE_TO_TABLE_NAME[resource_type]
     column_name = RESOURCE_TO_TABLE_COLUMN[resource_type]
 
-    # Check if the user owns this resource
-    cursor.execute(
-        sql.SQL(
-            "SELECT * FROM {table_name} WHERE userID = %s AND {column_name} = %s"
-        ).format(
-            table_name=sql.SQL(table_name), 
-            column_name=sql.SQL(column_name)
-        ), 
-        (user_id, resource_id,)
-    )
-    if cursor.rowcount > 1:
-        return False, Response("Unknown authentication error", status=401)
-    elif cursor.rowcount == 1:
-        return True, None    
+    # Query the databse to authorize
+    connection = CONNECTION_POOL.getconn()
+    cursor = connection.cursor()
+    try:
 
-    # Check if the requested resource was shared with this user
-    cursor.execute(
-        "SELECT * FROM Sharing WHERE granteeID = %s AND resource_type = %s AND resourceID = %s",
-        (user_id, resource_type, resource_id,)
-    )
-    if cursor.rowcount > 1:
-        return False, Response("Unknown authentication error", status=401)
-    elif cursor.rowcount == 1:
-        return True, None
-    else:
-        return False, Response("Access denied", status=403)
+        # Check if the user owns this resource
+        cursor.execute(
+            sql.SQL(
+                "SELECT * FROM {table_name} WHERE userID = %s AND {column_name} = %s"
+            ).format(
+                table_name=sql.SQL(table_name), 
+                column_name=sql.SQL(column_name)
+            ), 
+            (user_id, resource_id,)
+        )
+
+        if cursor.rowcount > 1:
+            return False, Response("Unknown authentication error", status=401)
+        
+        elif cursor.rowcount == 1:
+            return True, None    
+
+        # Check if the requested resource was shared with this user
+        cursor.execute(
+            "SELECT * FROM Sharing WHERE granteeID = %s AND resource_type = %s AND resourceID = %s",
+            (user_id, resource_type, resource_id,)
+        )
+        if cursor.rowcount > 1:
+            return False, Response("Unknown authentication error", status=401)
+        
+        elif cursor.rowcount == 1:
+            return True, None
+        
+        else:
+            return False, Response("Access denied", status=403)
+        
+    except Exception as e:
+        raise e
+    
+    finally:
+        cursor.close()
+        CONNECTION_POOL.putconn(connection)
     
