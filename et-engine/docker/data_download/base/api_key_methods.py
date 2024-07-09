@@ -1,6 +1,9 @@
 from flask import Blueprint, Response, request
 import json
-from . import CONNECTION_POOL
+import uuid
+import datetime
+from cryptography.fernet import Fernet
+from . import CONNECTION_POOL, FERNET_KEY
 
 keys = Blueprint('keys', __name__)
 
@@ -44,10 +47,114 @@ def list_keys():
 
 @keys.route('/keys', methods=['POST'])
 def create_key():
-    pass
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+
+    try:
+        request_data = request.get_data(as_text=True)
+        body = json.loads(request_data)
+
+    except Exception as e:
+        return Response("Error parsing request body", status=400)
+
+    try:
+        key_name = body['name']
+        key_description = body['description']
+    
+    except KeyError as e:
+        return Response("Request missing name or description", status=400)
+    
+    except Exception as e:
+        return Response("Error parsing request body", status=400)
+
+    key_id = str(uuid.uuid4())
+        
+    create_time = datetime.datetime.now()
+    expired_time = create_time + datetime.timedelta(days=30)
+
+    create_time = create_time.strftime('%Y-%m-%d %H:%M:%S')
+    expired_time = expired_time.strftime('%Y-%m-%d %H:%M:%S')
+
+    connection = CONNECTION_POOL.getconn()
+    cursor = connection.cursor()
+    try: 
+        if check_if_key_name_exists(cursor, user_id, key_name):
+            return Response("API Key with same name already exists", status=409)
+        else:
+            insert_new_key(cursor, key_id, user_id, key_name, key_description, create_time, expired_time)
+            connection.commit()
+            return Response(status=200)
+        
+    except:
+        return Response("Unknown error occurred", status=500)
+    
+    finally:
+        cursor.close()
+        CONNECTION_POOL.putconn(connection)
 
 
-@keys.route('/keys', methods=['DELETE'])
-def delete_key():
-    pass
+@keys.route('/keys/<key_id>', methods=['DELETE'])
+def delete_key(key_id):
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
 
+    connection = CONNECTION_POOL.getconn()
+    cursor = connection.cursor()
+    try: 
+        cursor.execute(
+            """
+            DELETE FROM APIKeys WHERE userID=%s AND keyID=%s
+            """,
+            (user_id, key_id)
+        )
+        connection.commit()
+        
+    except:
+        return Response("Unknown error occurred", status=500)
+    
+    finally:
+        cursor.close()
+        CONNECTION_POOL.putconn(connection)
+
+
+def insert_new_key(cursor, key_id, user_id, key_name, key_description, create_time, expired_time):
+    f = Fernet(FERNET_KEY)
+    key_token = f.encrypt(str.encode(key_id)).decode()
+    
+    cursor.execute(
+        """
+        INSERT INTO APIKeys (keyID, userID, name, description, date_created, date_expired)
+        VALUES ('{key_id}', '{user}', '{key_name}', '{key_description}', '{create_time}', '{expired_time}')
+        """,
+        (
+            key_id,
+            user_id,
+            key_name,
+            key_description,
+            create_time,
+            expired_time
+        )
+    )
+
+    return {
+        'name': key_name,
+        'key': key_token,
+        'dateCreated': create_time,
+        'dateExpired': expired_time
+    }
+
+
+def check_if_key_name_exists(cursor, user_id, desired_name):
+    
+    cursor.execute(
+        """
+        SELECT name FROM APIKeys WHERE userID = %s
+        """,
+        (user_id,)
+    )
+
+    queried_keys = cursor.fetchall()
+    available_names = [name[0] for name in queried_keys]
+    
+    return desired_name in available_names
+        

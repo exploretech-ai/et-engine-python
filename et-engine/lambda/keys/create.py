@@ -70,7 +70,7 @@ def handler(event, context):
         }
 
 
-def insert_new_key(connection, key_id, user, key_name, key_description, create_time, expired_time):
+def insert_new_key(cursor, key_id, user, key_name, key_description, create_time, expired_time):
     f = Fernet(fernet_key)
     key_token = f.encrypt(str.encode(key_id)).decode()
     
@@ -80,12 +80,12 @@ def insert_new_key(connection, key_id, user, key_name, key_description, create_t
     """
     print(sql_query)
 
-    cursor = connection.cursor()
+    # cursor = connection.cursor()
     
     cursor.execute(sql_query)
-    connection.commit()
+    # connection.commit()
 
-    cursor.close()
+    # cursor.close()
 
     return {
         'name': key_name,

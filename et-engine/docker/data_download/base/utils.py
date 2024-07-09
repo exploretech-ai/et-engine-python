@@ -10,6 +10,7 @@ def get_tool_stack(tool_id):
     
     return cf_outputs
 
+
 def get_stack_outputs(stack_name):
 
     cf_client = boto3.client('cloudformation')
@@ -17,6 +18,7 @@ def get_stack_outputs(stack_name):
     cf_outputs = cf_response["Stacks"][0]["Outputs"]
     
     return cf_outputs
+
 
 def get_component_from_outputs(outputs, key):
     value = None
@@ -28,6 +30,7 @@ def get_component_from_outputs(outputs, key):
         raise Exception("Key {key} not found")
     
     return value
+
 
 def get_tool_components(tool_id, keys):
     outputs = get_tool_stack(tool_id)
@@ -73,9 +76,6 @@ def empty_bucket(bucket_name):
         bucket = s3.Bucket(bucket_name)
         bucket.objects.all().delete()
 
-        # s3 = boto3.client('s3')
-        # s3.delete_bucket(Bucket=bucket_name)
-
     except ClientError:
         print('Bucket already empty')
         
@@ -101,14 +101,6 @@ def delete_repository(repo_name):
                 repositoryName=repo_name,
                 imageIds=images['imageIds']
             )
-        else:
-            # raise Exception(f'Repository {repo_name} Empty')
-            pass
-
-        # ecr.delete_repository(
-        #     repositoryName=repo_name,
-        #     force=True
-        # )
 
 
 def stack_exists(name, required_status = 'CREATE_COMPLETE'):
@@ -118,6 +110,7 @@ def stack_exists(name, required_status = 'CREATE_COMPLETE'):
     except ClientError:
         return False
     return data['Stacks'][0]['StackStatus'] == required_status
+
 
 def delete_stack(stack_name):
     
@@ -130,6 +123,7 @@ def delete_stack(stack_name):
         s3 = boto3.client('s3')
         # s3.delete_bucket(Bucket=stack_name)
 
+
 def compute_template_parameters(tool_id):
     return [
         {
@@ -137,6 +131,7 @@ def compute_template_parameters(tool_id):
             'ParameterValue': tool_id
         }
     ]
+
 
 def vfs_template_parameters(vfs_id):
     engine_stack_outputs = get_stack_outputs("ETEngine")
@@ -162,3 +157,42 @@ def vfs_template_parameters(vfs_id):
             'ParameterValue': launch_download_from_s3_to_efs_arn
         },
     ]
+
+
+def check_ecr(tool_id):
+    ecr = boto3.client('ecr')
+
+    ready = False
+    image_details = ecr.describe_images(repositoryName="tool-"+tool_id)['imageDetails']
+    if image_details:
+        ready = True
+
+    return ready
+
+
+def check_codebuild(tool_id):
+
+    cb = boto3.client('codebuild')
+    project_builds = cb.list_builds_for_project(
+        projectName="tool-" + tool_id
+    )
+    project_builds_data = cb.batch_get_builds(
+        ids=project_builds['ids']
+    )
+    build_status = project_builds_data['builds'][0]['buildStatus']
+
+    return build_status
+
+
+def get_cluster_parameters():
+    engine_stack_outputs = get_stack_outputs("ETEngine")
+
+    role_arn = get_component_from_outputs(engine_stack_outputs, "?????")
+    cluster_name = get_component_from_outputs(engine_stack_outputs, "?????")
+    capacity_provider_name = get_component_from_outputs(engine_stack_outputs, "?????")
+
+    return {
+        'role_arn': role_arn,
+        'cluster_name': cluster_name,
+        'capacity_provider_name': capacity_provider_name
+    }

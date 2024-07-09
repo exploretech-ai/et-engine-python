@@ -23,7 +23,7 @@ def list_vfs():
     try:
         cursor.execute(
             """
-            SELECT name, vfs_id FROM VirtualFilesystems WHERE userID = %s
+            SELECT name, vfsID FROM VirtualFilesystems WHERE userID = %s
             """,
             (user_id,)
         )
@@ -32,11 +32,11 @@ def list_vfs():
         cursor.execute(
             """
             SELECT 
-                name, vfs_id 
+                name, vfsID 
             FROM
                 VirtualFileSystems
             INNER JOIN Sharing
-                ON VirtualFileSystems.vfs_id = Sharing.resourceID AND Sharing.resource_type = 'vfs' AND Sharing.granteeID = %s
+                ON VirtualFileSystems.vfsID = Sharing.resourceID AND Sharing.resource_type = 'vfs' AND Sharing.granteeID = %s
             """,
             (user_id,)
         )
@@ -88,9 +88,7 @@ def create_vfs():
         vfs_id = str(uuid.uuid4())
         cfn = boto3.client('cloudformation')
         parameters = utils.vfs_template_parameters(vfs_id)
-        print("VFS ID:", vfs_id)
-        print("Stack Parameters:", parameters)
-        
+
         cfn.create_stack(
             StackName='vfs-' + vfs_id,
             TemplateURL='https://et-engine-templates.s3.us-east-2.amazonaws.com/efs-basic.yaml',
@@ -100,7 +98,7 @@ def create_vfs():
 
         cursor.execute(
             """
-            INSERT INTO VirtualFileSystems (vfs_id, userID, name)
+            INSERT INTO VirtualFileSystems (vfsID, userID, name)
             VALUES (%s, %s, %s)
             """,
             (vfs_id, user_id, vfs_name,)
@@ -133,7 +131,7 @@ def delete_vfs(vfs_id):
         
         cursor.execute(
             """
-            DELETE FROM VirtualFilesystems WHERE userID = %s AND vfs_id = %s
+            DELETE FROM VirtualFilesystems WHERE userID = %s AND vfsID = %s
             """,
             (user_id, vfs_id)
         )
@@ -270,7 +268,6 @@ def upload_file(vfs_id, filepath):
             return Response("Unknown error while creating multipart upload", status=500)
         
     else:
-        print('Creating single part upload')
         try:
             presigned_post = s3.generate_presigned_post(
                 Bucket=bucket_name, 
@@ -402,17 +399,17 @@ def share_filesystem(vfs_id):
     except Exception as e:
         return Response("Error parsing request body", status=400)
     
+    if 'grantee' in body:
+        grantee_id = body['grantee']
+    else:
+        return Response('Request body has no grantee', status=400)
+
     connection = CONNECTION_POOL.getconn()
     cursor = connection.cursor()
     try:       
-        if 'grantee' in body:
-            grantee_id = body['grantee']
-        else:
-            return Response('Request body has no grantee', status=400)
-
+        
         # throws an error if poorly-formed UUID
         uuid.UUID(grantee_id, version=4)
-        print('Grantee ID formatted properly')
         
         accessID = str(uuid.uuid4())
         date_created = datetime.datetime.now()
@@ -421,12 +418,13 @@ def share_filesystem(vfs_id):
         if user_id == grantee_id:
             return Response("Cannot share with yourself", status=403)
         
-        query = "SELECT * FROM Sharing WHERE ownerID = %s AND granteeID = %s AND resource_type = %s AND resourceId = %s"
-        cursor.execute(query, (user_id, grantee_id, "vfs", vfs_id))
+        cursor.execute(
+            "SELECT * FROM Sharing WHERE ownerID = %s AND granteeID = %s AND resource_type = %s AND resourceId = %s",
+            (user_id, grantee_id, "vfs", vfs_id)
+        )
         if cursor.rowcount > 0:
             return Response("Already shared with this user", status=409)
         
-
         cursor.execute(
             """
             INSERT INTO Sharing (accessID, ownerID, granteeID, resource_type, resourceID, date_granted)
@@ -446,7 +444,6 @@ def share_filesystem(vfs_id):
         return Response(status=200)
 
     except ValueError as e:
-        print('INVALID GRANTEE ID: must be uuid4', e)
         return Response("Invalid grantee", status=400)
         
     except Exception as e:

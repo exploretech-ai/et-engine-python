@@ -46,7 +46,7 @@ def handler(event, context):
         if ownerID == granteeID:
             raise SelfShareError
         
-        query = "SELECT * FROM Sharing WHERE ownerID = %s AND granteeID = %s AND resource_type = %s AND resourceId = %s"
+        query = "SELECT * FROM Sharing WHERE ownerID = %s AND granteeID = %s AND resource_type = %s AND resourceID = %s"
         cursor.execute(query, (ownerID, granteeID, resource_type, resourceID,))
         if cursor.rowcount > 0:
             raise AlreadyExistsError
