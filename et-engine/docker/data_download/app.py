@@ -1,47 +1,28 @@
-from flask import Flask, Response
-import logging
+from flask import Flask
 import os
 
-from base import CONNECTION_POOL, EFS_MOUNT_POINT
-from base.key_authorizer import AuthMiddleware
+from base.key_authorizer import Authorization
+
+from base.vfs_methods import vfs
+from base.tool_methods import tools
+from base.task_methods import tasks
+from base.api_key_methods import keys
 
 
 app = Flask(__name__)
-app.wsgi_app = AuthMiddleware(app.wsgi_app)
+app.wsgi_app = Authorization(app.wsgi_app)
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-
-@app.route('/')
-def hello():
-    return "hello, world!"
+app.register_blueprint(vfs)
+app.register_blueprint(tools)
+app.register_blueprint(tasks)
+app.register_blueprint(keys)
 
 
-@app.route('/vfs/<vfsID>/files/<path:filepath>', methods=['GET'])
-def download_file(vfsID, filepath):
+@app.after_request
+def add_cors_header(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
-    logger.info(f"VFS: {vfsID}, File: {filepath}")
-
-    full_file_path = os.path.join(EFS_MOUNT_POINT, vfsID, filepath)
-
-    if "/../" in full_file_path:
-        logger.info(f"** ALERT: POTENTIALLY MALICIOUS PATH **")
-        return "Invalid path", 403
-    
-    if not os.path.exists(full_file_path):
-        return f"File '{filepath}' does not exist", 404
-
-    def stream_file(file_to_stream):
-        with open(file_to_stream, "rb") as file_object:
-            while True:
-                chunk = file_object.read(8192)
-                if not chunk:
-                    break
-                yield chunk
-            
-    return Response(stream_file(full_file_path))
-    
 
 if __name__ == '__main__':
 

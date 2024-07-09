@@ -10,6 +10,7 @@ from constructs import Construct
 
 from .data_transfer.download_files import DownloadFiles
 from .data_transfer.upload_files import UploadFiles
+from .web_server import WebServer
 
 class ComputeCluster(Stack):
     def __init__(self, scope: Construct, construct_id: str, database, config, **kwargs) -> None:
@@ -104,4 +105,5 @@ class ComputeCluster(Stack):
         )
 
         self.upload_files = UploadFiles(self, "UploadFilesInfra")
-        self.download_files = DownloadFiles(self, f"DownloadFilesInfra{env}", self.vpc, self.ecs_cluster, database)
+        # self.download_files = DownloadFiles(self, f"DownloadFilesInfra{env}", self.vpc, self.ecs_cluster, database)
+        self.web_server = WebServer(self, f"ApiWebServer{env}", self.vpc, self.ecs_cluster, database)

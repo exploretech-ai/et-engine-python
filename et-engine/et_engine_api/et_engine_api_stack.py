@@ -23,7 +23,7 @@ class ETEngine(Stack):
         user_pool = UserPool(self, "UserPool")
         templates = Templates(self, "Templates", database)
         compute = ComputeCluster(self, f"ComputeCluster", database, config)
-        api = API(self, f"API{env}", database, user_pool.user_pool, compute, config)      
+        # api = API(self, f"API{env}", database, user_pool.user_pool, compute, config)      
         
         # Compute cluster outputs
         CfnOutput(self, "ComputeClusterVpcID", value=compute.vpc.vpc_id)
@@ -41,6 +41,8 @@ class ETEngine(Stack):
         CfnOutput(self, "APIClientID", value=user_pool.api_client.user_pool_client_id)
         CfnOutput(self, "WebAppClientID", value=user_pool.webapp_client.user_pool_client_id)
         
+        # 
+        CfnOutput(self, "WebServerDns", value=compute.web_server.load_balancer.load_balancer_dns_name)
         
 
         

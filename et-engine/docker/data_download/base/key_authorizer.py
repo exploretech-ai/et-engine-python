@@ -7,17 +7,14 @@ from werkzeug.wrappers import Request, Response
 
 import json
 import urllib.request
-import logging
+import uuid
 
 from psycopg2 import sql
 from cryptography.fernet import Fernet 
 import jwt
 from jwt.algorithms import RSAAlgorithm
 
-from . import FERNET_KEY, CONNECTION_POOL
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+from . import FERNET_KEY, CONNECTION_POOL, LOGGER
 
 
 RESOURCE_TO_TABLE_NAME = {
@@ -34,7 +31,7 @@ RESOURCE_TO_TABLE_COLUMN = {
 }
 
 
-class AuthMiddleware:
+class Authorization:
 
 
     region = 'us-east-2'
@@ -52,8 +49,12 @@ class AuthMiddleware:
     def __call__(self, environ, start_response):
 
         request = Request(environ)
+
         resource = request.path
         verb = request.method
+        request_id = str(uuid.uuid4())
+
+        LOGGER.info(f"[{request_id}] INCOMING REQUEST: {verb} {resource} from {request.remote_addr}")
 
         # Request can use either Bearer token (OAuth2) or Authorization token (API Key)
         auth_header = request.headers.get('Authorization')
@@ -62,21 +63,32 @@ class AuthMiddleware:
         # Check headers
         valid_headers, invalid_header_response = self.validate_headers(auth_header, bearer_header)
         if not valid_headers:
-            return invalid_header_response(environ, start_response)
+            return self.deny(request_id, invalid_header_response, environ, start_response)
         
         # Authenticate user
-        authenticated, authentication_error_response, user_id = self.authenticate(auth_header, bearer_header)
+        authenticated, authentication_error_response, context = self.authenticate(auth_header, bearer_header)
         if not authenticated:
-            return authentication_error_response(environ, start_response)
-        
+            return self.deny(request_id, authentication_error_response, environ, start_response)
+
         # Check if user has access to resources
-        authorized, unauthorized_response = self.authorize(user_id, resource, verb)
+        authorized, unauthorized_response = self.authorize(context, resource, verb)
         if authorized:
-            return self.app(environ, start_response)
+            environ["context"] = json.dumps(context)
+            return self.allow(request_id, environ, start_response)
         else:
-            return unauthorized_response(environ, start_response)
+            return self.deny(request_id, unauthorized_response, environ, start_response)
         
-        
+    
+    def deny(self, request_id, denial_response, environ, start_response):
+        LOGGER.info(f"[{request_id}] DENIED")
+        return denial_response(environ, start_response)
+    
+
+    def allow(self, request_id, environ, start_response):
+        LOGGER.info(f"[{request_id}] ALLOWED")
+        return self.app(environ, start_response)
+    
+
     def validate_headers(self, auth_token, bearer_token):
         
         if auth_token is not None and bearer_token is not None:
@@ -106,32 +118,38 @@ class AuthMiddleware:
             user_id = self.decode_api_key(auth_token)
 
         except NameError as e:
-            return False, Response("User not found", status=401)
+            return False, Response("User not found", status=401), None
         
         except Exception as e:
-            return False, Response("Unknown authentication error in API key", status=401)
+            return False, Response("Unknown authentication error in API key", status=401), None
         
-        source = "api"
-        api_key = auth_token
+        context = {
+            'user_id': user_id,
+            'source': "api"
+        }
 
-        return True, None, user_id
+        return True, None, context
 
 
     def authenticate_bearer(self, bearer_token):
 
         try:
-            user_id = self.decode_bearer_token(bearer_token)
+            user_id = self.decode_bearer_token(bearer_token), None
 
         except Exception as e:
-            return False, Response("Unknown authentication error in Bearer token", status=401)
+            return False, Response("Unknown authentication error in Bearer token", status=401), None
         
-        source = "web"
-        api_key = None
+        context = {
+            'user_id': user_id,
+            'source': "web"
+        }
 
-        return True, None, user_id
+        return True, None, context
     
 
-    def authorize(self, user_id, resource, verb):
+    def authorize(self, context, resource, verb):
+
+        user_id = context['user_id']
 
         # Check user's plan against requested method
         plan_allows_access = check_plan_access(user_id, resource, verb)
@@ -139,7 +157,7 @@ class AuthMiddleware:
             return False, Response("Access denied", status=403)
 
         # Check user's access to a specific resource
-        user_can_access_resource, authorization_error_response = check_engine_resource_access(resource, user_id)        
+        user_can_access_resource, authorization_error_response = check_engine_resource_access(resource, context)        
         if user_can_access_resource:
             return True, None
         else:
@@ -245,7 +263,9 @@ def check_plan_access(user_id, resource, verb):
     return allow
  
 
-def check_engine_resource_access(resource, user_id):
+def check_engine_resource_access(resource, context):
+
+    user_id = context['user_id']
 
     # Split path up by slashes
     resource_path = resource.strip("/").split("/")
@@ -258,8 +278,12 @@ def check_engine_resource_access(resource, user_id):
     resource_type = resource_path[0]
     resource_id = resource_path[1]
 
-    table_name = RESOURCE_TO_TABLE_NAME[resource_type]
-    column_name = RESOURCE_TO_TABLE_COLUMN[resource_type]
+    try:
+        table_name = RESOURCE_TO_TABLE_NAME[resource_type]
+        column_name = RESOURCE_TO_TABLE_COLUMN[resource_type]
+
+    except KeyError as e:
+        return False, Response(f"Resource '{resource_type}' does not exist", status=401)
 
     # Query the databse to authorize
     connection = CONNECTION_POOL.getconn()
@@ -281,6 +305,7 @@ def check_engine_resource_access(resource, user_id):
             return False, Response("Unknown authentication error", status=401)
         
         elif cursor.rowcount == 1:
+            context['is_owned'] = True
             return True, None    
 
         # Check if the requested resource was shared with this user
@@ -292,6 +317,7 @@ def check_engine_resource_access(resource, user_id):
             return False, Response("Unknown authentication error", status=401)
         
         elif cursor.rowcount == 1:
+            context['is_owned'] = False
             return True, None
         
         else:

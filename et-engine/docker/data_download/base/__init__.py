@@ -4,6 +4,10 @@ import boto3
 from botocore.exceptions import ClientError
 import psycopg2.pool
 
+import logging
+LOGGER = logging.getLogger()
+LOGGER.setLevel(logging.INFO)
+
 
 def initialize():
     # See here for connection pool architecture
@@ -39,7 +43,7 @@ def initialize():
         password=database_secret['password'],
         database=database_name
     )
-
+    LOGGER.info("INITIALIZATION COMLPETE")
     return fernet_key_secret, connection
 
 
