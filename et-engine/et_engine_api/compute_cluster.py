@@ -12,16 +12,17 @@ from .data_transfer.download_files import DownloadFiles
 from .data_transfer.upload_files import UploadFiles
 
 class ComputeCluster(Stack):
-    def __init__(self, scope: Construct, construct_id: str, config, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, database, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         env = config['env']
 
-        self.vpc = ec2.Vpc(
-            self,
-            "ClusterVpc",
-            vpc_name='ClusterVpc'
-        )
+        # self.vpc = ec2.Vpc(
+        #     self,
+        #     "ClusterVpc",
+        #     vpc_name='ClusterVpc'
+        # )
+        self.vpc = database.vpc
         self.ecs_cluster = ecs.Cluster(
             self, 
             "Cluster",
@@ -58,7 +59,7 @@ class ComputeCluster(Stack):
         self.auto_scaling_group.protect_new_instances_from_scale_in()
         self.capacity_provider = ecs.AsgCapacityProvider(self, "AsgCapacityProvider",
             auto_scaling_group=self.auto_scaling_group,
-            capacity_provider_name="AsgCapacityProvider"
+            capacity_provider_name="CpuCapacityProvider"
         )
         self.ecs_cluster.add_asg_capacity_provider(self.capacity_provider)
         self.ecs_cluster.add_default_capacity_provider_strategy([
@@ -103,4 +104,4 @@ class ComputeCluster(Stack):
         )
 
         self.upload_files = UploadFiles(self, "UploadFilesInfra")
-        self.download_files = DownloadFiles(self, f"DownloadFilesInfra{env}", self.vpc, self.ecs_cluster)
+        self.download_files = DownloadFiles(self, f"DownloadFilesInfra{env}", self.vpc, self.ecs_cluster, database)

@@ -6,12 +6,13 @@ from aws_cdk import (
     aws_apigateway as apigateway,
     aws_ec2 as ec2,
     aws_elasticloadbalancingv2 as elbv2,
+    aws_iam as iam,
 )
 from constructs import Construct
 
 # https://github.com/aws-samples/aws-cdk-examples/blob/main/typescript/ecs/ecs-service-with-advanced-alb-config/index.ts
 class DownloadFiles(Stack):
-    def __init__(self, scope: Construct, construct_id: str, vpc, ecs_cluster, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, vpc, ecs_cluster, database, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         
@@ -20,6 +21,17 @@ class DownloadFiles(Stack):
             platform=ecr_assets.Platform.LINUX_AMD64
         )   
         download_task_fargate = ecs.FargateTaskDefinition(self, "DownloadTaskDefinition")
+        download_task_fargate.add_to_task_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'secretsmanager:GetSecretValue',
+                ],
+                resources=[
+                    "arn:aws:secretsmanager:us-east-2:734818840861:secret:api_key_fernet_key-bjdEbo",
+                    "arn:aws:secretsmanager:us-east-2:734818840861:secret:RDSSecretA2B52E34-oFnaTiUxNkh4-Wu8arW"
+                ]
+            )
+        )
         download_task_fargate.add_volume(
             name="vfs-cafc9439-02ef-4c86-9110-6abff2c05b68",
             efs_volume_configuration=ecs.EfsVolumeConfiguration(
@@ -36,7 +48,13 @@ class DownloadFiles(Stack):
                 stream_prefix="DownloadContainer",
                 mode=ecs.AwsLogDriverMode.NON_BLOCKING,
                 max_buffer_size=Size.mebibytes(25)
-            )
+            ),
+            environment={
+                'DATABASE_SECRET_NAME': "RDSSecretA2B52E34-oFnaTiUxNkh4",
+                'DATABASE_NAME': "EngineMasterDB",
+                'FERNET_KEY_SECRET_NAME': "api_key_fernet_key",
+                'SECRET_REGION': "us-east-2",
+            }
         )
         download_container.add_mount_points(
             ecs.MountPoint(
@@ -51,11 +69,16 @@ class DownloadFiles(Stack):
                 host_port=80
             )
         )
-        security_group = ec2.SecurityGroup(self, "LoadBalancerSecurityGroup", vpc=vpc)
-        security_group.add_ingress_rule(
-            connection=ec2.Port.tcp(80),
-            peer=ec2.Peer.any_ipv4()
-        )
+        # security_group = ec2.SecurityGroup(self, "LoadBalancerSecurityGroup", vpc=vpc)
+        # security_group.add_ingress_rule(
+        #     connection=ec2.Port.tcp(80),
+        #     peer=ec2.Peer.any_ipv4()
+        # )
+        # database.db_security_group.add_ingress_rule(
+        #     security_group,
+        #     ec2.Port.tcp(5432),
+        #     'Fargate Service to Postgres database'
+        # )
         download_service = ecs.FargateService(self, "DownloadService",
             cluster=ecs_cluster,
             task_definition=download_task_fargate ,
@@ -71,7 +94,7 @@ class DownloadFiles(Stack):
                     base=1       
                 )
             ],
-            security_groups=[security_group]
+            security_groups=[database.fargate_service_security_group]
         )
         self.load_balancer = elbv2.NetworkLoadBalancer(self, "LoadBalancer", 
             vpc=vpc,

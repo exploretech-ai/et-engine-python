@@ -12,7 +12,7 @@ class MasterDB(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        vpc = ec2.Vpc(
+        self.vpc = ec2.Vpc(
             self, 
             "RDSVPC",
             max_azs=2,
@@ -33,19 +33,38 @@ class MasterDB(Stack):
         db_security_group = ec2.SecurityGroup(
             self,
             'DBSecurityGroup',
-            vpc=vpc
+            vpc=self.vpc
         )
+        
         lambda_security_group = ec2.SecurityGroup(
             self,
             'RDSLambdaSecurityGroup',
-            vpc=vpc
+            vpc=self.vpc
+        )       
+        self.fargate_service_security_group = ec2.SecurityGroup(
+            # For ECS web server
+            self, 
+            "LoadBalancerSecurityGroup", 
+            vpc=self.vpc
         )
+
         db_security_group.add_ingress_rule(
             lambda_security_group,
             ec2.Port.tcp(5432),
             'Lambda to Postgres database'
         )
+        db_security_group.add_ingress_rule(
+            self.fargate_service_security_group,
+            ec2.Port.tcp(5432),
+            'Fargate Service to Postgres database'
+        )
+        self.fargate_service_security_group.add_ingress_rule(
+            ec2.Port.tcp(80),
+            ec2.Peer.any_ipv4(),
+            'Load balancer to fargate service'
+        )
         
+
         db_secret = rds.DatabaseSecret(
             self,
             "RDSSecret",
@@ -57,10 +76,10 @@ class MasterDB(Stack):
             engine=rds.DatabaseInstanceEngine.POSTGRES,
             database_name="EngineMasterDB",
             credentials=rds.Credentials.from_secret(db_secret),
-            vpc=vpc,
+            vpc=self.vpc,
             security_groups=[db_security_group],
             vpc_subnets=ec2.SubnetSelection(
-                subnets=vpc.select_subnets(
+                subnets=self.vpc.select_subnets(
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
@@ -80,9 +99,9 @@ class MasterDB(Stack):
                 "SECRET_ARN": db_secret.secret_arn
             },
             timeout=cdk.Duration.minutes(5),
-            vpc=vpc,
+            vpc=self.vpc,
             vpc_subnets=ec2.SubnetSelection(
-                subnets=vpc.select_subnets(
+                subnets=self.vpc.select_subnets(
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
@@ -96,7 +115,7 @@ class MasterDB(Stack):
 
         self.database = database
         self.db_secret = db_secret
-        self.vpc = vpc
+        self.vpc = self.vpc
         self.sg = lambda_security_group
 
 

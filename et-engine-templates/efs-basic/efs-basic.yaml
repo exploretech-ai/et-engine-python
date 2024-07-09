@@ -58,26 +58,26 @@ Resources:
     DeletionPolicy: Retain
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/Resource
-  vfsEfsMountTargetPrivateSubnet12A54EF59:
+  vfsEfsMountTargetprivatelambdaSubnet18F7F36FE:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId:
         Ref: vfs0804DAB7
       SecurityGroups:
         - Ref: sgID
-      SubnetId: subnet-02977e5fc737bc049
+      SubnetId: subnet-036259cae17b5ea9a
     Metadata:
-      aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet1
-  vfsEfsMountTargetPrivateSubnet2E813BC5E:
+      aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-privatelambdaSubnet1
+  vfsEfsMountTargetprivatelambdaSubnet2A70D7992:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId:
         Ref: vfs0804DAB7
       SecurityGroups:
         - Ref: sgID
-      SubnetId: subnet-08780bdffbf1f8f96
+      SubnetId: subnet-00ca631f17163f077
     Metadata:
-      aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-PrivateSubnet2
+      aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-privatelambdaSubnet2
   vfsvfsAccessPointA97EC7A7:
     Type: AWS::EFS::AccessPoint
     Properties:
@@ -119,8 +119,8 @@ Resources:
               - Ref: AWS::Partition
               - :iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
     DependsOn:
-      - vfsEfsMountTargetPrivateSubnet12A54EF59
-      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+      - vfsEfsMountTargetprivatelambdaSubnet18F7F36FE
+      - vfsEfsMountTargetprivatelambdaSubnet2A70D7992
     Metadata:
       aws:cdk:path: EfsBasicStack/VFSLambda/ServiceRole/Resource
   VFSLambdaServiceRoleDefaultPolicyDCB78257:
@@ -162,8 +162,8 @@ Resources:
       Roles:
         - Ref: VFSLambdaServiceRole600D85E0
     DependsOn:
-      - vfsEfsMountTargetPrivateSubnet12A54EF59
-      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+      - vfsEfsMountTargetprivatelambdaSubnet18F7F36FE
+      - vfsEfsMountTargetprivatelambdaSubnet2A70D7992
     Metadata:
       aws:cdk:path: EfsBasicStack/VFSLambda/ServiceRole/DefaultPolicy/Resource
   VFSLambdaSecurityGroupD84993EA:
@@ -174,10 +174,10 @@ Resources:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
-      VpcId: vpc-0015b52fa62629c3b
+      VpcId: vpc-0a318a7640a39b81d
     DependsOn:
-      - vfsEfsMountTargetPrivateSubnet12A54EF59
-      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+      - vfsEfsMountTargetprivatelambdaSubnet18F7F36FE
+      - vfsEfsMountTargetprivatelambdaSubnet2A70D7992
     Metadata:
       aws:cdk:path: EfsBasicStack/VFSLambda/SecurityGroup/Resource
   VFSLambda5FAABBC2:
@@ -423,12 +423,12 @@ Resources:
               - VFSLambdaSecurityGroupD84993EA
               - GroupId
         SubnetIds:
-          - subnet-02977e5fc737bc049
-          - subnet-08780bdffbf1f8f96
+          - subnet-036259cae17b5ea9a
+          - subnet-00ca631f17163f077
     DependsOn:
       - ClusterSG2fromEfsBasicStackVFSLambdaSecurityGroup907B6CFC2049386C227F
-      - vfsEfsMountTargetPrivateSubnet12A54EF59
-      - vfsEfsMountTargetPrivateSubnet2E813BC5E
+      - vfsEfsMountTargetprivatelambdaSubnet18F7F36FE
+      - vfsEfsMountTargetprivatelambdaSubnet2A70D7992
       - VFSLambdaServiceRoleDefaultPolicyDCB78257
       - VFSLambdaServiceRole600D85E0
     Metadata:

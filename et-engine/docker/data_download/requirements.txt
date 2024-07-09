@@ -1,1 +1,7 @@
 Flask
+pyjwt
+cryptography
+psycopg2-binary
+Werkzeug
+boto3
+waitress

@@ -22,9 +22,8 @@ class ETEngine(Stack):
         database = MasterDB(self, "MasterDB")
         user_pool = UserPool(self, "UserPool")
         templates = Templates(self, "Templates", database)
-        compute = ComputeCluster(self, f"ComputeCluster2", config)
+        compute = ComputeCluster(self, f"ComputeCluster", database, config)
         api = API(self, f"API{env}", database, user_pool.user_pool, compute, config)      
-        # data_transfer_utils = DataTransfer(self, f"DataTransfer{env}")#, compute, api)
         
         # Compute cluster outputs
         CfnOutput(self, "ComputeClusterVpcID", value=compute.vpc.vpc_id)

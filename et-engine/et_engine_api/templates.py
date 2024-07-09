@@ -106,7 +106,8 @@ class VfsTemplate(Stack):
                     'efs:*',
                     'ssm:*',
                     'iam:*',
-                    'ec2:*'
+                    'ec2:*',
+                    'elasticfilesystem:DeleteMountTarget'
                 ],
                 resources=['*']
             )
