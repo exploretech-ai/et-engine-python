@@ -10,7 +10,7 @@ from aws_cdk import (
 from constructs import Construct
 
 class ToolTemplate(Stack):
-    def __init__(self, scope: Construct, construct_id: str, database, template_bucket, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, database, network, template_bucket, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         tools_update_lambda = _lambda.Function(
@@ -20,13 +20,13 @@ class ToolTemplate(Stack):
             handler= "tools.update.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
-            vpc=database.vpc,
+            vpc=network.vpc,
             vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
+                subnets=network.vpc.select_subnets(
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
-            security_groups=[database.sg]
+            security_groups=[network.database_lambda_security_group]
         )
         database.grant_access(tools_update_lambda)
         tools_update_lambda.add_to_role_policy(
@@ -78,7 +78,7 @@ class ToolTemplate(Stack):
 
 
 class VfsTemplate(Stack):
-    def __init__(self, scope: Construct, construct_id: str, database, template_bucket, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, database, network, template_bucket, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
         vfs_update_lambda = _lambda.Function(
@@ -88,13 +88,13 @@ class VfsTemplate(Stack):
             handler= "vfs.update.handler",
             code=_lambda.Code.from_asset('lambda'),  # Assuming your Lambda code is in a folder named 'lambda'
             timeout = Duration.seconds(30),
-            vpc=database.vpc,
+            vpc=network.vpc,
             vpc_subnets=ec2.SubnetSelection(
-                subnets=database.vpc.select_subnets(
+                subnets=network.vpc.select_subnets(
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
-            security_groups=[database.sg]
+            security_groups=[network.database_lambda_security_group]
         )
         database.grant_access(vfs_update_lambda)
         vfs_update_lambda.add_to_role_policy(
@@ -119,9 +119,9 @@ class VfsTemplate(Stack):
         )
 
 class Templates(Stack):
-    def __init__(self, scope: Construct, construct_id: str, database, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, network, database, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         template_bucket = s3.Bucket(self, "Templates", bucket_name="et-engine-templates")
-        ToolTemplate(self, "ToolTemplate", database, template_bucket)
-        VfsTemplate(self, "VfsTemplate", database, template_bucket)
+        ToolTemplate(self, "ToolTemplate", database, network, template_bucket)
+        VfsTemplate(self, "VfsTemplate", database, network, template_bucket)

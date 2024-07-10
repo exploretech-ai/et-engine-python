@@ -38,7 +38,7 @@ class EfsBasicStack(Stack):
             "launchDownloadFromS3ToEfsArn"
         ).value_as_string
 
-        vpc_id = "vpc-0a318a7640a39b81d"
+        vpc_id = "vpc-0412712c63ab21820"
 
         launch_download_from_s3_to_efs = _lambda.Function.from_function_arn(self, "S3toEfs", launch_download_from_s3_to_efs_arn)
 

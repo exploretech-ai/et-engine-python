@@ -1,12 +1,13 @@
 import json
 import psycopg2
 import boto3
+import os
 from botocore.exceptions import ClientError
 
 
 def get_secret():
 
-    secret_name = "RDSSecretA2B52E34-oFnaTiUxNkh4"
+    secret_name = os.environ['SECRET_NAME']
     region_name = "us-east-2"
 
     # Create a Secrets Manager client
@@ -39,5 +40,5 @@ def connect():
         port=db_secret['port'],
         user=db_secret['username'],
         password=db_secret['password'],
-        database="EngineMasterDB"
+        database=os.environ['DATABASE_SHORT_NAME']
     )
