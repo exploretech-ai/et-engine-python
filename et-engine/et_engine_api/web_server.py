@@ -5,16 +5,29 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_elasticloadbalancingv2 as elbv2,
     aws_iam as iam,
-    aws_ecs_patterns as ecs_patterns,
-    aws_elasticloadbalancingv2_targets as elbv2_targets,
-    aws_ec2 as ec2
+    aws_ec2 as ec2,
+    aws_certificatemanager as ctf,
+    aws_route53 as route53,
+    aws_route53_targets as r53t,
 )
 from constructs import Construct
 
 # https://github.com/aws-samples/aws-cdk-examples/blob/main/typescript/ecs/ecs-service-with-advanced-alb-config/index.ts
 class WebServer(Stack):
-    def __init__(self, scope: Construct, construct_id: str, network, ecs_cluster, database, **kwargs) -> None:
-        super().__init__(scope, construct_id, **kwargs)      
+    def __init__(self, scope: Construct, construct_id: str, network, ecs_cluster, database, config, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)  
+
+        env = config['env']
+        subdomain = config['subdomain']  
+
+        zone = route53.HostedZone.from_hosted_zone_attributes(self, "zone", 
+            hosted_zone_id="Z07247471MNWCOVOV0VX5",
+            zone_name="exploretech.ai"
+        )
+        certificate = ctf.Certificate(self, "apiCert", 
+            domain_name=f"{subdomain}.exploretech.ai",
+            validation=ctf.CertificateValidation.from_dns(zone)
+        )  
         
         web_server_image = ecr_assets.DockerImageAsset(self, "WebServerImage", 
             directory="docker/api",
@@ -105,17 +118,23 @@ class WebServer(Stack):
         self.load_balancer = elbv2.ApplicationLoadBalancer(self, "WebServerLoadBalancer",
             vpc=network.vpc,
             internet_facing=True
-        )
+        )        
         listener = self.load_balancer.add_listener("WebServerLoadBalancerListener",
-            port=80                                           
+            port=443,
+            certificates=[certificate]                                          
         )
-
         listener.add_targets("WebServerLoadBalancerListenerTarget",
             port=80,
             targets=[load_balancer_target],
             health_check=elbv2.HealthCheck(
                 enabled=True,
             )
+        )
+
+        route53.ARecord(self, "apiDNS",
+            zone=zone,
+            record_name=subdomain,
+            target=route53.RecordTarget.from_alias(r53t.LoadBalancerTarget(self.load_balancer))
         )
 
 

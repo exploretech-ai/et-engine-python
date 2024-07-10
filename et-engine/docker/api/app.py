@@ -1,7 +1,7 @@
-from flask import Flask
+from flask import Flask, Response
 import os
 
-from base.key_authorizer import Authorization
+from base.authorizer import Authorization
 
 from base.vfs_methods import vfs
 from base.tool_methods import tools
@@ -22,6 +22,11 @@ app.register_blueprint(keys)
 def add_cors_header(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
+
+
+@app.route("/")
+def health_check():
+    return Response(status=200)
 
 
 if __name__ == '__main__':

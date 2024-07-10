@@ -23,7 +23,7 @@ class ETEngine(Stack):
         user_pool = UserPool(self, "UserPool")
         templates = Templates(self, "Templates", network, database)
         compute = ComputeCluster(self, f"ComputeCluster", network, config)
-        web_server = WebServer(self, f"ApiWebServer{env}", network, compute.ecs_cluster, database)
+        web_server = WebServer(self, f"ApiWebServer{env}", network, compute.ecs_cluster, database, config)
 
         
         # Network

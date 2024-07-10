@@ -56,6 +56,11 @@ class Authorization:
 
         LOGGER.info(f"[{request_id}] INCOMING REQUEST: {verb} {resource} from {request.remote_addr}")
 
+        # for health check
+        if resource == "/":
+            LOGGER.info(f"[{request_id}] ALLOWED (health check)")
+            return self.app(environ, start_response)
+
         # Request can use either Bearer token (OAuth2) or Authorization token (API Key)
         auth_header = request.headers.get('Authorization')
         bearer_header = request.headers.get('Bearer')
