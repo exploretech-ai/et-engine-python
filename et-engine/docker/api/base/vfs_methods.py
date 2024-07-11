@@ -304,12 +304,15 @@ def delete_file(vfs_id, filepath):
         return Response(status=200)
 
 
-@vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['PUT'])
+@vfs.route('/vfs/<vfs_id>/mkdir/<path:filepath>', methods=['POST'])
 def make_directory(vfs_id, filepath):
+
+    context = os.environ["context"]
+    request_id = context["request_id"]
     
     full_path = os.path.join(EFS_MOUNT_POINT, vfs_id, filepath)
     if "/../" in full_path:
-        LOGGER.info(f"** ALERT: POTENTIALLY MALICIOUS PATH **")
+        LOGGER.warning(f"[{request_id}] ** ALERT: POTENTIALLY MALICIOUS PATH **")
         return Response("Invalid path", status=403)
     
     try:
@@ -322,6 +325,7 @@ def make_directory(vfs_id, filepath):
         return Response("Parent directory does not exist", status=400)
     
     except Exception:
+        LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error while creating directory", status=500)
     
     else:

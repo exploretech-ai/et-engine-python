@@ -57,7 +57,7 @@ class Authorization:
         LOGGER.info(f"[{request_id}] INCOMING REQUEST: {verb} {resource} from {request.remote_addr}")
 
         # for health check
-        if resource == "/":
+        if resource == "/" and verb == "GET":
             LOGGER.info(f"[{request_id}] ALLOWED (health check)")
             return self.app(environ, start_response)
         
@@ -80,6 +80,7 @@ class Authorization:
         # Check if user has access to resources
         authorized, unauthorized_response = self.authorize(context, resource, verb)
         if authorized:
+            context["request_id"] = request_id
             environ["context"] = json.dumps(context)
             return self.allow(request_id, environ, start_response)
         else:

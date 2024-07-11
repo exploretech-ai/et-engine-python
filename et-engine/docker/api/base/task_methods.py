@@ -60,9 +60,6 @@ def list_tasks():
         CONNECTION_POOL.putconn(connection)
 
 
-
-
-
 @tasks.route('/tasks', methods=['DELETE'])
 def clear_tasks():
 
@@ -112,6 +109,13 @@ def describe_task(task_id):
         
         task_arn = cursor.fetchone()[0]
 
+    except Exception as e:
+        request_id = context["request_id"]
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unknown error occurred", status=500)
+    
+    try:
+
         ecs = boto3.client('ecs')
         task_description = ecs.describe_tasks(cluster=cluster_name, tasks=[task_arn])
         task = task_description['tasks'][0]
@@ -132,12 +136,24 @@ def describe_task(task_id):
         status_time = status_time.strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute(
             """
-            UPDATE Tasks SET status = '{task_status}', status_time = '{status_time}', exit_code = '{exit_code}', exit_reason = '{exit_reason}' WHERE userID= '{user}' AND taskID = '{task_id}'
+            UPDATE Tasks SET status = %s, status_time = %s, exit_code = %s, exit_reason = %s WHERE userID= %s AND taskID = %s
             """,
             (task_status, status_time, exit_code, exit_reason, user_id, task_id)
         )
         connection.commit()
+    
+    except KeyError as e:
+        pass
 
+    except IndexError as e:
+        pass
+    
+    except Exception as e:
+        request_id = context["request_id"]
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unknown error occurred", status=500)
+    
+    try:
         payload = json.dumps({
             'status': task_status,
             'code': exit_code,
@@ -145,7 +161,9 @@ def describe_task(task_id):
         })
         return Response(payload, status=200)
     
-    except:
+    except Exception as e:
+        request_id = context["request_id"]
+        LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error occurred", status=500)
     
     finally:
