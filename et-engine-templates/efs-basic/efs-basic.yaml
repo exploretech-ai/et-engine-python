@@ -50,7 +50,7 @@ Resources:
         Ref: vfs0804DAB7
       SecurityGroups:
         - Ref: sgID
-      SubnetId: subnet-036259cae17b5ea9a
+      SubnetId: subnet-0237db9b87ac898b5
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-privatelambdaSubnet1
   vfsEfsMountTargetprivatelambdaSubnet2A70D7992:
@@ -60,7 +60,7 @@ Resources:
         Ref: vfs0804DAB7
       SecurityGroups:
         - Ref: sgID
-      SubnetId: subnet-00ca631f17163f077
+      SubnetId: subnet-0d938eb124807e796
     Metadata:
       aws:cdk:path: EfsBasicStack/vfs/EfsMountTarget-privatelambdaSubnet2
   vfsvfsAccessPointA97EC7A7:

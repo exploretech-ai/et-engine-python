@@ -36,7 +36,7 @@ class Authorization:
 
     region = 'us-east-2'
     user_pool_id = 'us-east-2_c3KpcMfzh'
-    app_client_id = '2ttoam3d4k75fcf2106nmpned' 
+    app_client_id = '1vshjgrpo7tahosfgt36fohq23' 
     keys_url = 'https://cognito-idp.{}.amazonaws.com/{}/.well-known/jwks.json'.format(region, user_pool_id)
     fernet_key = FERNET_KEY
 
@@ -60,18 +60,20 @@ class Authorization:
         if resource == "/":
             LOGGER.info(f"[{request_id}] ALLOWED (health check)")
             return self.app(environ, start_response)
+        
+        # for preflight CORS check
+        if verb == "OPTIONS":
+            LOGGER.info(f"[{request_id}] ALLOWED (preflight CORS)")
+            return self.app(environ, start_response)
 
-        # Request can use either Bearer token (OAuth2) or Authorization token (API Key)
+        # Validate header
         auth_header = request.headers.get('Authorization')
-        bearer_header = request.headers.get('Bearer')
-       
-        # Check headers
-        valid_headers, invalid_header_response = self.validate_headers(auth_header, bearer_header)
-        if not valid_headers:
-            return self.deny(request_id, invalid_header_response, environ, start_response)
+        if auth_header is None:
+            missing_header_response = Response("Missing authorization header", status=401)
+            return self.deny(request_id, missing_header_response, environ, start_response)
         
         # Authenticate user
-        authenticated, authentication_error_response, context = self.authenticate(auth_header, bearer_header)
+        authenticated, authentication_error_response, context = self.authenticate(auth_header)
         if not authenticated:
             return self.deny(request_id, authentication_error_response, environ, start_response)
 
@@ -85,37 +87,28 @@ class Authorization:
         
     
     def deny(self, request_id, denial_response, environ, start_response):
-        LOGGER.info(f"[{request_id}] DENIED")
+        denial_message = denial_response.get_data(as_text=True)
+        LOGGER.info(f"[{request_id}] DENIED ({denial_message})")
         return denial_response(environ, start_response)
     
 
     def allow(self, request_id, environ, start_response):
         LOGGER.info(f"[{request_id}] ALLOWED")
         return self.app(environ, start_response)
-    
 
-    def validate_headers(self, auth_token, bearer_token):
-        
-        if auth_token is not None and bearer_token is not None:
-            return False, Response("Cannot have both Authorization and Bearer tokens", status=401)
-        
-        if auth_token is None and bearer_token is None:
-            return False, Response("Missing authorization token", status=401)
-        
-        return True, None
     
-    
-    def authenticate(self, auth_token, bearer_token):
+    def authenticate(self, auth_token):
 
-        if auth_token and bearer_token is None:
-            return self.authenticate_api_key(auth_token)
-        
-        elif bearer_token and auth_token is None:
+        # Request can use either Bearer token (OAuth2) or regular Authorization token (API Key)
+        # Bearer tokens have the header {'Authorization': 'Bearer <token>'}
+
+        if "Bearer " in auth_token:
+            bearer_token = auth_token.split(" ")[1]
             return self.authenticate_bearer(bearer_token)
-        
         else:
-            return False, Response("Unknown authentication error", status=401), None
-        
+            return self.authenticate_api_key(auth_token)
+
+   
     
     def authenticate_api_key(self, auth_token):
 
@@ -139,7 +132,7 @@ class Authorization:
     def authenticate_bearer(self, bearer_token):
 
         try:
-            user_id = self.decode_bearer_token(bearer_token), None
+            user_id = self.decode_bearer_token(bearer_token)
 
         except Exception as e:
             return False, Response("Unknown authentication error in Bearer token", status=401), None

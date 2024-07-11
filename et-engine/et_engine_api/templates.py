@@ -26,7 +26,11 @@ class ToolTemplate(Stack):
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
-            security_groups=[network.database_lambda_security_group]
+            security_groups=[network.database_lambda_security_group],
+            environment={
+                "DATABASE_SHORT_NAME": database.database_name,
+                "SECRET_NAME": database.database_secret.secret_name
+            },
         )
         database.grant_access(tools_update_lambda)
         tools_update_lambda.add_to_role_policy(
@@ -94,7 +98,11 @@ class VfsTemplate(Stack):
                     subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
                 ).subnets
             ),
-            security_groups=[network.database_lambda_security_group]
+            security_groups=[network.database_lambda_security_group],
+            environment={
+                "DATABASE_SHORT_NAME": database.database_name,
+                "SECRET_NAME": database.database_secret.secret_name
+            },
         )
         database.grant_access(vfs_update_lambda)
         vfs_update_lambda.add_to_role_policy(

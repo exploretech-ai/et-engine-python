@@ -1,5 +1,6 @@
-from flask import Flask, Response
+from flask import Flask, Response, request
 import os
+import json
 
 from base.authorizer import Authorization
 
@@ -20,7 +21,9 @@ app.register_blueprint(keys)
 
 @app.after_request
 def add_cors_header(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
     return response
 
 

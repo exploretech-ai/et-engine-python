@@ -328,31 +328,9 @@ def make_directory(vfs_id, filepath):
         return Response(status=200)
 
     
-@vfs.route('/vfs/<vfs_id>/list', methods=['GET'])
-def list_root_directory(vfs_id):
-
-    full_path = os.path.join(EFS_MOUNT_POINT, vfs_id)
-
-    try:
-        dir_items = []
-        file_items = []
-        for (dirpath, dirnames, filenames) in os.walk(full_path):
-            dir_items.extend(dirnames)
-            file_items.extend(filenames)
-            break
-
-    except Exception as error:
-        return Response("Unable to list files", status=500)
-    
-    payload = json.dumps({
-        'directories': dir_items,
-        'files': file_items
-    })
-    return Response(payload, status=200)
-
-
+@vfs.route('/vfs/<vfs_id>/list', methods=['GET'], strict_slashes=False)
 @vfs.route('/vfs/<vfs_id>/list/<path:filepath>', methods=['GET'])
-def list_directory(vfs_id, filepath):
+def list_directory(vfs_id, filepath=""):
 
     full_path = os.path.join(EFS_MOUNT_POINT, vfs_id, filepath)
 

@@ -7,8 +7,6 @@ from aws_cdk import (
     aws_efs as efs,
     aws_ec2 as ec2,
     aws_iam as iam,
-    aws_autoscaling as autoscaling,
-    aws_ecs as ecs,
     aws_lambda as _lambda,
     aws_s3 as s3,
     aws_s3_notifications as s3n,

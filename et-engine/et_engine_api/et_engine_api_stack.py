@@ -34,6 +34,7 @@ class ETEngine(Stack):
         # Compute cluster
         CfnOutput(self, "ClusterName", value=compute.ecs_cluster.cluster_name)
         CfnOutput(self, "TaskExecutionRoleArn", value=compute.task_role.role_arn)
+        CfnOutput(self, "CapacityProviderName", value=compute.capacity_provider.capacity_provider_name)
         
         # Data Transfer 
         CfnOutput(self, "UploadContainerUri", value=compute.upload_files.upload_image.image_uri)
@@ -45,8 +46,7 @@ class ETEngine(Stack):
         CfnOutput(self, "APIClientID", value=user_pool.api_client.user_pool_client_id)
         CfnOutput(self, "WebAppClientID", value=user_pool.webapp_client.user_pool_client_id)
         
-        # Web Server 
-        # CfnOutput(self, "WebServerDns", value=web_server.load_balancer.load_balancer_dns_name)
+
 
         
 

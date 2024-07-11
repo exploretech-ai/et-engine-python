@@ -187,9 +187,9 @@ def check_codebuild(tool_id):
 def get_cluster_parameters():
     engine_stack_outputs = get_stack_outputs("ETEngine")
 
-    role_arn = get_component_from_outputs(engine_stack_outputs, "?????")
-    cluster_name = get_component_from_outputs(engine_stack_outputs, "?????")
-    capacity_provider_name = get_component_from_outputs(engine_stack_outputs, "?????")
+    role_arn = get_component_from_outputs(engine_stack_outputs, "TaskExecutionRoleArn")
+    cluster_name = get_component_from_outputs(engine_stack_outputs, "ClusterName")
+    capacity_provider_name = get_component_from_outputs(engine_stack_outputs, "CapacityProviderName")
 
     return {
         'role_arn': role_arn,

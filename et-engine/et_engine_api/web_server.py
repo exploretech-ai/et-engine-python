@@ -34,8 +34,8 @@ class WebServer(Stack):
             platform=ecr_assets.Platform.LINUX_AMD64
         )   
         
-        web_server_fargate_task = ecs.FargateTaskDefinition(self, "WebServerTaskDefinition")
-        web_server_fargate_task.add_to_task_role_policy(
+        self.web_server_fargate_task = ecs.FargateTaskDefinition(self, "WebServerTaskDefinition")
+        self.web_server_fargate_task.add_to_task_role_policy(
             iam.PolicyStatement(
                 actions=[
                     'secretsmanager:GetSecretValue',
@@ -46,7 +46,7 @@ class WebServer(Stack):
                 ]
             )
         )
-        web_server_fargate_task.add_to_task_role_policy(
+        self.web_server_fargate_task.add_to_task_role_policy(
             iam.PolicyStatement(
                 actions=[
                     'cloudformation:*',
@@ -65,7 +65,7 @@ class WebServer(Stack):
             )
         )
 
-        web_server_container = web_server_fargate_task.add_container("WebServerContainer",
+        self.web_server_container = self.web_server_fargate_task.add_container("WebServerContainer",
             image=ecs.ContainerImage.from_docker_image_asset(web_server_image),
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix="WebServerContainer",
@@ -79,7 +79,7 @@ class WebServer(Stack):
                 'SECRET_REGION': "us-east-2",
             }
         )
-        web_server_container.add_port_mappings(
+        self.web_server_container.add_port_mappings(
             ecs.PortMapping(
                 container_port=80,
                 host_port=80
@@ -103,7 +103,7 @@ class WebServer(Stack):
         )
         web_server_fargate_service = ecs.FargateService(self, "WebServerFargateService",
             cluster=ecs_cluster,
-            task_definition=web_server_fargate_task,
+            task_definition=self.web_server_fargate_task,
             capacity_provider_strategies=[
                 fargate_spot_capacity_provider,
                 fargate_capacity_provider
@@ -111,7 +111,7 @@ class WebServer(Stack):
             security_groups=[fargate_service_security_group]
         )
         load_balancer_target = web_server_fargate_service.load_balancer_target(
-            container_name=web_server_container.container_name,
+            container_name=self.web_server_container.container_name,
             container_port=80
         )
 
@@ -137,62 +137,35 @@ class WebServer(Stack):
             target=route53.RecordTarget.from_alias(r53t.LoadBalancerTarget(self.load_balancer))
         )
 
+        file_system_mount_params = [
+            ["cafc9439-02ef-4c86-9110-6abff2c05b68", "fs-09e0c241485f4226e", "fsap-021d0d9759a6302fd"],
+            ["f35dc82f-0019-43ef-ae9c-51ad9607c0bd", "fs-096e4d7658a8c4732", "fsap-02c968693bb54f224"],
+            ["24474f05-3256-48af-a68f-ddf7fb29cc89", "fs-06b2a6202057d1fbb", "fsap-0ab36f111fed24679"],
+            ["427e2294-1365-4b95-9237-a0314463c5bd", "fs-0b2b40344bb282514", "fsap-058764ea78df568ed"],
+            ["dde97cc8-d4e2-4a8c-946a-5f5226346b9a", "fs-0418f73e0e9a18931", "fsap-08306384f08e7f341"],
+            ["b0e39682-01bc-4141-8a1d-cc9b8cfc74ea", "fs-098ca96ed0dc2295b", "fsap-0b456caa8e25db8bf"],
+            ["a3927777-c26b-484d-a74a-89eb163f88cc", "fs-0808d3e89eff8a345", "fsap-045f50913c11a1193"]
+        ]
+        for p in file_system_mount_params:
+            self.mount_volume(p[0], p[1], p[2])
 
+            
 
-
-
-
-
-        # web_server_fargate_service.register_load_balancer_targets(
-        #     ecs.EcsTarget(
-        #         container_name=web_server_container.container_name,
-        #         container_port=80,
-        #         new_target_group_id="WebServerFargateService",
-        #         listener=ecs.ListenerConfig.application_listener(listener,
-        #             protocol=elbv2.ApplicationProtocol.HTTP
-        #         )
-        #     )
-        # )
-
-
-
-
-
-
-
-        
-
-
-# self.load_balancer = elbv2.NetworkLoadBalancer(self, "WebServerLoadBalancer", 
-#     vpc=vpc,
-#     internet_facing=True,   
-# )
-# listener = self.load_balancer.add_listener("WebServerLoadBalancerListener", 
-#     port=80,
-# )
-# listener.add_targets("WebServerLoadBalancerListenerTarget", 
-#     port=80,
-#     targets=[web_server_fargate_service],
-#     health_check=elbv2.HealthCheck(
-#         enabled=True,
-#     )
-# )
-
-
-# web_server_fargate_task.add_volume(
-#     name="vfs-cafc9439-02ef-4c86-9110-6abff2c05b68",
-#     efs_volume_configuration=ecs.EfsVolumeConfiguration(
-#         file_system_id="fs-09e0c241485f4226e",
-#         authorization_config=ecs.AuthorizationConfig(
-#             access_point_id="fsap-021d0d9759a6302fd"
-#         ),
-#         transit_encryption="ENABLED"
-#     )
-# )  
-# # web_server_container.add_mount_points(
-#     ecs.MountPoint(
-#         container_path="/mnt/cafc9439-02ef-4c86-9110-6abff2c05b68",
-#         read_only=False,
-#         source_volume="vfs-cafc9439-02ef-4c86-9110-6abff2c05b68"
-#     )
-# )
+    def mount_volume(self, vfs_id, file_system_id, access_point_id):
+        self.web_server_fargate_task.add_volume(
+            name="vfs-" + vfs_id,
+            efs_volume_configuration=ecs.EfsVolumeConfiguration(
+                file_system_id=file_system_id,
+                authorization_config=ecs.AuthorizationConfig(
+                    access_point_id=access_point_id
+                ),
+                transit_encryption="ENABLED"
+            )
+        )  
+        self.web_server_container.add_mount_points(
+            ecs.MountPoint(
+                container_path="/mnt/" + vfs_id,
+                read_only=False,
+                source_volume="vfs-" + vfs_id
+            )
+        )

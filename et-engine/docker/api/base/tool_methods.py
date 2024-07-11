@@ -46,7 +46,8 @@ def list_tools():
             tool = tool + ("shared",)
 
         available_tools.extend(shared_tools)
-        return Response(status=200)
+        payload = json.dumps(available_tools)
+        return Response(payload, status=200)
 
     except:
         return Response("Unknown error occurred", status=500)
@@ -150,11 +151,10 @@ def execute_tool(tool_id):
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
 
-    # cluster_parameters = utils.get_cluster_parameters()
+    cluster_parameters = utils.get_cluster_parameters()
     role_arn = cluster_parameters['role_arn']
     cluster_name = cluster_parameters['cluster_name']
     capacity_provider_name = cluster_parameters['capacity_provider_name']
-
 
     image = "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-" + tool_id + ':latest'
     container_mount_base = "/mnt/efs"
