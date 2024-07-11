@@ -19,14 +19,17 @@ def connect(tool_name):
     # Create vfs object by preparing the API endpoint
 
     status = requests.get(
-            API_ENDPOINT + "tools", 
-            params={'name':tool_name},
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-        )
+        API_ENDPOINT + "tools", 
+        # params={'name':tool_name},
+        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+    )
     if status.ok:
-
-        tool_id = status.json()[0][1]
-        return Tool(tool_id)
+        tool_list = status.json()
+        for t in tool_list:
+            if t[0] == tool_name:
+                tool_id = t[1]
+                return Tool(tool_id)
+        raise Exception("Tool does not exist")
     
     elif status.status_code == 403:
         raise Exception(f'Access to tool "{tool_name}" is forbidden')
@@ -131,6 +134,7 @@ class Tool:
         client : Client
             base authenticated client containing the active session
         """
+        self.tool_id = tool_id
         self.url = API_ENDPOINT + f"tools/{tool_id}"
 
 
@@ -142,19 +146,25 @@ class Tool:
 
         """  
 
-        n_tries = 0
-        while n_tries < 5:
-            try:
-                task = asyncio.run(self.execute(**kwargs))
-                print(f'Successfully launched task {task.id}')
-                return task
+        data = parse_kwargs(**kwargs)
+        response = requests.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]})
+        if response.ok:
+            return Task(response.text)
+        else:
+            raise Exception(response.text)
+        # n_tries = 0
+        # while n_tries < 5:
+        #     try:
+        #         task = asyncio.run(self.execute(**kwargs))
+        #         print(f'Successfully launched task {task.id}')
+        #         return task
             
-            except Exception as e:
-                n_tries += 1
-                print(f'Failed attempts: {n_tries}. Waiting 1 minute and trying again...')
-                time.sleep(60)
+        #     except Exception as e:
+        #         n_tries += 1
+        #         print(f'Failed attempts: {n_tries}. Waiting 1 minute and trying again...')
+        #         time.sleep(60)
 
-        raise MaxRetriesExceededError(f'failed to execute {n_tries} times')
+        # raise MaxRetriesExceededError(f'failed to execute {n_tries} times')
 
 
     async def execute(self, **kwargs):

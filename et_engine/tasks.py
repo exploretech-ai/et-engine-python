@@ -15,13 +15,12 @@ class Task:
             self.url,
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
+        if response.ok:
+            return response.json()
+        else:
+            print(response)
+            raise Exception
 
-        return response.json()
-        
-        # if response.ok:
-        #     return response.json()
-        # else:
-        #     raise Exception('error fetching status')
         
     def wait(self, sleep=60, n=100):
         """waits for the task to finish
