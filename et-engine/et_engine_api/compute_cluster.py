@@ -8,7 +8,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-from .data_transfer.upload_files import UploadFiles
+from .upload_files import UploadFiles
 
 class ComputeCluster(Stack):
     def __init__(self, scope: Construct, construct_id: str, network, config, **kwargs) -> None:

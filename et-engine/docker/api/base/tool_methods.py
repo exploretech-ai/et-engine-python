@@ -291,7 +291,8 @@ def execute_tool(tool_id):
 
         return Response(task_id, status=200)
         
-    except:
+    except Exception as e:
+        LOGGER.info(e)
         return Response('Task failed to launch', status=500)
     
     finally:
