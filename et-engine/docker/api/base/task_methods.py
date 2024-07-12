@@ -118,25 +118,21 @@ def describe_task(task_id):
         LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error occurred", status=500)
     
-    try:
+    try:     
+
+        exit_code = -1
+        exit_reason = None
+
         ecs = boto3.client('ecs')
         task_description = ecs.describe_tasks(cluster=cluster_name, tasks=[task_arn])
         task = task_description['tasks'][0]
         task_status = task['lastStatus']
 
-    except Exception as e:
-        
-        cursor.close()
-        CONNECTION_POOL.putconn(connection)
-
-        request_id = context["request_id"]
-        LOGGER.exception(f"[{request_id}]")
-        return Response("Unknown error occurred", status=500)
+    except IndexError:
+        exit_code = 0
+        exit_reason = 'task expired'
     
     try:
-
-        exit_code = -1
-        exit_reason = None
         
         container_list = task['containers']
         container = container_list[0]
