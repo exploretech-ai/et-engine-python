@@ -12,7 +12,7 @@ from aws_cdk import (
 from constructs import Construct
 
 
-class DataTransfer(Stack):
+class UploadFiles(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -43,7 +43,7 @@ class DataTransfer(Stack):
             self,
             "vfs-transfer-task-launcher",
             runtime=_lambda.Runtime.PYTHON_3_8,
-            handler= "vfs.data_upload_lambda.handler",
+            handler= "data_upload.handler",
             code=_lambda.Code.from_asset('lambda'),
             timeout = Duration.minutes(5)
         )
@@ -54,11 +54,13 @@ class DataTransfer(Stack):
                     'ecs:RegisterTaskDefinition',
                     'iam:PassRole',
                     'ecs:RunTask',
-                    # 's3:*'
+                    's3:*'
                 ],
                 resources=[
                     "*"
                 ]
             )
         )
-
+        self.launch_download_from_s3_to_efs.add_permission("S3EventNotificationPermission",
+            principal=iam.ServicePrincipal("s3.amazonaws.com")
+        )

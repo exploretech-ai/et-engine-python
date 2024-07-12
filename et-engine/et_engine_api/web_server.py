@@ -60,7 +60,7 @@ class WebServer(Stack):
                     'elasticloadbalancing:*',
                     'codebuild:*',
                     'logs:*',
-                    'iam:PassRole'
+                    'iam:*'
                 ],
                 resources=['*']
             )
