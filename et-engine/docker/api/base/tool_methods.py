@@ -435,9 +435,7 @@ def fetch_available_vfs(user, cursor):
     """
 
     cursor.execute(query)
-    print(f'Found {cursor.rowcount} owned filesystems')
     available_vfs = cursor.fetchall()
-    print('Owned filesystems:', available_vfs)
 
     query = """
         SELECT 
@@ -448,9 +446,7 @@ def fetch_available_vfs(user, cursor):
             ON VirtualFileSystems.vfsID = Sharing.resourceID AND Sharing.resource_type = 'vfs' AND Sharing.granteeID = %s
     """
     cursor.execute(query, (user,))
-    print(f'Found {cursor.rowcount} shared filesystems')
     shared_vfs = cursor.fetchall()
-    print('Shared filesystems:', shared_vfs)
 
     available_vfs.extend(shared_vfs)
 
@@ -470,9 +466,6 @@ def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
     status_time = status_time.strftime('%Y-%m-%d %H:%M:%S')
 
     task_id = str(uuid.uuid4())
-
-    print('hardware: ', hardware)
-    print('args: ', args)
 
     cursor.execute("""
         INSERT INTO Tasks (taskID, taskArn, userID, toolID, logID, start_time, hardware, status, status_time, args)

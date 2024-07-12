@@ -110,22 +110,36 @@ def describe_task(task_id):
         task_arn = cursor.fetchone()[0]
 
     except Exception as e:
+        
+        connection = CONNECTION_POOL.getconn()
+        cursor = connection.cursor()
+
+        request_id = context["request_id"]
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unknown error occurred", status=500)
+    
+    try:
+        ecs = boto3.client('ecs')
+        task_description = ecs.describe_tasks(cluster=cluster_name, tasks=[task_arn])
+        task = task_description['tasks'][0]
+        task_status = task['lastStatus']
+
+    except Exception as e:
+        
+        cursor.close()
+        CONNECTION_POOL.putconn(connection)
+
         request_id = context["request_id"]
         LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error occurred", status=500)
     
     try:
 
-        ecs = boto3.client('ecs')
-        task_description = ecs.describe_tasks(cluster=cluster_name, tasks=[task_arn])
-        task = task_description['tasks'][0]
-        task_status = task['lastStatus']
-
-        container_list = task['containers']
-        container = container_list[0]
-
         exit_code = -1
         exit_reason = None
+        
+        container_list = task['containers']
+        container = container_list[0]
 
         if 'exitCode' in container:
             exit_code = container['exitCode']
@@ -141,33 +155,31 @@ def describe_task(task_id):
             (task_status, status_time, exit_code, exit_reason, user_id, task_id)
         )
         connection.commit()
-    
+
     except KeyError as e:
         pass
 
     except IndexError as e:
         pass
-    
+
     except Exception as e:
         request_id = context["request_id"]
         LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error occurred", status=500)
-    
-    try:
-        payload = json.dumps({
-            'status': task_status,
-            'code': exit_code,
-            'reason': exit_reason
-        })
-        return Response(payload, status=200)
-    
-    except Exception as e:
-        request_id = context["request_id"]
-        LOGGER.exception(f"[{request_id}]")
-        return Response("Unknown error occurred", status=500)
-    
+
     finally:
         cursor.close()
         CONNECTION_POOL.putconn(connection)
+        
+    payload = json.dumps({
+        'status': task_status,
+        'code': exit_code,
+        'reason': exit_reason
+    })
+    return Response(payload, status=200)
+    
+    
+    
+    
 
     
