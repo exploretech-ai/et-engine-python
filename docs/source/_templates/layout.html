@@ -1,0 +1,12 @@
+{% extends "!layout.html" %}
+
+{% block menu %}
+<p class="caption" role="heading">
+    <span class="caption-text">Navigation</span>
+</p>
+<ul>
+    <li class="toctree-l1"><a class="reference internal" href="{{ pathto(master_doc) }}">{{ project }} Documentation</a></li>
+    <li class="toctree-l1"><a class="reference external" href="{{ main_doc_url }}">Main Documentation Home</a></li>
+</ul>
+{{ super() }}
+{% endblock %}
