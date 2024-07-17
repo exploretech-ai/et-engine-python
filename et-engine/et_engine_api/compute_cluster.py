@@ -55,6 +55,16 @@ class ComputeCluster(Stack):
                 capacity_provider=self.capacity_provider.capacity_provider_name
             )
         ])
+        self.fargate_spot_capacity_provider = ecs.CapacityProviderStrategy(
+            capacity_provider="FARGATE_SPOT",
+            weight=2,
+            base=0
+        )
+        self.fargate_capacity_provider = ecs.CapacityProviderStrategy(
+            capacity_provider="FARGATE",
+            weight=1,
+            base=1       
+        )
 
         self.ecs_cluster.enable_fargate_capacity_providers()
         

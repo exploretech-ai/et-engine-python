@@ -49,3 +49,4 @@ def initialize():
 
 FERNET_KEY, CONNECTION_POOL = initialize()
 EFS_MOUNT_POINT = '/mnt/'
+JOB_SUBMISSION_QUEUE_URL = os.environ['JOB_SUBMISSION_QUEUE_URL']

@@ -129,8 +129,12 @@ def describe_task(task_id):
         task_status = task['lastStatus']
 
     except IndexError:
-        exit_code = 0
-        exit_reason = 'task expired'
+        payload = json.dumps({
+            'status': 'STOPPED',
+            'code': 2,
+            'reason': 'task expired'
+        })
+        return Response(payload, status=200)
     
     try:
         

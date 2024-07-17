@@ -10,6 +10,7 @@ from .compute_cluster import ComputeCluster
 from .user_pool import UserPool
 from .web_server import WebServer
 from .network import Network
+from .batch_compute import BatchCompute
 
 class ETEngine(Stack):
 
@@ -23,8 +24,10 @@ class ETEngine(Stack):
         user_pool = UserPool(self, "UserPool")
         templates = Templates(self, "Templates", network, database)
         compute = ComputeCluster(self, f"ComputeCluster", network, config)
-        web_server = WebServer(self, f"ApiWebServer{env}", network, compute.ecs_cluster, database, config)
+        batch = BatchCompute(self, f"BatchCompute{env}", network, compute)
+        web_server = WebServer(self, f"ApiWebServer{env}", network, compute, database, batch, config)
 
+        CfnOutput(self, "JobRole", value=batch.job_role.role_arn)
         
         # Network
         CfnOutput(self, "EngineVpcId", value=network.vpc.vpc_id)

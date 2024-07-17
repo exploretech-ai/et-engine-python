@@ -14,7 +14,7 @@ from constructs import Construct
 
 # https://github.com/aws-samples/aws-cdk-examples/blob/main/typescript/ecs/ecs-service-with-advanced-alb-config/index.ts
 class WebServer(Stack):
-    def __init__(self, scope: Construct, construct_id: str, network, ecs_cluster, database, config, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, network, compute, database, batch, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)  
 
         env = config['env']
@@ -60,9 +60,18 @@ class WebServer(Stack):
                     'elasticloadbalancing:*',
                     'codebuild:*',
                     'logs:*',
-                    'iam:*'
+                    'iam:*',
+                    'batch:*'
                 ],
                 resources=['*']
+            )
+        )
+        self.web_server_fargate_task.add_to_task_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    'sqs:*'
+                ],
+                resources=[batch.job_submitter_queue.queue_arn]
             )
         )
 
@@ -78,6 +87,7 @@ class WebServer(Stack):
                 'DATABASE_NAME': database.database_name,
                 'FERNET_KEY_SECRET_NAME': "api_key_fernet_key",
                 'SECRET_REGION': "us-east-2",
+                'JOB_SUBMISSION_QUEUE_URL': batch.job_submitter_queue.queue_url
             }
         )
         self.web_server_container.add_port_mappings(
@@ -87,27 +97,18 @@ class WebServer(Stack):
             )
         )
 
-        fargate_spot_capacity_provider = ecs.CapacityProviderStrategy(
-            capacity_provider="FARGATE_SPOT",
-            weight=2,
-            base=0
-        )
-        fargate_capacity_provider = ecs.CapacityProviderStrategy(
-            capacity_provider="FARGATE",
-            weight=1,
-            base=1       
-        )
+        
 
         # NOTE: This is hard-coded as an import because using `network.fargate_service_security_group` causes a cyclical reference error
         fargate_service_security_group = ec2.SecurityGroup.from_security_group_id(self, "ImportedFargateServiceSecurityGroup",
             security_group_id="sg-0e3f3ed33ff60aab4"
         )
         web_server_fargate_service = ecs.FargateService(self, "WebServerFargateService",
-            cluster=ecs_cluster,
+            cluster=compute.ecs_cluster,
             task_definition=self.web_server_fargate_task,
             capacity_provider_strategies=[
-                fargate_spot_capacity_provider,
-                fargate_capacity_provider
+                compute.fargate_spot_capacity_provider,
+                compute.fargate_capacity_provider
             ],
             security_groups=[fargate_service_security_group]
         )
@@ -138,6 +139,7 @@ class WebServer(Stack):
             target=route53.RecordTarget.from_alias(r53t.LoadBalancerTarget(self.load_balancer))
         )
 
+        # NOTE: This will have to be automatically updated
         file_system_mount_params = [
             ["cafc9439-02ef-4c86-9110-6abff2c05b68", "fs-09e0c241485f4226e", "fsap-021d0d9759a6302fd"],
             ["f35dc82f-0019-43ef-ae9c-51ad9607c0bd", "fs-096e4d7658a8c4732", "fsap-02c968693bb54f224"],
