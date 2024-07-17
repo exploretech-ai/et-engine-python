@@ -3,47 +3,69 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
-import sys
-sys.path.insert(0, os.path.abspath('../..'))
-
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Engine'
+import os
+import sys
+from unittest.mock import MagicMock
+
+sys.path.insert(0, os.path.abspath('../../et-engine/docker/api'))
+sys.path.insert(0, os.path.abspath('.'))
+
+
+project = 'EngineAPI (HTTP)'
 copyright = '2024, Alex Miltenberger, Tyler Hall'
 author = 'Alex Miltenberger, Tyler Hall'
 release = '0.0.1'
 
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinxcontrib.httpdomain',
+    'sphinxcontrib.autohttp.flask'
 ]
 
-html_theme = 'sphinx_rtd_theme'
 
-# Add any paths that contain templates here, relative to this directory.
+autodoc_docstring_signature = True
+
+autosummary_generate = True
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
 templates_path = ['_templates']
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
 exclude_patterns = []
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
-# If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
-
-# -- Options for HTML output ----------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_context = {
+    'main_doc_url': 'https://docs.exploretech.ai/'
+}
+
+# Napoleon settings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+
+# Autodoc settings
+add_module_names = False

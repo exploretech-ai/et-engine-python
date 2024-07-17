@@ -47,5 +47,10 @@ def initialize():
     return fernet_key_secret, connection
 
 
-FERNET_KEY, CONNECTION_POOL = initialize()
+try:
+    FERNET_KEY, CONNECTION_POOL = initialize()
+except:
+    FERNET_KEY=""
+    CONNECTION_POOL=None
+    
 EFS_MOUNT_POINT = '/mnt/'
