@@ -1,10 +1,8 @@
-Configuration
-================
+Config
+=======
 
-do we actually need this one?
+.. autosummary::
+   :toctree: generated
+   :recursive:
 
-.. automodule:: et_engine.config
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :noindex:
+   et_engine.config

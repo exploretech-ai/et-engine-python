@@ -1,21 +1,8 @@
-Tasks API
-=============================
+Tasks
+=====
 
-.. automodule:: et_engine.tasks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :noindex:
+.. autosummary::
+   :toctree: generated
+   :recursive:
 
-Functions
----------
-
-.. autofunction:: et_engine.tasks.wait
-
-Classes
--------
-
-.. autoclass:: et_engine.tasks.Task
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   et_engine.tasks

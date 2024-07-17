@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Engine API'
+project = 'EngineAPI (Python)'
 copyright = '2024, Alex Miltenberger, Tyler Hall'
 author = 'Alex Miltenberger, Tyler Hall'
 release = '0.0.1'
@@ -19,10 +19,22 @@ release = '0.0.1'
 
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinxcontrib.httpdomain',
 ]
+
+autosummary_generate = True
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
 templates_path = ['_templates']
 exclude_patterns = []
 
