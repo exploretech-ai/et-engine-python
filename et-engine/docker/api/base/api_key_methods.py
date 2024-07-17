@@ -3,13 +3,38 @@ import json
 import uuid
 import datetime
 from cryptography.fernet import Fernet
-from . import CONNECTION_POOL, FERNET_KEY
+from base import CONNECTION_POOL, FERNET_KEY
 
 keys = Blueprint('keys', __name__)
 
 
 @keys.route('/keys', methods=['GET'])
 def list_keys():
+    """
+    List all API keys for the authenticated user.
+
+    This endpoint retrieves all API keys associated with the authenticated user.
+    The user is identified by the 'user_id' in the request context.
+
+    :reqheader Authorization: Bearer token for user authentication
+    :status 200: Success. Returns a list of API keys.
+    :status 500: Unknown error occurred during processing.
+
+    **Example response**:
+
+    .. sourcecode:: json
+
+       [
+         {
+           "name": "API Key Name",
+           "description": "Key Description",
+           "dateCreated": "2024-07-16 10:30:00",
+           "dateExpired": "2024-08-15 10:30:00"
+         }
+       ]
+
+    :raises: May raise exceptions related to database operations.
+    """
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
