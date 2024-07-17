@@ -14,6 +14,15 @@ LOGGER.setLevel(logging.INFO)
 
 
 def submit_job(tool_id, request_id, user_id, body):
+    """
+    body has the following format:
+
+        {
+            'hardware': {}  (optional, if specified it must be JSON)
+            '
+
+        }
+    """
 
     batch_parameters = job_utils.get_batch_parameters()
     role_arn = batch_parameters['role_arn']
@@ -125,6 +134,13 @@ def submit_job(tool_id, request_id, user_id, body):
     #     cursor.close()
     #     CONNECTION_POOL.putconn(connection)
 
+
+
+def submit_batch(tool_id, request_id, user_id, fixed_args, varying_args):
+    # for each in varying args:
+    #     Construct "body" from fixed_args and this varying arg
+    #     Run submit_job
+    pass
 
 
 if __name__ == "__main__":
