@@ -19,11 +19,21 @@ app.register_blueprint(tasks)
 app.register_blueprint(keys)
 
 
+@app.before_request
+def preflight_cors():
+    if request.method == "OPTIONS":
+        response = Response(status=200)
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] ='GET, PUT, POST, DELETE, OPTIONS'
+        return response
+    
+
 @app.after_request
 def add_cors_header(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE, OPTIONS'
     return response
 
 

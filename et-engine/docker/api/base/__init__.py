@@ -49,8 +49,11 @@ def initialize():
 
 try:
     FERNET_KEY, CONNECTION_POOL = initialize()
+    JOB_SUBMISSION_QUEUE_URL = os.environ['JOB_SUBMISSION_QUEUE_URL']
 except:
+    LOGGER.warning("Initialization failed, database and service connections will not work.")
     FERNET_KEY=""
     CONNECTION_POOL=None
+    JOB_SUBMISSION_QUEUE_URL=""
     
 EFS_MOUNT_POINT = '/mnt/'

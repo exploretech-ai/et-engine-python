@@ -2,9 +2,10 @@ from flask import Blueprint, Response, request
 import json
 import uuid
 import datetime
+import time
 import boto3
 from . import utils
-from . import CONNECTION_POOL, LOGGER
+from . import CONNECTION_POOL, LOGGER, JOB_SUBMISSION_QUEUE_URL
 
 
 tools = Blueprint('tools', __name__)
@@ -150,6 +151,7 @@ def execute_tool(tool_id):
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
+    request_id = context['request_id']
 
     cluster_parameters = utils.get_cluster_parameters()
     role_arn = cluster_parameters['role_arn']
@@ -292,7 +294,7 @@ def execute_tool(tool_id):
         return Response(task_id, status=200)
         
     except Exception as e:
-        LOGGER.info(e)
+        LOGGER.exception(f"[{request_id}]")
         return Response('Task failed to launch', status=500)
     
     finally:
@@ -428,6 +430,164 @@ def share_tool(tool_id):
         CONNECTION_POOL.putconn(connection)
 
 
+@tools.route('/tools/<tool_id>/batch', methods=['POST'])
+def submit_job(tool_id):
+
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+    request_id = context['request_id']
+
+    batch_parameters = utils.get_batch_parameters()
+    role_arn = batch_parameters['role_arn']
+
+    image = "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-" + tool_id + ':latest'
+    container_mount_base = "/mnt/efs"
+    args = []
+
+    try:
+        request_data = request.get_data(as_text=True)
+        body = json.loads(request_data)
+
+    except Exception as e:
+        return Response("Error parsing request body", status=400)
+
+    if 'hardware' in body:
+        hardware = body.pop('hardware')
+
+    else:
+        hardware = {
+            'filesystems': [],
+            'memory': 512,
+            'cpu': 1,
+            'gpu': False
+        }
+
+    for key in body.keys():
+        args.append({
+            'name': key,
+            'value': body[key]
+        })
+
+    connection = CONNECTION_POOL.getconn()
+    cursor = connection.cursor()
+    try:
+        batch_client = boto3.client('batch')
+        mount_points = []
+        volumes = []
+
+        if hardware['filesystems']:
+            vfs_id_map = fetch_available_vfs(user_id, cursor)
+            for vfs_name in hardware['filesystems']:
+                
+                vfs_id = vfs_id_map[vfs_name]
+                vfs_stack_outputs = utils.get_stack_outputs("vfs-"+vfs_id)
+                file_system_id = utils.get_component_from_outputs(vfs_stack_outputs, "FileSystemId")
+                access_point_id = utils.get_component_from_outputs(vfs_stack_outputs, "AccessPointId")
+
+                volume_name = "vfs-" + vfs_id
+                mount_points.append(
+                    {
+                        'sourceVolume': volume_name,
+                        'containerPath': container_mount_base,
+                        'readOnly': False
+                    }
+                )
+                volumes.append(
+                    {
+                        'name': volume_name,
+                        'efsVolumeConfiguration': {
+                            "fileSystemId": file_system_id,
+                            "rootDirectory": "/",
+                            "transitEncryption": "ENABLED",
+                            "authorizationConfig": {
+                                "accessPointId": access_point_id,
+                                "iam": "ENABLED"
+                            }
+                        }
+                    }
+                )
+    
+        log_id = str(uuid.uuid4())
+
+        job_definition = batch_client.register_job_definition(
+            jobDefinitionName=log_id,
+            type='container',
+            containerProperties={
+                'image': image,
+                'vcpus': hardware['cpu'],
+                'memory': hardware['memory'],
+                'jobRoleArn': role_arn,
+                'executionRoleArn': role_arn,
+                'volumes': volumes,
+                'environment': args,
+                'mountPoints': mount_points,
+                'logConfiguration': {
+                    'logDriver': 'awslogs',
+                    'options': {
+                        'awslogs-region': "us-east-2" ,
+                        'awslogs-group': "EngineLogGroup",
+                        "awslogs-stream-prefix": log_id
+                    }
+                }
+            }
+        )
+        job_definition_arn = job_definition['jobDefinitionArn']
+        batch_response = batch_client.submit_job(
+            jobName='tool-'+tool_id+"-"+log_id,
+            jobQueue="JobQueueEE3AD499-ykz4wxsfUYiw86fC",
+            jobDefinition=job_definition_arn
+        )
+
+        job_arn = batch_response['jobArn']
+        if args:
+            args.pop(0)
+        task_id = log_task(job_arn, user_id, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
+        
+        # connection.commit()
+
+        return Response(task_id, status=200)
+        
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
+        return Response('Task failed to launch', status=500)
+    
+    finally:
+        cursor.close()
+        CONNECTION_POOL.putconn(connection)
+
+
+@tools.route('/tools/<tool_id>/mc', methods=['POST'])
+def submit_monte_carlo(tool_id):
+
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+    request_id = context['request_id']
+
+    try:
+        message = request.get_data(as_text=True)
+        message_dict = json.loads(message)
+        message_dict['submission'] = {
+            'user_id': user_id,
+            'request_id': request_id,
+            'tool_id': tool_id
+        }
+        
+        sqs = boto3.client('sqs')
+        sqs.send_message(
+            QueueUrl=JOB_SUBMISSION_QUEUE_URL,
+            MessageBody=json.dumps(message_dict),
+            MessageGroupId=str(uuid.uuid4()),
+            MessageDeduplicationId=str(uuid.uuid4())
+        )
+
+        return Response(status=200)
+
+        
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
+        return Response('Task failed to launch', status=500)
+    
+
 def fetch_available_vfs(user, cursor):
                     
     query = f"""
@@ -435,9 +595,7 @@ def fetch_available_vfs(user, cursor):
     """
 
     cursor.execute(query)
-    print(f'Found {cursor.rowcount} owned filesystems')
     available_vfs = cursor.fetchall()
-    print('Owned filesystems:', available_vfs)
 
     query = """
         SELECT 
@@ -448,9 +606,7 @@ def fetch_available_vfs(user, cursor):
             ON VirtualFileSystems.vfsID = Sharing.resourceID AND Sharing.resource_type = 'vfs' AND Sharing.granteeID = %s
     """
     cursor.execute(query, (user,))
-    print(f'Found {cursor.rowcount} shared filesystems')
     shared_vfs = cursor.fetchall()
-    print('Shared filesystems:', shared_vfs)
 
     available_vfs.extend(shared_vfs)
 
@@ -470,9 +626,6 @@ def log_task(task_arn, user_id, tool_id, log_id, hardware, args, cursor):
     status_time = status_time.strftime('%Y-%m-%d %H:%M:%S')
 
     task_id = str(uuid.uuid4())
-
-    print('hardware: ', hardware)
-    print('args: ', args)
 
     cursor.execute("""
         INSERT INTO Tasks (taskID, taskArn, userID, toolID, logID, start_time, hardware, status, status_time, args)
