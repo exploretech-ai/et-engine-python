@@ -3,7 +3,7 @@ import json
 import uuid
 import datetime
 from cryptography.fernet import Fernet
-from base import CONNECTION_POOL, FERNET_KEY
+from base import CONNECTION_POOL, FERNET_KEY, LOGGER
 
 keys = Blueprint('keys', __name__)
 
@@ -45,7 +45,7 @@ def list_keys():
     try:
         cursor.execute(
             """
-            SELECT name, description, date_created, date_expired FROM APIKeys WHERE userID = %s
+            SELECT name, description, date_created, date_expired, keyID FROM APIKeys WHERE userID = %s
             """,
             (user_id,)
         )
@@ -57,12 +57,14 @@ def list_keys():
                 'name': item[0],
                 'description': item[1],
                 'dateCreated': item[2].strftime('%Y-%m-%d %H:%M:%S'),
-                'dateExpired': item[3].strftime('%Y-%m-%d %H:%M:%S')
+                'dateExpired': item[3].strftime('%Y-%m-%d %H:%M:%S'),
+                'key_id': item[4]
             })
 
         return Response(json.dumps(api_keys), status=200)
     
-    except:
+    except Exception as e:
+        LOGGER.exception(e)
         return Response("Unknown error", status=500)
 
     finally:
@@ -72,6 +74,34 @@ def list_keys():
 
 @keys.route('/keys', methods=['POST'])
 def create_key():
+    """
+    Creates a new API keys for the authenticated user.
+
+    The user is identified by the 'user_id' in the request context. Requests must include a JSON body with a "name" and "description".
+
+    :reqheader Authorization: Bearer token for user authentication
+    :status 200: Success. Returns the API key as a string.
+    :status 400: Error processing request body
+    :status 409: API key with the same name already exists.
+    :status 500: Unknown error occurred during processing.
+
+    **Request Syntax**:
+
+    .. sourcecode:: json
+
+       {
+         "name": "string"
+         "description" "string"
+       }
+
+    **Response Syntax**:
+
+    .. sourcecode:: json
+
+       "<key>"
+
+    :raises: May raise exceptions related to database operations.
+    """
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
 
@@ -106,11 +136,12 @@ def create_key():
         if check_if_key_name_exists(cursor, user_id, key_name):
             return Response("API Key with same name already exists", status=409)
         else:
-            insert_new_key(cursor, key_id, user_id, key_name, key_description, create_time, expired_time)
+            key_token = insert_new_key(cursor, key_id, user_id, key_name, key_description, create_time, expired_time)
             connection.commit()
-            return Response(status=200)
+            return Response(key_token, status=200)
         
-    except:
+    except Exception as e:
+        LOGGER.exception(e)
         return Response("Unknown error occurred", status=500)
     
     finally:
@@ -120,6 +151,19 @@ def create_key():
 
 @keys.route('/keys/<key_id>', methods=['DELETE'])
 def delete_key(key_id):
+    """
+    Deletes the specified API key.
+
+    The user is identified by the 'user_id' in the request context. Requests must include a JSON body with a "name" and "description".
+
+    :reqheader Authorization: Bearer token for user authentication
+    :status 200: Success.
+    :status 500: Unknown error occurred during processing.
+
+
+    :raises: May raise exceptions related to database operations.
+    """
+
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
 
@@ -133,8 +177,10 @@ def delete_key(key_id):
             (user_id, key_id)
         )
         connection.commit()
+        return Response(status=200)
         
-    except:
+    except Exception as e:
+        LOGGER.exception(e)
         return Response("Unknown error occurred", status=500)
     
     finally:
@@ -149,7 +195,7 @@ def insert_new_key(cursor, key_id, user_id, key_name, key_description, create_ti
     cursor.execute(
         """
         INSERT INTO APIKeys (keyID, userID, name, description, date_created, date_expired)
-        VALUES ('{key_id}', '{user}', '{key_name}', '{key_description}', '{create_time}', '{expired_time}')
+        VALUES (%s, %s, %s, %s, %s, %s)
         """,
         (
             key_id,
@@ -161,12 +207,7 @@ def insert_new_key(cursor, key_id, user_id, key_name, key_description, create_ti
         )
     )
 
-    return {
-        'name': key_name,
-        'key': key_token,
-        'dateCreated': create_time,
-        'dateExpired': expired_time
-    }
+    return key_token
 
 
 def check_if_key_name_exists(cursor, user_id, desired_name):
