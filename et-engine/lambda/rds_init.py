@@ -51,24 +51,51 @@ def handler(event, context):
         print('Table "APIKeys" created successfully')
         
 
+        # DEPRECATED
+        # create_table_sql = """
+        #     CREATE TABLE IF NOT EXISTS Tasks (
+        #         taskID UUID PRIMARY KEY,
+        #         taskArn TEXT NOT NULL,
+        #         userID UUID NOT NULL,
+        #         toolID UUID NOT NULL,
+        #         logID UUID NOT NULL,
+        #         start_time TIMESTAMP NOT NULL,
+        #         hardware JSON NOT NULL,
+        #         args JSON NOT NULL,
+        #         status VARCHAR(255) NOT NULL,
+        #         status_time TIMESTAMP NOT NULL,
+        #         exit_reason TEXT,
+        #         exit_code INTEGER
+        #     );
+        # """
+        # cursor.execute(create_table_sql)
+        # print('Table "Tasks" created successfully')
+
+
         create_table_sql = """
-            CREATE TABLE IF NOT EXISTS Tasks (
-                taskID UUID PRIMARY KEY,
-                taskArn TEXT NOT NULL,
+            CREATE TABLE IF NOT EXISTS Batches (
+                batchID UUID PRIMARY KEY,
                 userID UUID NOT NULL,
                 toolID UUID NOT NULL,
-                logID UUID NOT NULL,
-                start_time TIMESTAMP NOT NULL,
                 hardware JSON NOT NULL,
-                args JSON NOT NULL,
-                status VARCHAR(255) NOT NULL,
-                status_time TIMESTAMP NOT NULL,
-                exit_reason TEXT,
-                exit_code INTEGER
+                n_jobs INTEGER NOT NULL
             );
         """
         cursor.execute(create_table_sql)
-        print('Table "Tasks" created successfully')
+        print('Table "Batches" created successfully')
+
+
+        create_table_sql = """
+            CREATE TABLE IF NOT EXISTS Jobs (
+                jobID UUID PRIMARY KEY,
+                jobArn TEXT NOT NULL,
+                batchID UUID NOT NULL,
+                logID UUID NOT NULL,
+                args JSON NOT NULL
+            );
+        """
+        cursor.execute(create_table_sql)
+        print('Table "Jobs" created successfully')
 
 
         create_table_sql = """

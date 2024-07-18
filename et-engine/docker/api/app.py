@@ -6,17 +6,16 @@ from base.authorizer import Authorization
 
 from base.vfs_methods import vfs
 from base.tool_methods import tools
-from base.task_methods import tasks
 from base.api_key_methods import keys
-
+from base.job_methods import jobs
 
 app = Flask(__name__)
 app.wsgi_app = Authorization(app.wsgi_app)
 
 app.register_blueprint(vfs)
 app.register_blueprint(tools)
-app.register_blueprint(tasks)
 app.register_blueprint(keys)
+app.register_blueprint(jobs)
 
 
 @app.before_request

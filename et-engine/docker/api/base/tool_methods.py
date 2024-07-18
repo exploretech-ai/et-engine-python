@@ -8,6 +8,10 @@ from . import utils
 from . import CONNECTION_POOL, LOGGER, JOB_SUBMISSION_QUEUE_URL
 
 
+class InvalidRequestBodyError(Exception):
+    pass
+
+
 tools = Blueprint('tools', __name__)
 
 
@@ -148,154 +152,103 @@ def describe_tool(tool_id):
 
 @tools.route('/tools/<tool_id>', methods=['POST'])
 def execute_tool(tool_id):
+    """
+    Submits a job or batch of jobs to the tool execution service
+
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :status 200: Success. Returns the job id(s).
+    :status 500: Unknown error occurred during processing.
+
+    **Request Syntax**:
+
+    .. sourcecode:: json
+
+       {
+          "fixed_args": {
+            "name": "value"
+          },
+          "variable_args: [
+            {
+              "name": "value"
+            }
+          ],
+          "hardware": {
+            "filesystems": [
+              "id"
+            ],
+            "memory": 123,
+            "cpu": 123
+          }
+       }
+
+    **Response Syntax**:
+
+    .. sourcecode:: json
+
+       [
+         {
+           "job_id": "string"
+         }
+       ]
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
     request_id = context['request_id']
 
-    cluster_parameters = utils.get_cluster_parameters()
-    role_arn = cluster_parameters['role_arn']
-    cluster_name = cluster_parameters['cluster_name']
-    capacity_provider_name = cluster_parameters['capacity_provider_name']
-
-    image = "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-" + tool_id + ':latest'
-    container_mount_base = "/mnt/efs"
-    args = []
-
+    
     try:
-        request_data = request.get_data(as_text=True)
-        body = json.loads(request_data)
-
+        body_string = request.get_data(as_text=True)
+        body = json.loads(body_string)
+    except json.JSONDecodeError:
+        return Response("Invalid JSON in request body", status=400)
     except Exception as e:
-        return Response("Error parsing request body", status=400)
-
-    if 'hardware' in body:
-        hardware = body.pop('hardware')
-
-    else:
-        hardware = {
-            'filesystems': [],
-            'memory': 512,
-            'cpu': 1,
-            'gpu': False
-        }
-
-    for key in body.keys():
-        args.append({
-            'name': key,
-            'value': body[key]
-        })
-
+        LOGGER.exception(f"[{request_id}]")
+        return Response('Unknown error occurred', status=500)
+    
+    try:
+        body_is_valid = validate_body(body)
+        if not body_is_valid:
+            raise InvalidRequestBodyError("Invalid request body")       
+    except (TypeError, InvalidRequestBodyError) as e:
+        return Response("Invalid request body", status=400)
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
+        return Response('Unknown error occurred', status=500)
+    
     connection = CONNECTION_POOL.getconn()
     cursor = connection.cursor()
     try:
-        ecs_client = boto3.client('ecs')
-        mount_points = []
-        volumes = []
-
-        if hardware['filesystems']:
-            vfs_id_map = fetch_available_vfs(user_id, cursor)
-            for vfs_name in hardware['filesystems']:
-                
-                vfs_id = vfs_id_map[vfs_name]
-                vfs_stack_outputs = utils.get_stack_outputs("vfs-"+vfs_id)
-                file_system_id = utils.get_component_from_outputs(vfs_stack_outputs, "FileSystemId")
-                access_point_id = utils.get_component_from_outputs(vfs_stack_outputs, "AccessPointId")
-
-                volume_name = "vfs-" + vfs_id
-                mount_points.append(
-                    {
-                        'sourceVolume': volume_name,
-                        "containerPath": container_mount_base,
-                        'readOnly': False
-                    }
-                )
-                volumes.append(
-                    {
-                        'name': volume_name,
-                        'efsVolumeConfiguration': {
-                            "fileSystemId": file_system_id,
-                            "rootDirectory": "/",
-                            "transitEncryption": "ENABLED",
-                            "authorizationConfig": {
-                                "accessPointId": access_point_id,
-                                "iam": "ENABLED"
-                            }
-                        }
-                    }
-                )
-    
-        log_id = str(uuid.uuid4())
-        container_definition = {
-            'name': "tool-" + tool_id,
-            'image': image,
-            'logConfiguration': {
-                'logDriver': 'awslogs',
-                'options': {
-                    'awslogs-region': "us-east-2" ,
-                    'awslogs-group': "EngineLogGroup",
-                    "awslogs-stream-prefix": log_id
-                }
-            },
-            'mountPoints': mount_points,
-            # 'memory': hardware['memory'],
-            # 'cpu': hardware['cpu'],
+        body['submission'] = {
+            'user_id': user_id,
+            'batch_id': request_id,
+            'tool_id': tool_id
         }
-        
-        if hardware['gpu']:
-            container_definition['resourceRequirements'] = [
-                {
-                    'value': hardware['gpu'],
-                    'type': 'GPU'
-                }
-            ]
 
-        task_def = ecs_client.register_task_definition(
-            family="tool-" + tool_id,
-            taskRoleArn=role_arn,
-            executionRoleArn=role_arn,
-            containerDefinitions=[container_definition],
-            volumes=volumes,
-            memory=str(hardware['memory']),
-            cpu=str(hardware['cpu'])
+        cursor.execute(
+            """
+            INSERT INTO Batches (batchID, userID, toolID, hardware, n_jobs)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (request_id, user_id, tool_id, json.dumps(body["hardware"]), max(1, len(body["variable_args"])))
         )
-
-        task_arn = task_def['taskDefinition']['taskDefinitionArn']
-        
-        ecs_response = ecs_client.run_task(
-            cluster=cluster_name,
-            taskDefinition=task_arn,
-            capacityProviderStrategy=[
-                {
-                    'capacityProvider': capacity_provider_name
-                },
-            ],
-            overrides={
-                'containerOverrides': [
-                    {
-                        'name': "tool-" + tool_id,
-                        'environment': args,
-                    }
-                ]
-            }
-        )
-
-        if len(ecs_response['tasks']) == 0:
-            raise
-        
-        task = ecs_response['tasks'][0]
-        task_arn = task['taskArn']
-        if args:
-            args.pop(0)
-        task_id = log_task(task_arn, user_id, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
-        
         connection.commit()
-
-        return Response(task_id, status=200)
         
+        sqs = boto3.client('sqs')
+        sqs.send_message(
+            QueueUrl=JOB_SUBMISSION_QUEUE_URL,
+            MessageBody=json.dumps(body),
+            MessageGroupId=str(uuid.uuid4()),
+            MessageDeduplicationId=str(uuid.uuid4())
+        )
+
+        return Response(request_id, status=200)
+  
     except Exception as e:
         LOGGER.exception(f"[{request_id}]")
-        return Response('Task failed to launch', status=500)
+        return Response('Failed to submit batch', status=500)
     
     finally:
         cursor.close()
@@ -430,163 +383,22 @@ def share_tool(tool_id):
         CONNECTION_POOL.putconn(connection)
 
 
-@tools.route('/tools/<tool_id>/batch', methods=['POST'])
-def submit_job(tool_id):
-
-    context = json.loads(request.environ['context'])
-    user_id = context['user_id']
-    request_id = context['request_id']
-
-    batch_parameters = utils.get_batch_parameters()
-    role_arn = batch_parameters['role_arn']
-
-    image = "734818840861.dkr.ecr.us-east-2.amazonaws.com/tool-" + tool_id + ':latest'
-    container_mount_base = "/mnt/efs"
-    args = []
-
-    try:
-        request_data = request.get_data(as_text=True)
-        body = json.loads(request_data)
-
-    except Exception as e:
-        return Response("Error parsing request body", status=400)
-
-    if 'hardware' in body:
-        hardware = body.pop('hardware')
-
-    else:
-        hardware = {
-            'filesystems': [],
-            'memory': 512,
-            'cpu': 1,
-            'gpu': False
-        }
-
-    for key in body.keys():
-        args.append({
-            'name': key,
-            'value': body[key]
-        })
-
-    connection = CONNECTION_POOL.getconn()
-    cursor = connection.cursor()
-    try:
-        batch_client = boto3.client('batch')
-        mount_points = []
-        volumes = []
-
-        if hardware['filesystems']:
-            vfs_id_map = fetch_available_vfs(user_id, cursor)
-            for vfs_name in hardware['filesystems']:
-                
-                vfs_id = vfs_id_map[vfs_name]
-                vfs_stack_outputs = utils.get_stack_outputs("vfs-"+vfs_id)
-                file_system_id = utils.get_component_from_outputs(vfs_stack_outputs, "FileSystemId")
-                access_point_id = utils.get_component_from_outputs(vfs_stack_outputs, "AccessPointId")
-
-                volume_name = "vfs-" + vfs_id
-                mount_points.append(
-                    {
-                        'sourceVolume': volume_name,
-                        'containerPath': container_mount_base,
-                        'readOnly': False
-                    }
-                )
-                volumes.append(
-                    {
-                        'name': volume_name,
-                        'efsVolumeConfiguration': {
-                            "fileSystemId": file_system_id,
-                            "rootDirectory": "/",
-                            "transitEncryption": "ENABLED",
-                            "authorizationConfig": {
-                                "accessPointId": access_point_id,
-                                "iam": "ENABLED"
-                            }
-                        }
-                    }
-                )
+def validate_body(body):
     
-        log_id = str(uuid.uuid4())
+    if "hardware" not in body:
+        return False
 
-        job_definition = batch_client.register_job_definition(
-            jobDefinitionName=log_id,
-            type='container',
-            containerProperties={
-                'image': image,
-                'vcpus': hardware['cpu'],
-                'memory': hardware['memory'],
-                'jobRoleArn': role_arn,
-                'executionRoleArn': role_arn,
-                'volumes': volumes,
-                'environment': args,
-                'mountPoints': mount_points,
-                'logConfiguration': {
-                    'logDriver': 'awslogs',
-                    'options': {
-                        'awslogs-region': "us-east-2" ,
-                        'awslogs-group': "EngineLogGroup",
-                        "awslogs-stream-prefix": log_id
-                    }
-                }
-            }
-        )
-        job_definition_arn = job_definition['jobDefinitionArn']
-        batch_response = batch_client.submit_job(
-            jobName='tool-'+tool_id+"-"+log_id,
-            jobQueue="JobQueueEE3AD499-ykz4wxsfUYiw86fC",
-            jobDefinition=job_definition_arn
-        )
-
-        job_arn = batch_response['jobArn']
-        if args:
-            args.pop(0)
-        task_id = log_task(job_arn, user_id, tool_id, log_id, json.dumps(hardware), json.dumps(args), cursor)
-        
-        # connection.commit()
-
-        return Response(task_id, status=200)
-        
-    except Exception as e:
-        LOGGER.exception(f"[{request_id}]")
-        return Response('Task failed to launch', status=500)
+    if not all(key in body["hardware"] for key in ["filesystems", "memory", "cpu"]):
+        return False
     
-    finally:
-        cursor.close()
-        CONNECTION_POOL.putconn(connection)
-
-
-@tools.route('/tools/<tool_id>/mc', methods=['POST'])
-def submit_monte_carlo(tool_id):
-
-    context = json.loads(request.environ['context'])
-    user_id = context['user_id']
-    request_id = context['request_id']
-
-    try:
-        message = request.get_data(as_text=True)
-        message_dict = json.loads(message)
-        message_dict['submission'] = {
-            'user_id': user_id,
-            'request_id': request_id,
-            'tool_id': tool_id
-        }
-        
-        sqs = boto3.client('sqs')
-        sqs.send_message(
-            QueueUrl=JOB_SUBMISSION_QUEUE_URL,
-            MessageBody=json.dumps(message_dict),
-            MessageGroupId=str(uuid.uuid4()),
-            MessageDeduplicationId=str(uuid.uuid4())
-        )
-
-        return Response(status=200)
-
-        
-    except Exception as e:
-        LOGGER.exception(f"[{request_id}]")
-        return Response('Task failed to launch', status=500)
+    if "variable_args" not in body:
+        return False
     
+    if "fixed_args" not in body:
+        return False
+    
+    return True
+
 
 def fetch_available_vfs(user, cursor):
                     

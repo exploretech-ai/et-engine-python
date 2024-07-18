@@ -24,7 +24,7 @@ class ETEngine(Stack):
         user_pool = UserPool(self, "UserPool")
         templates = Templates(self, "Templates", network, database)
         compute = ComputeCluster(self, f"ComputeCluster", network, config)
-        batch = BatchCompute(self, f"BatchCompute{env}", network, compute)
+        batch = BatchCompute(self, f"BatchCompute{env}", network, compute, database)
         web_server = WebServer(self, f"ApiWebServer{env}", network, compute, database, batch, config)
 
         CfnOutput(self, "JobRole", value=batch.job_role.role_arn)

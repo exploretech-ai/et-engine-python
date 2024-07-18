@@ -20,14 +20,14 @@ from . import FERNET_KEY, CONNECTION_POOL, LOGGER
 RESOURCE_TO_TABLE_NAME = {
     'vfs': 'VirtualFileSystems',
     'tools': 'Tools',
-    'tasks': 'Tasks',
-    'keys': "APIKeys" # ?????
+    'batches': 'Batches',
+    'keys': "APIKeys"
 }
 RESOURCE_TO_TABLE_COLUMN = {
     'vfs': 'vfsID',
     'tools': 'toolID',
-    'tasks': 'taskID',
-    'keys': 'keyID' # ?????
+    'batches': 'batchID',
+    'keys': 'keyID'
 }
 
 
