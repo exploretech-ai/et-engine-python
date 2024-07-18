@@ -6,6 +6,17 @@ from .config import API_ENDPOINT
 
 
 def list_batches():
+    """
+    Lists all the available batches for the user
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    A list of Batch objects
+    
+    """
      
     response = requests.get(
         API_ENDPOINT + "/batches",
@@ -21,6 +32,10 @@ def list_batches():
 
 
 def clear_batches():
+    """Deletes all the available batches for the user.
+    
+    * NOTE: This will not cancel any jobs, which will still run and incur costs once cleared.
+    """
 
     response = requests.delete(
         API_ENDPOINT + "/batches",
@@ -31,11 +46,35 @@ def clear_batches():
 
 
 class Batch:
+    """Class for interacting with a Batch
+    
+    Attributes
+    ----------
+    id : 
+        unique ID of the batch
+    url : string
+        API endpoint for this batch
+    """
     def __init__(self, batch_id):
+        """
+        
+        Parameters
+        ----------
+        batch_id : string
+            The batch ID to connect to
+
+        """
         self.id = batch_id
         self.url = API_ENDPOINT + "/batches/" + batch_id
         
     def list_jobs(self):
+        """
+        List the jobs in this batch
+
+        Returns
+        -------
+        a lit of Job objects
+        """
         
         response = requests.get(
             self.url + "/jobs",
@@ -48,6 +87,9 @@ class Batch:
             raise Exception("error listing jobs: " + response.text)
         
     def delete(self):
+        """Delete this batch. 
+        * NOTE: This will not cancel any jobs, which will still run and incur costs once deleted.
+        """
 
         response = requests.delete(
             self.url,
@@ -57,6 +99,13 @@ class Batch:
             raise Exception("error deleting batch: " + response.text)
         
     def status(self):
+        """
+        Returns the basic information of this batch and summarizes the job status.
+
+        Returns
+        -------
+        a dictionary with a summary (see HTTP docs)
+        """
 
         response = requests.get(
             self.url,
@@ -70,13 +119,43 @@ class Batch:
 
 
 class Job:
+    """Class for interacting with a Job
+    
+    Attributes
+    ----------
+    batch : Batch
+        Parent batch for this job
+    id : string
+        unique ID of the tool
+    url : string
+        API endpoint for this tool
+    """
 
     def __init__(self, batch_id, job_id):
+        """
+        Parameters
+        ----------
+        batch_id : string
+            unique ID of the parent batch
+        job_id : string
+            unique ID of the job to connect to
+        """
         self.batch = Batch(batch_id)
         self.id = job_id
         self.url = self.batch.url + "/jobs/" + job_id
 
     def status(self):
+        """
+        Describes the status of the job.
+
+        Returns
+        -------
+        a dictionary of the job status (see HTTP docs)
+        
+        Raises	
+        ------	
+
+        """
         
         response = requests.get(
             self.url,
