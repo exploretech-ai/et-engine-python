@@ -153,11 +153,15 @@ def describe_batch(batch_id):
              "cpu": 123
            },
            "n_submitted": 123,
-           "submitted_jobs": [         # optional
-             {
-               "": ""
-             }
-           ]
+           "submitted_jobs": {
+            "SUBMITTED": 123, 
+            "PENDING": 123, 
+            "RUNNABLE": 123, 
+            "STARTING": 123,
+            "RUNNING": 123, 
+            "SUCCEEDED": 123,
+            "FAILED": 123
+           }
          }
        ]
 
@@ -199,10 +203,6 @@ def describe_batch(batch_id):
 
         batch_info['n_submitted'] = len(job_ids)
 
-        if batch_info['n_submitted'] == 0:
-            payload = json.dumps(batch_info)
-            return Response(payload, status=200)
-        
         submitted_jobs = {
             'SUBMITTED': 0, 
             'PENDING': 0, 
@@ -212,6 +212,11 @@ def describe_batch(batch_id):
             'SUCCEEDED': 0,
             'FAILED': 0
         }
+
+        if batch_info['n_submitted'] == 0:
+            batch_info['submitted_jobs'] = submitted_jobs
+            payload = json.dumps(batch_info)
+            return Response(payload, status=200)
 
         for job_chunk in chunks(job_ids, 100):
             
