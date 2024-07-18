@@ -11,13 +11,17 @@ class MaxRetriesExceededError(Exception):
 
 
 def connect(tool_name):
-    # Make API call to GET vfs?name={vfs_name}
-    #     - NOTE: Use ToolID to call vfs/{vfsID} to build, etc.
-    # Create vfs object by preparing the API endpoint
+    """
+    Searches for a tool with the specified name and returns a Tool object if found.
+
+    Parameters	
+    ----------	
+    name : string	
+        Name of the tool to connect to	
+    """
 
     status = requests.get(
         API_ENDPOINT + "/tools", 
-        # params={'name':tool_name},
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
     )
     if status.ok:
@@ -41,26 +45,6 @@ def connect(tool_name):
         raise Exception(f'Tool "{tool_name}" could not be accessed')
 
 
-def delete(name):	
-    """deletes the specified VFS	
-        
-    Parameters	
-    ----------	
-    name : string	
-        Name of the VFS to delete	
-    """	
-    status = requests.delete(	
-        API_ENDPOINT + "/tools", 
-        params={'name':name},	
-        headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
-    )	
-
-    if status.ok:
-        return status
-    else:
-        raise Exception('Delete failed')
-
-
 def create(name, description):	
     """Creates a new Tool	
         
@@ -70,15 +54,17 @@ def create(name, description):
         Name of the tool	
     description : string	
         Plain text description of the tool	
+
     Returns	
     -------	
     Tool	
         A Tool object connected to the newly-created tool	
+
     Raises	
     ------	
     Warnings	
     --------	
-    The API works, but the method does not yet return a connected "Tool" object	
+
     """	
 
     # API Request	
@@ -102,10 +88,10 @@ class Tool:
     
     Attributes
     ----------
-    session : Session
-        authenticated session
+    id : 
+        unique ID of the tool
     url : string
-        VFS API endpoint
+        API endpoint for this tool
     """
 
 
@@ -119,15 +105,23 @@ class Tool:
         client : Client
             base authenticated client containing the active session
         """
-        self.tool_id = tool_id
+        self.id = tool_id
         self.url = API_ENDPOINT + f"/tools/{tool_id}"
 
 
     def __call__(self, **kwargs):
         """Makes the object callable like a function
         
+        Parameters
+        ----------
+        kwargs : dict
+            key-value arguments to be passed into the job. If *hardware* keyword is provided, it must be of type Hardware and it will be used to specify the hardware for the job to run on.
+  
+        Returns
+        -------
+        a jobs.Batch object
+
         Keyword arguments are passed to the Tool as environment variables
-        If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so 
 
         """  
 
@@ -157,10 +151,20 @@ class Tool:
         
 
     def run_batch(self, fixed_kwargs={}, variable_kwargs=[], hardware=None):
-        """Makes the object callable like a function
+        """
+
+        Parameters
+        ----------
+        fixed_kwargs : dict
+            key-value arguments to be passed into each job in the batch
+        variable_kwargs : [dict]
+            variable arguments to be passed into separate jobs in the batch
+        hardware : Hardware
+            the compute hardware to run for each job in the batch
         
-        Keyword arguments are passed to the Tool as environment variables
-        If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so 
+        Returns
+        -------
+        a jobs.Batch object
 
         """  
 
