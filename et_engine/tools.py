@@ -2,10 +2,7 @@ import shutil
 import requests
 import json
 import os
-from .tasks import Task
-import asyncio, aiohttp
-from tqdm import tqdm
-import time
+from .jobs import Batch
 from .config import API_ENDPOINT
 
 
@@ -19,7 +16,7 @@ def connect(tool_name):
     # Create vfs object by preparing the API endpoint
 
     status = requests.get(
-        API_ENDPOINT + "tools", 
+        API_ENDPOINT + "/tools", 
         # params={'name':tool_name},
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
     )
@@ -53,7 +50,7 @@ def delete(name):
         Name of the VFS to delete	
     """	
     status = requests.delete(	
-        API_ENDPOINT + "tools", 
+        API_ENDPOINT + "/tools", 
         params={'name':name},	
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
     )	
@@ -86,7 +83,7 @@ def create(name, description):
 
     # API Request	
     status = requests.post(	
-        API_ENDPOINT + "tools",
+        API_ENDPOINT + "/tools",
         data=json.dumps({	
             "name": name,	
             "description": description	
@@ -98,19 +95,7 @@ def create(name, description):
         return status
     else:
         raise Exception('Create failed')
-
-
-def parse_kwargs(**kwargs):
-        if kwargs:
-            if 'hardware' in kwargs:
-                assert isinstance(kwargs['hardware'], Hardware)
-                kwargs['hardware'] = kwargs['hardware'].to_dict()
-
-            return json.dumps(kwargs)
-
-        else:
-            return None
-        
+       
 
 class Tool:
     """Class for interacting with a Tool
@@ -135,7 +120,7 @@ class Tool:
             base authenticated client containing the active session
         """
         self.tool_id = tool_id
-        self.url = API_ENDPOINT + f"tools/{tool_id}"
+        self.url = API_ENDPOINT + f"/tools/{tool_id}"
 
 
     def __call__(self, **kwargs):
@@ -146,83 +131,62 @@ class Tool:
 
         """  
 
-        data = parse_kwargs(**kwargs)
-        response = requests.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]})
+        if "hardware" in kwargs:
+            hardware_arg = kwargs.pop("hardware")
+            assert isinstance(hardware_arg, Hardware)
+            hardware = hardware_arg.to_dict()
+
+        else:
+            hardware = Hardware().to_dict()
+
+        data = {
+            'fixed_args': kwargs,
+            'variable_args': [],
+            'hardware': hardware
+        }
+
+        response = requests.post(
+            self.url, 
+            data=json.dumps(data), 
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
         if response.ok:
-            return Task(response.text)
+            return Batch(response.text)
         else:
             raise Exception(response.text)
-        # n_tries = 0
-        # while n_tries < 5:
-        #     try:
-        #         task = asyncio.run(self.execute(**kwargs))
-        #         print(f'Successfully launched task {task.id}')
-        #         return task
-            
-        #     except Exception as e:
-        #         n_tries += 1
-        #         print(f'Failed attempts: {n_tries}. Waiting 1 minute and trying again...')
-        #         time.sleep(60)
-
-        # raise MaxRetriesExceededError(f'failed to execute {n_tries} times')
-
-
-    async def execute(self, **kwargs):
-
-        # async def make_request():
-        data = parse_kwargs(**kwargs)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}) as status:
-                if status.ok:
-                    return Task(await status.json())
-                else:
-                    print(await status.text())
-                    print(kwargs)
-                    # return None
-                    raise Exception('Execute failed')
-            
-                
-
-    async def execute_one(self, session, **kwargs):
-        data = parse_kwargs(**kwargs)
-
-        n_tries = 0
-        while n_tries < 100:
-            async with session.post(self.url, data=data, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}) as status:
-                if status.ok:
-                    return Task(await status.json())
-                else:
-                    # print("Task failed:", status, n_tries)
-                    n_tries += 1
         
-        return None
-                
 
-    async def parallel(self, kwarg_list):
+    def run_batch(self, fixed_kwargs={}, variable_kwargs=[], hardware=None):
+        """Makes the object callable like a function
+        
+        Keyword arguments are passed to the Tool as environment variables
+        If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so 
 
-        async with aiohttp.ClientSession() as session:
-            tasks = set()
-            for i, kwargs in enumerate(kwarg_list):
-                task = asyncio.create_task(self.execute_one(session, **kwargs))
-                tasks.add(task)
+        """  
 
-            results = []
-            for t in tqdm(asyncio.as_completed(tasks), total=len(tasks)):
-                results.append(await t)
+        data = {
+            'fixed_args': fixed_kwargs,
+            'variable_args': variable_kwargs
+        }
 
-        return results
+        if hardware is None:
+            data['hardware'] = Hardware().to_dict()
+        else:
+            assert isinstance(hardware, Hardware)
+            data['hardware'] = hardware.to_dict()
 
+        response = requests.post(
+            self.url, 
+            data=json.dumps(data), 
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
 
-    def monte_carlo(self,kwarg_list):
-        task_list = asyncio.run(self.parallel(kwarg_list)) 
-        n_fails = 0
-        for t in task_list:                
-            if t is None:
-                n_fails += 1
-                task_list.remove(t)
-        print(f'Successfully launched {(1 - (n_fails) / len(kwarg_list))*100}% of tasks ({n_fails} failed).')
-        return task_list
-
+        if response.ok:
+            return Batch(response.text)
+        else:
+            print(response)
+            raise Exception(response.text)
+              
         
     def push(self, folder):
         """Update the tool code
@@ -251,6 +215,7 @@ class Tool:
             self.url, 
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
+
         presigned_post = json.loads(response.text)
         
         with open(zip_file, 'rb') as f:
@@ -264,27 +229,27 @@ class Tool:
     
 
 class Hardware:
-    def __init__(self, filesystems=[], memory=512, cpu=1, gpu=None):
+    def __init__(self, filesystems=[], memory=512, cpu=1):
         """
         Creates a hardware configuration object
         """
         self.filesystems = filesystems
         self.memory = memory
         self.cpu = cpu
-        self.gpu = gpu
+
 
     def to_dict(self):
         return {
-            'filesystems': self.filesystems,
+            'filesystems': [fs.id for fs in self.filesystems],
             'memory': self.memory,
-            'cpu': self.cpu,
-            'gpu': self.gpu
+            'cpu': self.cpu
         }
+
 
     def to_json(self):
         """
         Converts the class instance to a json string that can be passed to The Engine
         """
         
-        return json.dumps(self.to_dict)
+        return json.dumps(self.to_dict())
 

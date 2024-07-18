@@ -37,7 +37,7 @@ def create(name):
 
     # API Request	
     status = requests.post(	
-        API_ENDPOINT + "vfs",
+        API_ENDPOINT + "/vfs",
         data=json.dumps({	
             "name": name
         }), 	
@@ -53,7 +53,7 @@ def create(name):
 
 def list_all():
     status = requests.get(
-        API_ENDPOINT + "vfs", 
+        API_ENDPOINT + "/vfs", 
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
     )
     if status.ok:
@@ -83,7 +83,7 @@ def delete(name):
         Name of the VFS to delete	
     """	
     status = requests.delete(	
-        API_ENDPOINT + "vfs", 
+        API_ENDPOINT + "/vfs", 
         params={'name':name},	
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
     )	
@@ -115,7 +115,7 @@ class VirtualFileSystem:
             id associated with the VFS of interest
         """
         self.id = vfs_id
-        self.url = API_ENDPOINT + f"vfs/{vfs_id}"
+        self.url = API_ENDPOINT + f"/vfs/{vfs_id}"
 
 
     def file_exists(self):
@@ -178,31 +178,29 @@ class VirtualFileSystem:
         """
         url = f"{self.url}/files/{remote_file}"
 
-        response = requests.get(
-            url, 
-            params={"key": remote_file},
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-        )
-        presigned_url = json.loads(response.text)
-        
-        with requests.get(presigned_url, stream=True) as r:
-            # r.raise_for_status()
-            with open(local_file, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=None):
-                    f.write(chunk)
+        with requests.get(url, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}, stream=True) as r:
+            r.raise_for_status()
+            total_size = int(r.headers.get("Content-Length", 0))
+            print(total_size)
+            block_size = 8192
+
+            with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
+                with open(local_file, "wb") as file:
+                    for data in r.iter_content(block_size):
+                        progress_bar.update(len(data))
+                        file.write(data)
 
 
-    def mkdir(self, path):
+    def mkdir(self, path, ignore_exists=False):
         response = requests.post(
             self.url + "/mkdir/" + path, 
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
 
-        # >>>>> HERE CHANGE THIS SO "ALREADY EXISTS" DOESN'T THROW ERROR
-
-        # =====
+        if ignore_exists and response.status_code == 409:
+            return
+        
         response.raise_for_status()
-        # <<<<<
 
 
     def list(self, path=None):
@@ -252,8 +250,6 @@ def request_multipart_upload(url, remote_file, num_parts, file_size_bytes, chunk
         raise Exception(f"Error creating multipart upload: {response}, {response.reason}")
     
     
-
-
 async def upload_part(local_file, part_number, chunk_size, presigned_url, session):
     """
     Uploads one part in a multipart upload
