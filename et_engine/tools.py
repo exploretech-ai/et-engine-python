@@ -3,7 +3,7 @@ import requests
 import json
 import os
 from .jobs import Batch
-from .config import API_ENDPOINT
+from .config import API_ENDPOINT, MultipartUpload
 
 
 class MaxRetriesExceededError(Exception):
@@ -213,22 +213,11 @@ class Tool:
 
         if not tar_gz_file.endswith(".tar.gz"):
             raise Exception("File must have .tar.gz")
-
-        response = requests.put(
-            self.url, 
-            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
-        )
-
-        presigned_post = json.loads(response.text)
         
-        with open(tar_gz_file, 'rb') as f:
-            files = {'file': (tar_gz_file, f)}
-            upload_response = requests.post(
-                presigned_post['url'], 
-                data=presigned_post['fields'], 
-                files=files
-            )
-        return upload_response
+        tool_contents = MultipartUpload(tar_gz_file, self.url, method="PUT")
+        tool_contents.request_upload()
+        tool_contents.upload()
+        tool_contents.complete_upload()
     
 
 class Hardware:
