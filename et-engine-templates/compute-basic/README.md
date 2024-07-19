@@ -1,3 +1,27 @@
+# Template Contents
+
+1. `efs-basic` is for virtual filesystems
+2. `compute-basic` is for the computing
+3. `buildspec.yml` is for codebuild projects which run once tools are pushed
+4. `update_templates.sh` is used to update all the above templates and push them to s3
+
+
+# Building tools
+
+Once you've created a Dockerfile inside a folder `/path/to/docker/folder`, you can get the tool on the cloud via the following steps:
+```
+docker build --tag my_tool /path/to/docker/folder
+docker save my_tool | gzip > my_tool.tar.gz
+```
+Once you've generated `my_tool.tar.gz` you can push to The Engine by opening a Python interpreter and running
+
+```
+>>> from et_engine import tools
+>>> my_tool = tools.connect("my_tool_name")
+>>> my_tool.push("my_tool.tar.gz")
+```
+
+If you get a response `204` then your tool has been successfully uploaded and the build will be attempted.
 
 # Welcome to your CDK Python project!
 

@@ -20,9 +20,6 @@ for PROJECT_DIR in "${CDK_PROJECTS[@]}"; do
     TEMPLATE_FILE="${PROJECT_DIR}.yaml"
     cdk synth > "$TEMPLATE_FILE"
     
-    # Here you could include any steps to programmatically edit the template file
-    # e.g., sed -i 's/original_text/replacement_text/g' "$TEMPLATE_FILE"
-
     # Upload the template to S3
     aws s3 cp "$TEMPLATE_FILE" "s3://$BUCKET_NAME/$TEMPLATE_FILE"
 done

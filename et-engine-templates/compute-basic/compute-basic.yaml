@@ -80,6 +80,11 @@ Resources:
         LambdaFunctionConfigurations:
           - Events:
               - s3:ObjectCreated:*
+            Filter:
+              Key:
+                FilterRules:
+                  - Name: prefix
+                    Value: tool.tar.gz
             LambdaFunctionArn:
               Fn::GetAtt:
                 - codebuildtrigger9AB2B5F9
@@ -374,21 +379,6 @@ Resources:
       PolicyDocument:
         Statement:
           - Action:
-              - s3:GetBucket*
-              - s3:GetObject*
-              - s3:List*
-            Effect: Allow
-            Resource:
-              - Fn::GetAtt:
-                  - CodeBucketFF4C7AD6
-                  - Arn
-              - Fn::Join:
-                  - ""
-                  - - Fn::GetAtt:
-                        - CodeBucketFF4C7AD6
-                        - Arn
-                    - /tool.zip
-          - Action:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
@@ -421,6 +411,18 @@ Resources:
               - ecr:GetAuthorizationToken
             Effect: Allow
             Resource: "*"
+          - Action: s3:*
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - CodeBucketFF4C7AD6
+                  - Arn
+              - Fn::Join:
+                  - ""
+                  - - Fn::GetAtt:
+                        - CodeBucketFF4C7AD6
+                        - Arn
+                    - /*
           - Action:
               - ecr:BatchCheckLayerAvailability
               - ecr:CompleteLayerUpload
@@ -489,6 +491,13 @@ Resources:
           - Name: AWS_ACCOUNT_ID
             Type: PLAINTEXT
             Value: "734818840861"
+          - Name: BUCKET_NAME
+            Type: PLAINTEXT
+            Value:
+              Fn::Join:
+                - ""
+                - - tool-
+                  - Ref: toolID
         Image: aws/codebuild/standard:5.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
@@ -503,12 +512,38 @@ Resources:
           - DockerBuilderRole896034E6
           - Arn
       Source:
-        Location:
-          Fn::Join:
-            - ""
-            - - Ref: CodeBucketFF4C7AD6
-              - /tool.zip
-        Type: S3
+        BuildSpec: |-
+          {
+            "version": "0.2",
+            "phases": {
+              "pre_build": {
+                "commands": [
+                  "echo Logging in to Amazon ECR...",
+                  "aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com",
+                  "echo Downloading the image archive from S3...",
+                  "aws s3 cp s3://$BUCKET_NAME/tool.tar.gz tool.tar.gz"
+                ]
+              },
+              "build": {
+                "commands": [
+                  "echo Build started on `date`",
+                  "echo Extracting the Docker image...",
+                  "IMAGE_NAME=$(docker load --input tool.tar.gz)",
+                  "IMAGE_NAME=${IMAGE_NAME#\"Loaded image: \"}",
+                  "echo Tagging $IMAGE_NAME",
+                  "docker tag $IMAGE_NAME $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG"
+                ]
+              },
+              "post_build": {
+                "commands": [
+                  "echo Build completed on `date`",
+                  "echo Pushing the Docker image...",
+                  "docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG"
+                ]
+              }
+            }
+          }
+        Type: NO_SOURCE
     Metadata:
       aws:cdk:path: ComputeBasicStack/DockerBuilder/Resource
   CDKMetadata:

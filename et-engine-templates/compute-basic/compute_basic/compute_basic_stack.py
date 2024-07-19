@@ -26,10 +26,6 @@ class ComputeBasicStack(Stack):
             self,
             "toolID"
         ).value_as_string
-        # cluster_arn = CfnParameter(
-        #     self,
-        #     "clusterARN"
-        # ).value_as_string
 
         # Bucket & Build Trigger
         code_bucket = s3.Bucket(
@@ -63,7 +59,10 @@ def handler(event, context):
         )
         code_bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED, 
-            s3n.LambdaDestination(codebuild_trigger)
+            s3n.LambdaDestination(codebuild_trigger),
+            s3.NotificationKeyFilter(
+                prefix="tool.tar.gz"
+            )
         )
 
         # Container Image
@@ -74,14 +73,41 @@ def handler(event, context):
         )
 
         # Codebuild Project
+        build_spec = codebuild.BuildSpec.from_object({
+            "version": "0.2",
+            "phases": {
+                "pre_build": {
+                    "commands": [
+                        "echo Logging in to Amazon ECR...",
+                        "aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com",
+                        "echo Downloading the image archive from S3...",
+                        "aws s3 cp s3://$BUCKET_NAME/tool.tar.gz tool.tar.gz"
+                    ]
+                },
+                "build": {
+                    "commands": [
+                        "echo Build started on `date`",
+                        "echo Extracting the Docker image...",
+                        "IMAGE_NAME=$(docker load --input tool.tar.gz)",
+                        'IMAGE_NAME=${IMAGE_NAME#"Loaded image: "}',
+                        "echo Tagging $IMAGE_NAME",
+                        "docker tag $IMAGE_NAME $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG"
+                    ]
+                },
+                "post_build": {
+                    "commands": [
+                        "echo Build completed on `date`",
+                        "echo Pushing the Docker image...",
+                        "docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG"
+                    ]
+                }
+            }
+        })
         docker_builder = codebuild.Project(
             self,
             "DockerBuilder",
             project_name = "tool-" + tool_id,
-            source=codebuild.Source.s3(
-                bucket=code_bucket,
-                path="tool.zip"
-            ),
+            build_spec = build_spec,
             environment=codebuild.BuildEnvironment(
                 privileged=True,
                 environment_variables={
@@ -99,6 +125,9 @@ def handler(event, context):
                     ),
                     "AWS_ACCOUNT_ID": codebuild.BuildEnvironmentVariable(
                         value="734818840861"
+                    ),
+                    "BUCKET_NAME": codebuild.BuildEnvironmentVariable(
+                        value="tool-"+tool_id
                     )
                 },
                 build_image=codebuild.LinuxBuildImage.STANDARD_5_0
@@ -112,54 +141,19 @@ def handler(event, context):
                 actions=[
                     'ecr:*'
                 ],
-                resources=['*']
+                resources=["*"]
+            )
+        )
+        docker_builder.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    's3:*'
+                ],
+                resources=[
+                    code_bucket.bucket_arn,
+                    code_bucket.bucket_arn + "/*"
+                ]
             )
         )
         container_repo.grant_push(docker_builder)
 
-
-        # ==================================================================================================================
-        # THESE WILL NEED TO BE REMOVED AND CONFIGURED ON THE FLY ALONG WITH EFS VOLUMES
-
-        # ecs_task_definition = ecs.Ec2TaskDefinition(
-        #     self,
-        #     "ToolTask",
-        #     family="tool-" + tool_id
-        # )
-        # ecs_task_definition.add_container(
-        #     "ToolImage",
-        #     image=ecs.ContainerImage.from_registry(
-        #         container_repo.repository_uri + ':latest'
-        #     ),
-        #     memory_limit_mib=512,
-        #     logging=ecs.LogDrivers.aws_logs(
-        #         stream_prefix=f"tool-{tool_id}",
-        #         mode=ecs.AwsLogDriverMode.NON_BLOCKING,
-        #     ),
-        #     container_name=f"tool-{tool_id}"
-        # )
-        # ecs_task_definition.add_to_execution_role_policy(
-        #     iam.PolicyStatement(
-        #         actions=[
-        #             'ecr:*'
-        #         ],
-        #         resources=['*']
-        #     )
-        # )
-        # ==================================================================================================================
-
-
-        
-
-        # OUTPUTS
-        # CfnOutput(
-        #     self,
-        #     "ClusterName",
-        #     value=cluster_arn
-        # )
-        # CfnOutput(
-        #     self,
-        #     "TaskName",
-        #     value=ecs_task_definition.task_definition_arn
-        # )
-       
