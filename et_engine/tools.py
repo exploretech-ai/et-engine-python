@@ -192,28 +192,27 @@ class Tool:
             raise Exception(response.text)
               
         
-    def push(self, folder):
+    def push(self, tar_gz_file):
         """Update the tool code
         
-        The tool folder must contain:
-            1. a Dockerfile
-            2. a buildspec.yml file
+        Before pushing the tool, you must build, save, and gzip a docker image on your computer. To do this, run the following commands.
 
-        When pushed, the folder will be zipped and sent to the ET Engine. There, the tool will be built and run in a container.
+        ```
+        docker build --tag my_tool /path/to/docker/folder
+        docker save my_tool | gzip > my_tool.tar.gz
+        ```
 
-        Inside the API, we are:
-            1. Triggering codebuild
-            2. Codebuild is combined with the pre-installations and clean-up commands, and built inside Engine 
+        Then, pass the path to `/path/to/my_tool.tar.gz` to this function. The image will be uploaded, processed, and made available for use.
 
+        
         Parameters
         ----------
-        folder : string
-            Path to a folder containing the tool
+        tar_gz_file : string
+            Path to the `.tar.gz` file containing the image
         """
 
-        # ZIP folder
-        zip_file = f"{folder}.zip"
-        shutil.make_archive(folder, 'zip', folder)
+        if not tar_gz_file.endswith(".tar.gz"):
+            raise Exception("File must have .tar.gz")
 
         response = requests.put(
             self.url, 
@@ -222,8 +221,8 @@ class Tool:
 
         presigned_post = json.loads(response.text)
         
-        with open(zip_file, 'rb') as f:
-            files = {'file': (zip_file, f)}
+        with open(tar_gz_file, 'rb') as f:
+            files = {'file': (tar_gz_file, f)}
             upload_response = requests.post(
                 presigned_post['url'], 
                 data=presigned_post['fields'], 
