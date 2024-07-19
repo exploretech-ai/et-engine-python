@@ -263,8 +263,8 @@ def build_tool(tool_id):
         bucket_name = "tool-" + tool_id
         presigned_post = s3.generate_presigned_post(
             bucket_name, 
-            "tool.zip",
-            ExpiresIn=60
+            "tool.tar.gz",
+            ExpiresIn=3600
         )    
         return Response(json.dumps(presigned_post), status=200)
     
