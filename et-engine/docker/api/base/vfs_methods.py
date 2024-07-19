@@ -63,6 +63,7 @@ def create_vfs():
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
+    request_id = context["request_id"]
 
     try:
         request_data = request.get_data(as_text=True)
@@ -79,7 +80,7 @@ def create_vfs():
             """
             SELECT name FROM VirtualFilesystems WHERE userID = %s
             """,
-            (user_id)
+            (user_id,)
         )
         available_vfs = [row[0] for row in cursor.fetchall()]
         if vfs_name in available_vfs:
@@ -105,9 +106,10 @@ def create_vfs():
         )
         connection.commit()
 
-        return Response(f"'{vfs_name}' successfully created", status=200)
+        return Response(status=200)
     
-    except:
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error", status=500)
 
     finally:
@@ -120,6 +122,7 @@ def delete_vfs(vfs_id):
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
+    request_id = context["request_id"]
     is_owned = context['is_owned']
 
     if not is_owned:
@@ -142,7 +145,8 @@ def delete_vfs(vfs_id):
 
         return Response(f"Successfully deleted VFS {vfs_id}", status=200)
     
-    except:
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
         return Response("Unknown error", status=500)
     
     finally:
@@ -178,6 +182,10 @@ def download_file(vfs_id, filepath):
 @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['POST'])
 def upload_file(vfs_id, filepath):
 
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+    request_id = context['request_id']
+
     upload_type = "multipart"
     bucket_name = "vfs-" + vfs_id
 
@@ -210,7 +218,8 @@ def upload_file(vfs_id, filepath):
         complete = False
     
     except Exception as e:
-        return Response("Unknown error while parsing checking for a 'complete' string", status=500)
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unknown error", status=500)
 
     if complete:
         try:
@@ -278,6 +287,7 @@ def upload_file(vfs_id, filepath):
             return Response(payload, status=200)
 
         except Exception as e:
+            LOGGER.exception(e)
             return Response("Error generating presigned url", status=500)
 
 

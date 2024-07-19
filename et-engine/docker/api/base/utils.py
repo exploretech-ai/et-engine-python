@@ -27,7 +27,7 @@ def get_component_from_outputs(outputs, key):
             value = elem["OutputValue"]
 
     if value is None:
-        raise Exception("Key {key} not found")
+        raise Exception(f"Key {key} not found")
     
     return value
 
@@ -135,8 +135,8 @@ def compute_template_parameters(tool_id):
 
 def vfs_template_parameters(vfs_id):
     engine_stack_outputs = get_stack_outputs("ETEngine")
-    vpc_id = get_component_from_outputs(engine_stack_outputs, "ComputeClusterVpcID")
-    sg_id = get_component_from_outputs(engine_stack_outputs, "ComputeClusterSgID")
+    vpc_id = get_component_from_outputs(engine_stack_outputs, "EngineVpcId")
+    sg_id = get_component_from_outputs(engine_stack_outputs, "EfsSecurityGroupId")
     launch_download_from_s3_to_efs_arn = get_component_from_outputs(engine_stack_outputs, "DownloadS3ToEfsFunctionArn")
 
     return [

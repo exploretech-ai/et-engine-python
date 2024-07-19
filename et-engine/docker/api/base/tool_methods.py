@@ -256,20 +256,152 @@ def execute_tool(tool_id):
 
     
 @tools.route('/tools/<tool_id>', methods=['PUT'])
-def build_tool(tool_id):
+def push_tool_multipart(tool_id):
+    """
+    Returns attributes for batch
+
+    The user is identified by the 'user_id' in the request context.
+
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :status 200: Success. Returns a list of batch id's and associated properties.
+    :status 500: Unknown error occurred during processing.
+
+    **Request Syntax**:
+
+    .. sourcecode:: json
+
+       {
+         "num_parts": 123,
+         "complete": "true" | "false",
+         "parts": [
+            *from presigned urls*
+         ],
+         "UploadId": "string"
+       }
+
+    **Response Syntax**:
+
+    .. sourcecode:: json
+
+       {
+         "UploadId": "string"
+         "urls": [
+           "string"
+         ]
+       }
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
+
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+    request_id = context['request_id']
+
+    upload_type = "multipart"
+    bucket_name = "tool-" + tool_id
+    filepath = "tool.tar.gz"
+
+    s3 = boto3.client('s3', region_name="us-east-2")
 
     try:
-        s3 = boto3.client('s3')
-        bucket_name = "tool-" + tool_id
-        presigned_post = s3.generate_presigned_post(
-            bucket_name, 
-            "tool.tar.gz",
-            ExpiresIn=3600
-        )    
-        return Response(json.dumps(presigned_post), status=200)
+        request_data = request.get_data(as_text=True)
+        body = json.loads(request_data)
+    
+    except KeyError as e:
+        return Response("Request missing body", status=400)
     
     except Exception as e:
-        return Response("Unknown error occurred", status=500)
+        return Response("Error parsing request body", status=400)
+
+    try:
+        complete_string = body['complete']
+
+        if complete_string == "true":
+            complete = True
+
+        elif complete_string == "false":
+            complete = False
+
+        else:
+            return Response("Invalid 'complete' code, use either 'true' or 'false'", status=400)
+        
+    except KeyError as e:
+        # Continue if 'complete' not found in request body
+        complete = False
+    
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unknown error", status=500)
+
+    if complete:
+        try:
+            parts = body['parts'] # yikes
+            upload_id = body['UploadId']
+
+            parts = sorted(parts, key=lambda x: x['PartNumber'])
+
+            s3.complete_multipart_upload(
+                Bucket=bucket_name,
+                Key=filepath,
+                MultipartUpload={"Parts": parts},
+                UploadId=upload_id,
+            )
+            return Response(status=200)
+
+        except KeyError as e:
+            return Response("Missing 'parts' or 'UploadId' in request body when completing multipart upload", status=400)
+        
+        except Exception as e:
+              return Response("Unknown error when completing multipart upload", status=500)
+        
+
+    # Create presigned post
+    if upload_type == "multipart":
+        try:
+            num_parts = body['num_parts']
+        
+            multipart_upload = s3.create_multipart_upload(Bucket=bucket_name, Key=filepath)
+            upload_id = multipart_upload["UploadId"]
+
+            urls = []
+            for part_number in range(1, num_parts + 1): # parts start at 1
+                url = s3.generate_presigned_url(
+                    ClientMethod="upload_part",
+                    Params={
+                        "Bucket": bucket_name,
+                        "Key": filepath,
+                        "UploadId": upload_id,
+                        "PartNumber": part_number,
+                    },
+                )
+                urls.append((part_number, url))
+
+            payload = json.dumps({
+                'UploadId': upload_id,
+                'urls': urls
+            })
+            return Response(payload, status=200)
+
+        except KeyError as e:
+            return Response("Number of parts not specified properly in request body", status=400)
+        
+        except Exception as e:
+            return Response("Unknown error while creating multipart upload", status=500)
+        
+    else:
+        try:
+            presigned_post = s3.generate_presigned_post(
+                Bucket=bucket_name, 
+                Key=filepath,
+                ExpiresIn=3600
+            )   
+            payload = json.dumps(presigned_post)
+            return Response(payload, status=200)
+
+        except Exception as e:
+            LOGGER.exception(e)
+            return Response("Error generating presigned url", status=500)
+
 
 
 @tools.route('/tools/<tool_id>', methods=['DELETE'])
