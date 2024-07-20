@@ -147,13 +147,13 @@ class WebServer(Stack):
             ["427e2294-1365-4b95-9237-a0314463c5bd", "fs-0b2b40344bb282514", "fsap-058764ea78df568ed"],
             ["dde97cc8-d4e2-4a8c-946a-5f5226346b9a", "fs-0418f73e0e9a18931", "fsap-08306384f08e7f341"],
             ["b0e39682-01bc-4141-8a1d-cc9b8cfc74ea", "fs-098ca96ed0dc2295b", "fsap-0b456caa8e25db8bf"],
-            ["a3927777-c26b-484d-a74a-89eb163f88cc", "fs-0808d3e89eff8a345", "fsap-045f50913c11a1193"]
+            ["a3927777-c26b-484d-a74a-89eb163f88cc", "fs-0808d3e89eff8a345", "fsap-045f50913c11a1193"],
+            ["be0750a7-1b74-4c79-b2cb-dafe7d25254b", "fs-0469e69f616565c64", "fsap-078e63324197071ea"]
         ]
         for p in file_system_mount_params:
             self.mount_volume(p[0], p[1], p[2])
 
             
-
     def mount_volume(self, vfs_id, file_system_id, access_point_id):
         self.web_server_fargate_task.add_volume(
             name="vfs-" + vfs_id,

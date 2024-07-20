@@ -23,7 +23,7 @@ def preflight_cors():
     if request.method == "OPTIONS":
         response = Response(status=200)
         response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Content-Range'
         response.headers['Access-Control-Allow-Methods'] ='GET, PUT, POST, DELETE, OPTIONS'
         return response
     
@@ -31,7 +31,7 @@ def preflight_cors():
 @app.after_request
 def add_cors_header(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Content-Range'
     response.headers['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE, OPTIONS'
     return response
 

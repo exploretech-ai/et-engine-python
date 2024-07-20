@@ -403,7 +403,6 @@ def push_tool_multipart(tool_id):
             return Response("Error generating presigned url", status=500)
 
 
-
 @tools.route('/tools/<tool_id>', methods=['DELETE'])
 def delete_tool(tool_id):
     

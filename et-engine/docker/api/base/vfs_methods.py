@@ -5,6 +5,9 @@ import uuid
 import shutil
 import datetime
 import boto3
+import asyncio, aiofiles
+import random
+
 from . import EFS_MOUNT_POINT, LOGGER, CONNECTION_POOL
 from . import utils
 
@@ -157,12 +160,14 @@ def delete_vfs(vfs_id):
 @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['GET'])
 def download_file(vfs_id, filepath):
 
-    LOGGER.info(f"VFS: {vfs_id}, File: {filepath}")
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+    request_id = context["request_id"]
 
     full_file_path = os.path.join(EFS_MOUNT_POINT, vfs_id, filepath)
 
     if "/../" in full_file_path:
-        LOGGER.info(f"** ALERT: POTENTIALLY MALICIOUS PATH **")
+        LOGGER.info(f"[{request_id}] ** ALERT: POTENTIALLY MALICIOUS PATH **")
         return Response("Invalid path", status=403)
     
     if not os.path.exists(full_file_path):
@@ -179,116 +184,209 @@ def download_file(vfs_id, filepath):
     return Response(stream_file(full_file_path))
 
 
-@vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['POST'])
-def upload_file(vfs_id, filepath):
+# @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['POST'])
+# def upload_file(vfs_id, filepath):
+
+#     context = json.loads(request.environ['context'])
+#     user_id = context['user_id']
+#     request_id = context['request_id']
+
+#     upload_type = "multipart"
+#     bucket_name = "vfs-" + vfs_id
+
+#     s3 = boto3.client('s3', region_name="us-east-2")
+
+#     try:
+#         request_data = request.get_data(as_text=True)
+#         body = json.loads(request_data)
+    
+#     except KeyError as e:
+#         return Response("Request missing body", status=400)
+    
+#     except Exception as e:
+#         return Response("Error parsing request body", status=400)
+
+#     try:
+#         complete_string = body['complete']
+
+#         if complete_string == "true":
+#             complete = True
+
+#         elif complete_string == "false":
+#             complete = False
+
+#         else:
+#             return Response("Invalid 'complete' code, use either 'true' or 'false'", status=400)
+        
+#     except KeyError as e:
+#         # Continue if 'complete' not found in request body
+#         complete = False
+    
+#     except Exception as e:
+#         LOGGER.exception(f"[{request_id}]")
+#         return Response("Unknown error", status=500)
+
+#     if complete:
+#         try:
+#             parts = body['parts'] # yikes
+#             upload_id = body['UploadId']
+
+#             parts = sorted(parts, key=lambda x: x['PartNumber'])
+
+#             s3.complete_multipart_upload(
+#                 Bucket=bucket_name,
+#                 Key=filepath,
+#                 MultipartUpload={"Parts": parts},
+#                 UploadId=upload_id,
+#             )
+#             return Response(status=200)
+
+#         except KeyError as e:
+#             return Response("Missing 'parts' or 'UploadId' in request body when completing multipart upload", status=400)
+        
+#         except Exception as e:
+#               return Response("Unknown error when completing multipart upload", status=500)
+        
+
+#     # Create presigned post
+#     if upload_type == "multipart":
+#         try:
+#             num_parts = body['num_parts']
+        
+#             multipart_upload = s3.create_multipart_upload(Bucket=bucket_name, Key=filepath)
+#             upload_id = multipart_upload["UploadId"]
+
+#             urls = []
+#             for part_number in range(1, num_parts + 1): # parts start at 1
+#                 url = s3.generate_presigned_url(
+#                     ClientMethod="upload_part",
+#                     Params={
+#                         "Bucket": bucket_name,
+#                         "Key": filepath,
+#                         "UploadId": upload_id,
+#                         "PartNumber": part_number,
+#                     },
+#                 )
+#                 urls.append((part_number, url))
+
+#             payload = json.dumps({
+#                 'UploadId': upload_id,
+#                 'urls': urls
+#             })
+#             return Response(payload, status=200)
+
+#         except KeyError as e:
+#             return Response("Number of parts not specified properly in request body", status=400)
+        
+#         except Exception as e:
+#             return Response("Unknown error while creating multipart upload", status=500)
+        
+#     else:
+#         try:
+#             presigned_post = s3.generate_presigned_post(
+#                 Bucket=bucket_name, 
+#                 Key=filepath,
+#                 ExpiresIn=3600
+#             )   
+#             payload = json.dumps(presigned_post)
+#             return Response(payload, status=200)
+
+#         except Exception as e:
+#             LOGGER.exception(e)
+#             return Response("Error generating presigned url", status=500)
+
+
+@vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['PUT'])
+async def upload_part(vfs_id, filepath):
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
-    request_id = context['request_id']
+    request_id = context["request_id"]
 
-    upload_type = "multipart"
-    bucket_name = "vfs-" + vfs_id
+    full_file_path = os.path.join(EFS_MOUNT_POINT, vfs_id, filepath)
 
-    s3 = boto3.client('s3', region_name="us-east-2")
-
-    try:
-        request_data = request.get_data(as_text=True)
-        body = json.loads(request_data)
-    
-    except KeyError as e:
-        return Response("Request missing body", status=400)
-    
-    except Exception as e:
-        return Response("Error parsing request body", status=400)
+    if "/../" in full_file_path:
+        LOGGER.info(f"[{request_id}] ** ALERT: POTENTIALLY MALICIOUS PATH **")
+        return Response("Invalid path", status=403)
 
     try:
-        complete_string = body['complete']
+        data = request.get_data()
+        if 'Content-Range' not in request.headers:
+            return Response("Missing required Content-Range header")
 
-        if complete_string == "true":
-            complete = True
+        content_string = request.headers['Content-Range'].strip()
 
-        elif complete_string == "false":
-            complete = False
+        chunk_params = content_string.split(":")
+        upload_id = chunk_params[0].strip()[1:-1]
 
-        else:
-            return Response("Invalid 'complete' code, use either 'true' or 'false'", status=400)
-        
-    except KeyError as e:
-        # Continue if 'complete' not found in request body
-        complete = False
+        content_range = [int(b) for b in chunk_params[1].split("-")]
+        start_bytes = content_range[0]
+
+        expected_chunk_size = content_range[1] - content_range[0]
+
+        if len(data) != expected_chunk_size:
+            return Response("Received chunk size does not match Content-Length header", status=400)
+
+        destination = f"{full_file_path}.{upload_id}"
+
+        async with aiofiles.open(destination, "r+b") as f:
+            await f.seek(start_bytes, 0)
+            await f.write(data)
+
+        return Response(status=200)
     
     except Exception as e:
         LOGGER.exception(f"[{request_id}]")
-        return Response("Unknown error", status=500)
+        return Response("Unkown error", status=500)
+    
 
-    if complete:
-        try:
-            parts = body['parts'] # yikes
-            upload_id = body['UploadId']
+@vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['POST'])
+def upload(vfs_id, filepath):
 
-            parts = sorted(parts, key=lambda x: x['PartNumber'])
+    context = json.loads(request.environ['context'])
+    user_id = context['user_id']
+    request_id = context["request_id"]
 
-            s3.complete_multipart_upload(
-                Bucket=bucket_name,
-                Key=filepath,
-                MultipartUpload={"Parts": parts},
-                UploadId=upload_id,
-            )
+    full_file_path = os.path.join(EFS_MOUNT_POINT, vfs_id, filepath)
+
+    if "/../" in full_file_path:
+        LOGGER.info(f"[{request_id}] ** ALERT: POTENTIALLY MALICIOUS PATH **")
+        return Response("Invalid path", status=403)
+
+    try:
+        body = request.get_data(as_text=True)
+        body = json.loads(body)
+
+        if 'complete' in body and body['complete']:
+            if 'upload_id' not in body:
+                return Response("upload_id is required to complete the upload", status=400)
+            upload_id = body['upload_id']
+            destination = f"{full_file_path}.{upload_id}"
+            os.rename(destination, full_file_path)
             return Response(status=200)
 
-        except KeyError as e:
-            return Response("Missing 'parts' or 'UploadId' in request body when completing multipart upload", status=400)
+        if 'size' not in body:
+            return Response("Invalid request body", status=400)
         
-        except Exception as e:
-              return Response("Unknown error when completing multipart upload", status=500)
+        file_size_bytes = body['size']
+        sample_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        upload_id = ''.join(random.choices(sample_str, k = 20))  
+
+        destination = f"{full_file_path}.{upload_id}"
         
-
-    # Create presigned post
-    if upload_type == "multipart":
-        try:
-            num_parts = body['num_parts']
-        
-            multipart_upload = s3.create_multipart_upload(Bucket=bucket_name, Key=filepath)
-            upload_id = multipart_upload["UploadId"]
-
-            urls = []
-            for part_number in range(1, num_parts + 1): # parts start at 1
-                url = s3.generate_presigned_url(
-                    ClientMethod="upload_part",
-                    Params={
-                        "Bucket": bucket_name,
-                        "Key": filepath,
-                        "UploadId": upload_id,
-                        "PartNumber": part_number,
-                    },
-                )
-                urls.append((part_number, url))
-
-            payload = json.dumps({
-                'UploadId': upload_id,
-                'urls': urls
-            })
-            return Response(payload, status=200)
-
-        except KeyError as e:
-            return Response("Number of parts not specified properly in request body", status=400)
-        
-        except Exception as e:
-            return Response("Unknown error while creating multipart upload", status=500)
-        
-    else:
-        try:
-            presigned_post = s3.generate_presigned_post(
-                Bucket=bucket_name, 
-                Key=filepath,
-                ExpiresIn=3600
-            )   
-            payload = json.dumps(presigned_post)
-            return Response(payload, status=200)
-
-        except Exception as e:
-            LOGGER.exception(e)
-            return Response("Error generating presigned url", status=500)
+        with open(destination, "wb") as f:
+            f.seek(file_size_bytes - 1)
+            f.write(b'\0')
+    
+        payload = json.dumps({
+            'upload_id': upload_id
+        })
+      
+        return Response(payload, status=200)
+    
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unkown error", status=500)
 
 
 @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['DELETE'])

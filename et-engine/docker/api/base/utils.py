@@ -1,6 +1,6 @@
 import boto3
 from botocore.client import ClientError
-
+import uuid
 
 def get_tool_stack(tool_id):
 
@@ -206,3 +206,19 @@ def get_batch_parameters():
     return {
         'role_arn': role_arn,
     }
+
+
+class MultipartUpload:
+
+    def __init__(self, destination, file_size):
+        self.file = destination
+        self.size = file_size
+    
+    def initialize_file(self):
+        pass
+
+    def write_part(self):
+        pass
+
+    def finalize_file(self):
+        pass
