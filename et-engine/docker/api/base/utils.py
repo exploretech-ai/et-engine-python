@@ -135,9 +135,8 @@ def compute_template_parameters(tool_id):
 
 def vfs_template_parameters(vfs_id):
     engine_stack_outputs = get_stack_outputs("ETEngine")
-    vpc_id = get_component_from_outputs(engine_stack_outputs, "EngineVpcId")
     sg_id = get_component_from_outputs(engine_stack_outputs, "EfsSecurityGroupId")
-    launch_download_from_s3_to_efs_arn = get_component_from_outputs(engine_stack_outputs, "DownloadS3ToEfsFunctionArn")
+    fs_id = get_component_from_outputs(engine_stack_outputs, "MasterFileSystemId")
 
     return [
         {
@@ -149,13 +148,9 @@ def vfs_template_parameters(vfs_id):
             'ParameterValue': sg_id
         },
         {
-            'ParameterKey': 'vpcID',
-            'ParameterValue': vpc_id
-        },
-        {
-            'ParameterKey': 'launchDownloadFromS3ToEfsArn',
-            'ParameterValue': launch_download_from_s3_to_efs_arn
-        },
+            'ParameterKey': 'fileSystemId',
+            'ParameterValue': fs_id
+        }
     ]
 
 
@@ -207,18 +202,3 @@ def get_batch_parameters():
         'role_arn': role_arn,
     }
 
-
-class MultipartUpload:
-
-    def __init__(self, destination, file_size):
-        self.file = destination
-        self.size = file_size
-    
-    def initialize_file(self):
-        pass
-
-    def write_part(self):
-        pass
-
-    def finalize_file(self):
-        pass

@@ -90,6 +90,7 @@ def create_vfs():
             return Response(f"'{vfs_name}' already exists", status=409)
         
         vfs_id = str(uuid.uuid4())
+
         cfn = boto3.client('cloudformation')
         parameters = utils.vfs_template_parameters(vfs_id)
 
@@ -99,6 +100,9 @@ def create_vfs():
             Parameters=parameters,
             Capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
         )
+
+        new_vfs_path = os.path.join(EFS_MOUNT_POINT, vfs_id)
+        os.mkdir(new_vfs_path)
 
         cursor.execute(
             """
@@ -143,7 +147,7 @@ def delete_vfs(vfs_id):
         )
         connection.commit()
 
-        utils.empty_bucket(f"vfs-{vfs_id}")
+        # utils.empty_bucket(f"vfs-{vfs_id}")
         utils.delete_stack(f"vfs-{vfs_id}")
 
         return Response(f"Successfully deleted VFS {vfs_id}", status=200)

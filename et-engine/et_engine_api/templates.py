@@ -44,7 +44,7 @@ class Templates(Stack):
                     'ecr:*',
                     'ecs:*',
                     'efs:*',
-                    'elasticfilesystem:DeleteMountTarget',
+                    'elasticfilesystem:*',
                     'iam:*',
                     'lambda:*',
                     'logs:DeleteLogGroup',

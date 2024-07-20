@@ -38,8 +38,10 @@ def create_job_definition(batch_client, hardware):
     if hardware['filesystems']:
         for vfs_id in hardware['filesystems']:
             
+            engine_outputs = job_utils.get_stack_outputs("ETEngine")
+            file_system_id = job_utils.get_component_from_outputs(engine_outputs, "MasterFileSystemId")
+            
             vfs_stack_outputs = job_utils.get_stack_outputs("vfs-"+vfs_id)
-            file_system_id = job_utils.get_component_from_outputs(vfs_stack_outputs, "FileSystemId")
             access_point_id = job_utils.get_component_from_outputs(vfs_stack_outputs, "AccessPointId")
 
             volume_name = "vfs-" + vfs_id

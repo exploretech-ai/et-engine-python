@@ -14,7 +14,7 @@ from constructs import Construct
 
 # https://github.com/aws-samples/aws-cdk-examples/blob/main/typescript/ecs/ecs-service-with-advanced-alb-config/index.ts
 class WebServer(Stack):
-    def __init__(self, scope: Construct, construct_id: str, network, compute, database, batch, config, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, network, compute, database, batch, file_systems, config, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)  
 
         env = config['env']
@@ -97,7 +97,6 @@ class WebServer(Stack):
             )
         )
 
-        
 
         # NOTE: This is hard-coded as an import because using `network.fargate_service_security_group` causes a cyclical reference error
         fargate_service_security_group = ec2.SecurityGroup.from_security_group_id(self, "ImportedFargateServiceSecurityGroup",
@@ -139,36 +138,21 @@ class WebServer(Stack):
             target=route53.RecordTarget.from_alias(r53t.LoadBalancerTarget(self.load_balancer))
         )
 
-        # NOTE: This will have to be automatically updated
-        file_system_mount_params = [
-            ["cafc9439-02ef-4c86-9110-6abff2c05b68", "fs-09e0c241485f4226e", "fsap-021d0d9759a6302fd"],
-            ["f35dc82f-0019-43ef-ae9c-51ad9607c0bd", "fs-096e4d7658a8c4732", "fsap-02c968693bb54f224"],
-            ["24474f05-3256-48af-a68f-ddf7fb29cc89", "fs-06b2a6202057d1fbb", "fsap-0ab36f111fed24679"],
-            ["427e2294-1365-4b95-9237-a0314463c5bd", "fs-0b2b40344bb282514", "fsap-058764ea78df568ed"],
-            ["dde97cc8-d4e2-4a8c-946a-5f5226346b9a", "fs-0418f73e0e9a18931", "fsap-08306384f08e7f341"],
-            ["b0e39682-01bc-4141-8a1d-cc9b8cfc74ea", "fs-098ca96ed0dc2295b", "fsap-0b456caa8e25db8bf"],
-            ["a3927777-c26b-484d-a74a-89eb163f88cc", "fs-0808d3e89eff8a345", "fsap-045f50913c11a1193"],
-            ["be0750a7-1b74-4c79-b2cb-dafe7d25254b", "fs-0469e69f616565c64", "fsap-078e63324197071ea"]
-        ]
-        for p in file_system_mount_params:
-            self.mount_volume(p[0], p[1], p[2])
-
-            
-    def mount_volume(self, vfs_id, file_system_id, access_point_id):
+        master_volume_name = "master-file-system"
         self.web_server_fargate_task.add_volume(
-            name="vfs-" + vfs_id,
+            name=master_volume_name,
             efs_volume_configuration=ecs.EfsVolumeConfiguration(
-                file_system_id=file_system_id,
+                file_system_id=file_systems.master_file_system.file_system_id,
                 authorization_config=ecs.AuthorizationConfig(
-                    access_point_id=access_point_id
+                    access_point_id=file_systems.master_access_point.access_point_id
                 ),
                 transit_encryption="ENABLED"
             )
         )  
         self.web_server_container.add_mount_points(
             ecs.MountPoint(
-                container_path="/mnt/" + vfs_id,
+                container_path="/mnt",
                 read_only=False,
-                source_volume="vfs-" + vfs_id
+                source_volume=master_volume_name
             )
         )

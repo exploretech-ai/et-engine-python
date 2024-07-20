@@ -129,7 +129,6 @@ def delete_stack(stack_name):
             StackName=stack_name
         )
         s3 = boto3.client('s3')
-        # s3.delete_bucket(Bucket=stack_name)
 
 def compute_template_parameters(tool_id):
     return [
@@ -141,9 +140,8 @@ def compute_template_parameters(tool_id):
 
 def vfs_template_parameters(vfs_id):
     engine_stack_outputs = get_stack_outputs("ETEngine")
-    vpc_id = get_component_from_outputs(engine_stack_outputs, "EngineVpcId")
     sg_id = get_component_from_outputs(engine_stack_outputs, "EfsSecurityGroupId")
-    launch_download_from_s3_to_efs_arn = get_component_from_outputs(engine_stack_outputs, "DownloadS3ToEfsFunctionArn")
+    fs_id = get_component_from_outputs(engine_stack_outputs, "MasterFileSystemId")
 
     return [
         {
@@ -155,11 +153,7 @@ def vfs_template_parameters(vfs_id):
             'ParameterValue': sg_id
         },
         {
-            'ParameterKey': 'vpcID',
-            'ParameterValue': vpc_id
-        },
-        {
-            'ParameterKey': 'launchDownloadFromS3ToEfsArn',
-            'ParameterValue': launch_download_from_s3_to_efs_arn
-        },
+            'ParameterKey': 'fileSystemId',
+            'ParameterValue': fs_id
+        }
     ]
