@@ -158,7 +158,21 @@ def delete_vfs(vfs_id):
 
 
 @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['GET'])
-def download_file(vfs_id, filepath):
+async def download_file(vfs_id, filepath):
+    """
+    Download a chunk of a file.
+
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :reqheader Content-Range: Byte range for this file, in the format <START>-<END>
+    :status 200: Success.
+    :status 403: Requested file path forbidden.
+    :status 400: Invalid Content-Range header.
+    :status 500: Unknown error occurred during processing.
+
+    Pass the query string param ?init=true to obtain the file size and a download_id
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
@@ -172,132 +186,50 @@ def download_file(vfs_id, filepath):
     
     if not os.path.exists(full_file_path):
         return Response(f"File '{filepath}' does not exist", status=404)
-
-    def stream_file(file_to_stream):
-        with open(file_to_stream, "rb") as file_object:
-            while True:
-                chunk = file_object.read(8192)
-                if not chunk:
-                    break
-                yield chunk
-            
-    return Response(stream_file(full_file_path))
-
-
-# @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['POST'])
-# def upload_file(vfs_id, filepath):
-
-#     context = json.loads(request.environ['context'])
-#     user_id = context['user_id']
-#     request_id = context['request_id']
-
-#     upload_type = "multipart"
-#     bucket_name = "vfs-" + vfs_id
-
-#     s3 = boto3.client('s3', region_name="us-east-2")
-
-#     try:
-#         request_data = request.get_data(as_text=True)
-#         body = json.loads(request_data)
     
-#     except KeyError as e:
-#         return Response("Request missing body", status=400)
-    
-#     except Exception as e:
-#         return Response("Error parsing request body", status=400)
+    initialize = request.args.get('init', default=False)
+    if initialize:
+        file_size_bytes = os.stat(full_file_path).st_size
+        sample_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        download_id = ''.join(random.choices(sample_str, k = 20))  
+        payload = json.dumps({
+            "size": file_size_bytes,
+            "download_id": download_id
+        })
+        return Response(payload, status=200)
 
-#     try:
-#         complete_string = body['complete']
-
-#         if complete_string == "true":
-#             complete = True
-
-#         elif complete_string == "false":
-#             complete = False
-
-#         else:
-#             return Response("Invalid 'complete' code, use either 'true' or 'false'", status=400)
+    try:
+        if 'Content-Range' not in request.headers:
+            return Response("Missing Content-Range header", status=400)
         
-#     except KeyError as e:
-#         # Continue if 'complete' not found in request body
-#         complete = False
-    
-#     except Exception as e:
-#         LOGGER.exception(f"[{request_id}]")
-#         return Response("Unknown error", status=500)
+        content_range = [int(b) for b in request.headers['Content-Range'].strip().split("-")]
+        chunk_size = content_range[1] - content_range[0]
 
-#     if complete:
-#         try:
-#             parts = body['parts'] # yikes
-#             upload_id = body['UploadId']
-
-#             parts = sorted(parts, key=lambda x: x['PartNumber'])
-
-#             s3.complete_multipart_upload(
-#                 Bucket=bucket_name,
-#                 Key=filepath,
-#                 MultipartUpload={"Parts": parts},
-#                 UploadId=upload_id,
-#             )
-#             return Response(status=200)
-
-#         except KeyError as e:
-#             return Response("Missing 'parts' or 'UploadId' in request body when completing multipart upload", status=400)
+        async with aiofiles.open(full_file_path, mode='rb') as file:
+            await file.seek(content_range[0])
+            chunk = await file.read(chunk_size)
+            return Response(chunk, status=200)
         
-#         except Exception as e:
-#               return Response("Unknown error when completing multipart upload", status=500)
-        
-
-#     # Create presigned post
-#     if upload_type == "multipart":
-#         try:
-#             num_parts = body['num_parts']
-        
-#             multipart_upload = s3.create_multipart_upload(Bucket=bucket_name, Key=filepath)
-#             upload_id = multipart_upload["UploadId"]
-
-#             urls = []
-#             for part_number in range(1, num_parts + 1): # parts start at 1
-#                 url = s3.generate_presigned_url(
-#                     ClientMethod="upload_part",
-#                     Params={
-#                         "Bucket": bucket_name,
-#                         "Key": filepath,
-#                         "UploadId": upload_id,
-#                         "PartNumber": part_number,
-#                     },
-#                 )
-#                 urls.append((part_number, url))
-
-#             payload = json.dumps({
-#                 'UploadId': upload_id,
-#                 'urls': urls
-#             })
-#             return Response(payload, status=200)
-
-#         except KeyError as e:
-#             return Response("Number of parts not specified properly in request body", status=400)
-        
-#         except Exception as e:
-#             return Response("Unknown error while creating multipart upload", status=500)
-        
-#     else:
-#         try:
-#             presigned_post = s3.generate_presigned_post(
-#                 Bucket=bucket_name, 
-#                 Key=filepath,
-#                 ExpiresIn=3600
-#             )   
-#             payload = json.dumps(presigned_post)
-#             return Response(payload, status=200)
-
-#         except Exception as e:
-#             LOGGER.exception(e)
-#             return Response("Error generating presigned url", status=500)
+    except Exception as e:
+        LOGGER.exception(f"[{request_id}]")
+        return Response("Unknown error", status=500)
 
 
 @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['PUT'])
 async def upload_part(vfs_id, filepath):
+    """
+    Upload a chunk of a file.
+
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :reqheader Content-Range: Upload ID and byte range for this file, in the format [<UPLOAD_ID>]:<START>-<END>
+    :status 200: Success.
+    :status 403: Requested file path forbidden.
+    :status 400: Invalid Content-Range header.
+    :status 402: Content-Range doesn't match length of body.
+    :status 500: Unknown error occurred during processing.
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
@@ -312,7 +244,7 @@ async def upload_part(vfs_id, filepath):
     try:
         data = request.get_data()
         if 'Content-Range' not in request.headers:
-            return Response("Missing required Content-Range header")
+            return Response("Missing required Content-Range header", status=400)
 
         content_string = request.headers['Content-Range'].strip()
 
@@ -325,7 +257,7 @@ async def upload_part(vfs_id, filepath):
         expected_chunk_size = content_range[1] - content_range[0]
 
         if len(data) != expected_chunk_size:
-            return Response("Received chunk size does not match Content-Length header", status=400)
+            return Response("Received chunk size does not match Content-Length header", status=402)
 
         destination = f"{full_file_path}.{upload_id}"
 
