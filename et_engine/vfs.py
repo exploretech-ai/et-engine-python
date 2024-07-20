@@ -4,7 +4,7 @@ import os
 from math import ceil
 from tqdm import tqdm
 import asyncio, aiohttp, aiofiles
-from .config import API_ENDPOINT, MultipartUpload
+from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, DirectMultipartUpload
 
 
 class PayloadTooLargeError(Exception):
@@ -122,7 +122,7 @@ class VirtualFileSystem:
         pass
 
 
-    def upload(self, local_file, remote_file):
+    def upload(self, local_file, remote_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
         """Performs a multipart upload to s3
         
         Steps:
@@ -134,10 +134,10 @@ class VirtualFileSystem:
         """
         url = f"{self.url}/files/{remote_file}"
 
-        tool_contents = MultipartUpload(local_file, url)
-        tool_contents.request_upload()
-        tool_contents.upload()
-        tool_contents.complete_upload()
+        file_contents = DirectMultipartUpload(local_file, url, chunk_size=chunk_size)
+        file_contents.request_upload()
+        file_contents.upload()
+        file_contents.complete_upload()
 
     
     def download(self, remote_file, local_file):
@@ -156,9 +156,7 @@ class VirtualFileSystem:
         with requests.get(url, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}, stream=True) as r:
             r.raise_for_status()
             total_size = int(r.headers.get("Content-Length", 0))
-            print(total_size)
             block_size = 8192
-
             with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
                 with open(local_file, "wb") as file:
                     for data in r.iter_content(block_size):
@@ -175,6 +173,14 @@ class VirtualFileSystem:
         if ignore_exists and response.status_code == 409:
             return
         
+        response.raise_for_status()
+
+    def delete(self, path):
+        response = requests.delete(
+            self.url + "/files/" + path, 
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
+
         response.raise_for_status()
 
 
