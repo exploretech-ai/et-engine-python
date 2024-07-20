@@ -247,6 +247,114 @@ class DirectMultipartUpload:
             return parts
         
     
+class DirectMultipartDownload:
+
+    def __init__(self, local_file, url, chunk_size=MIN_CHUNK_SIZE_BYTES, timeout=7200):
+        self.local_file = local_file
+        self.url = url
+
+        self.file_size_bytes = None
+        self.num_parts = None
+        self.download_id = None
+        self.chunk_size = chunk_size
+
+        self.timeout = timeout
 
         
+
+    
+    def request_download(self):
+
+        response = requests.get(
+            self.url,
+            params={
+                "init": True
+            },
+            headers={
+                'Authorization': os.environ['ET_ENGINE_API_KEY']
+            }
+        )
+        if not response.ok:
+            raise Exception(response.text)
+    
+        download_info = response.json()
+        self.file_size_bytes = download_info['size']
+        self.download_id = download_info['download_id']
+        self.num_parts = ceil(self.file_size_bytes / self.chunk_size)
+
+        self.initialize_file()
+
+
+    def initialize_file(self):
+
+        if self.file_size_bytes is None or self.download_id is None or self.num_parts is None:
+            raise Exception("Download not yet initialized")
+        
+        destination = f"{self.local_file}.{self.download_id}"
+        with open(destination, "wb") as f:
+            f.seek(self.file_size_bytes - 1)
+            f.write(b'\0')
+
+
+    def download(self):
+        return asyncio.run(self.download_parts_in_parallel())
+
+
+    def complete_download(self):
+        destination = f"{self.local_file}.{self.download_id}"
+        os.rename(destination, self.local_file)
+
+
+    async def download_part(self, starting_byte, session):
+        """
+        Uploads one part in a multipart upload
+        """
+
+        destination = f"{self.local_file}.{self.download_id}"
+        async with aiofiles.open(destination, mode='r+b') as f:
+
+            await f.seek(starting_byte, 0)
+            content_range = f"{starting_byte}-{starting_byte+self.chunk_size}"
+
+            headers = {
+                'Authorization': os.environ['ET_ENGINE_API_KEY'],
+                'Content-Range': content_range
+            }
+
+            n_tries = 0
+            while n_tries < 1:
+                try:
+                    async with session.get(self.url, headers=headers) as response:
+                        if not response.ok:
+                            raise Exception(f"Error uploading part: {response.text}")
+                        
+                        await f.write(await response.content.read())
+                        return response.status
+                except:
+                    n_tries += 1
+            raise Exception("Max retries exceeded")
+                            
+        
+    async def download_parts_in_parallel(self):
+        """
+        Sends upload HTTP requests asynchronously to speed up file transfer
+        """
+
+        connector = aiohttp.TCPConnector(limit=5)
+        client_timeout = aiohttp.ClientTimeout(total=self.timeout)
+
+        async with aiohttp.ClientSession(timeout=client_timeout, connector=connector) as session:
+            download_part_tasks = set()
+            for starting_byte in range(0, self.file_size_bytes, self.chunk_size):
+                task = asyncio.create_task(
+                    self.download_part(starting_byte, session)
+                )
+                download_part_tasks.add(task)
+
+            parts = []
+            for task in tqdm(asyncio.as_completed(download_part_tasks), desc=f"[{self.file_size_bytes / 1024 / 1024 // 1} MB] {self.local_file}", total=len(download_part_tasks)):
+                part_status = await task
+                parts.append(part_status)
+
+            return parts
 

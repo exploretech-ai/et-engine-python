@@ -4,7 +4,7 @@ import os
 from math import ceil
 from tqdm import tqdm
 import asyncio, aiohttp, aiofiles
-from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, DirectMultipartUpload
+from .config import API_ENDPOINT, MIN_CHUNK_SIZE_BYTES, DirectMultipartUpload, DirectMultipartDownload
 
 
 class PayloadTooLargeError(Exception):
@@ -140,7 +140,7 @@ class VirtualFileSystem:
         file_contents.complete_upload()
 
     
-    def download(self, remote_file, local_file):
+    def download(self, remote_file, local_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
         """Downloads a copy of a VFS file to the local machine
 
         Parameters
@@ -153,15 +153,10 @@ class VirtualFileSystem:
         """
         url = f"{self.url}/files/{remote_file}"
 
-        with requests.get(url, headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}, stream=True) as r:
-            r.raise_for_status()
-            total_size = int(r.headers.get("Content-Length", 0))
-            block_size = 8192
-            with tqdm(total=total_size, unit="B", unit_scale=True) as progress_bar:
-                with open(local_file, "wb") as file:
-                    for data in r.iter_content(block_size):
-                        progress_bar.update(len(data))
-                        file.write(data)
+        file_contents = DirectMultipartDownload(local_file, url, chunk_size=chunk_size)
+        file_contents.request_download()
+        file_contents.download()
+        file_contents.complete_download()
 
 
     def mkdir(self, path, ignore_exists=False):
@@ -169,18 +164,17 @@ class VirtualFileSystem:
             self.url + "/mkdir/" + path, 
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
-
         if ignore_exists and response.status_code == 409:
             return
         
         response.raise_for_status()
+
 
     def delete(self, path):
         response = requests.delete(
             self.url + "/files/" + path, 
             headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
         )
-
         response.raise_for_status()
 
 
