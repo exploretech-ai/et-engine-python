@@ -342,7 +342,44 @@ async def upload_part(vfs_id, filepath):
 
 @vfs.route('/vfs/<vfs_id>/files/<path:filepath>', methods=['POST'])
 def upload(vfs_id, filepath):
+    """
+    Initialize or complete a multipart upload. Initializations include the size in the request body. Completions include the upload ID and a boolean true/false string in the body.
 
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :status 200: Success. Returns the initialization information if it's an initialization request.
+    :status 403: Requested file path forbidden.
+    :status 400: Invalid request body.
+    :status 500: Unknown error occurred during processing.
+
+    **Request Syntax (Initialize)**:
+
+    .. sourcecode:: json
+
+       {
+          "size": 123
+       }
+
+    **Request Syntax (Complete)**:
+
+    .. sourcecode:: json
+
+       {
+         "complete": "true" | "false"
+         "upload_id": "string"
+       }
+
+    **Response Syntax (Initialize)**:
+
+    .. sourcecode:: json
+
+       [
+         {
+           "upload_id": "string"
+         }
+       ]
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
     request_id = context["request_id"]
