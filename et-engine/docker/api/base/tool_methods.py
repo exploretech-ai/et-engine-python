@@ -165,11 +165,17 @@ def execute_tool(tool_id):
 
        {
           "fixed_args": {
-            "name": "value"
+            "name": {
+              "value": <ANY>,
+              "type" "string"
+            }
           },
           "variable_args: [
             {
-              "name": "value"
+              "name": {
+                "value": <ANY>,
+                "type" "string"
+              }
             }
           ],
           "hardware": {
@@ -197,7 +203,6 @@ def execute_tool(tool_id):
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
     request_id = context['request_id']
-
     
     try:
         body_string = request.get_data(as_text=True)
@@ -245,11 +250,9 @@ def execute_tool(tool_id):
         )
 
         return Response(request_id, status=200)
-  
     except Exception as e:
         LOGGER.exception(f"[{request_id}]")
         return Response('Failed to submit batch', status=500)
-    
     finally:
         cursor.close()
         CONNECTION_POOL.putconn(connection)

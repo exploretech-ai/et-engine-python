@@ -26,8 +26,8 @@ class ETEngine(Stack):
         user_pool = UserPool(self, "UserPool")
         templates = Templates(self, "Templates", network, database)
         compute = ComputeCluster(self, f"ComputeCluster", network, config)
-        batch = BatchCompute(self, f"BatchCompute{env}", network, compute, database)
-        file_systems = FileSystems(self, f"FileSystems{env}", network)
+        batch = BatchCompute(self, f"BatchComputedev", network, compute, database)
+        file_systems = FileSystems(self, f"FileSystemsdev", network)
         web_server = WebServer(self, f"ApiWebServer{env}", network, compute, database, batch, file_systems, config)
         
         

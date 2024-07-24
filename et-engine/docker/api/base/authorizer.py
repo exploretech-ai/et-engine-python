@@ -178,15 +178,11 @@ class Authorization:
         cursor = connection.cursor()
 
         try:
-            
             cursor.execute("SELECT userID FROM APIKeys WHERE keyID = %s", (key_id,))
-            
             if cursor.rowcount == 0:
                 raise NameError(f'no user not associated with key {key_id}')      
-            
             else:
                 user_id = cursor.fetchall()[0][0]   
-
             return user_id
         
         except Exception as e:
