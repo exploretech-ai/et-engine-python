@@ -1,7 +1,7 @@
-et\_engine.tasks
+et\_engine.jobs
 ================
 
-.. automodule:: et_engine.tasks
+.. automodule:: et_engine.jobs
 
    
    
