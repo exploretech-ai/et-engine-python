@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>et_engine.vfs &mdash; EngineAPI (Python) 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Tools" href="../tools.html" />
+    <link rel="prev" title="VFS" href="../vfs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            EngineAPI (Python)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+<p class="caption" role="heading">
+    <span class="caption-text">Navigation</span>
+</p>
+<ul>
+    <li class="toctree-l1"><a class="reference internal" href="../index.html">EngineAPI (Python) Documentation</a></li>
+    <li class="toctree-l1"><a class="reference external" href="https://docs.exploretech.ai/">Main Documentation Home</a></li>
+</ul>
+
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../vfs.html">VFS</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">et_engine.vfs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.PayloadTooLargeError"><code class="docutils literal notranslate"><span class="pre">PayloadTooLargeError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.ChunkTooSmallError"><code class="docutils literal notranslate"><span class="pre">ChunkTooSmallError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.create"><code class="docutils literal notranslate"><span class="pre">create()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.list_all"><code class="docutils literal notranslate"><span class="pre">list_all()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.connect"><code class="docutils literal notranslate"><span class="pre">connect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.delete"><code class="docutils literal notranslate"><span class="pre">delete()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.session"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.session</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.url"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.url</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.__init__"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.file_exists"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.file_exists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.upload"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.upload()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.download"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.download()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.mkdir"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.mkdir()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem.list"><code class="docutils literal notranslate"><span class="pre">VirtualFileSystem.list()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.request_multipart_upload"><code class="docutils literal notranslate"><span class="pre">request_multipart_upload()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.upload_part"><code class="docutils literal notranslate"><span class="pre">upload_part()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#et_engine.vfs.upload_parts_in_parallel"><code class="docutils literal notranslate"><span class="pre">upload_parts_in_parallel()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tools.html">Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tasks.html">Tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Config</a></li>
+</ul>
+
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">EngineAPI (Python)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../vfs.html">VFS</a></li>
+      <li class="breadcrumb-item active">et_engine.vfs</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/generated/et_engine.vfs.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-et_engine.vfs">
+<span id="et-engine-vfs"></span><h1>et_engine.vfs<a class="headerlink" href="#module-et_engine.vfs" title="Link to this heading"></a></h1>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#et_engine.vfs.connect" title="et_engine.vfs.connect"><code class="xref py py-obj docutils literal notranslate"><span class="pre">connect</span></code></a>(vfs_name)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#et_engine.vfs.create" title="et_engine.vfs.create"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create</span></code></a>(name)</p></td>
+<td><p>Creates a new Tool</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#et_engine.vfs.delete" title="et_engine.vfs.delete"><code class="xref py py-obj docutils literal notranslate"><span class="pre">delete</span></code></a>(name)</p></td>
+<td><p>deletes the specified VFS</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#et_engine.vfs.list_all" title="et_engine.vfs.list_all"><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_all</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#et_engine.vfs.request_multipart_upload" title="et_engine.vfs.request_multipart_upload"><code class="xref py py-obj docutils literal notranslate"><span class="pre">request_multipart_upload</span></code></a>(url, remote_file, ...)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#et_engine.vfs.upload_part" title="et_engine.vfs.upload_part"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload_part</span></code></a>(local_file, part_number, ...)</p></td>
+<td><p>Uploads one part in a multipart upload</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#et_engine.vfs.upload_parts_in_parallel" title="et_engine.vfs.upload_parts_in_parallel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload_parts_in_parallel</span></code></a>(local_file, urls, ...)</p></td>
+<td><p>Sends upload HTTP requests asynchronously to speed up file transfer</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Classes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#et_engine.vfs.VirtualFileSystem" title="et_engine.vfs.VirtualFileSystem"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VirtualFileSystem</span></code></a>(vfs_id)</p></td>
+<td><p>Object for interacting with the ET Engine VFS API</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Exceptions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#et_engine.vfs.ChunkTooSmallError" title="et_engine.vfs.ChunkTooSmallError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ChunkTooSmallError</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#et_engine.vfs.PayloadTooLargeError" title="et_engine.vfs.PayloadTooLargeError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PayloadTooLargeError</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py exception">
+<dt class="sig sig-object py" id="et_engine.vfs.PayloadTooLargeError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">PayloadTooLargeError</span></span><a class="reference internal" href="../_modules/et_engine/vfs.html#PayloadTooLargeError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.PayloadTooLargeError" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="et_engine.vfs.ChunkTooSmallError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">ChunkTooSmallError</span></span><a class="reference internal" href="../_modules/et_engine/vfs.html#ChunkTooSmallError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.ChunkTooSmallError" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.create">
+<span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.create" title="Link to this definition"></a></dt>
+<dd><p>Creates a new Tool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>string</em>) – Name of the tool</p></li>
+<li><p><strong>description</strong> (<em>string</em>) – Plain text description of the tool</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Tool object connected to the newly-created tool</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="et_engine.tools.html#et_engine.tools.Tool" title="et_engine.tools.Tool">Tool</a></p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The API works, but the method does not yet return a connected “Tool” object</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.list_all">
+<span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">list_all</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#list_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.list_all" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.connect">
+<span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vfs_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.connect" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.delete">
+<span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.delete" title="Link to this definition"></a></dt>
+<dd><p>deletes the specified VFS</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>string</em>) – Name of the VFS to delete</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">VirtualFileSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vfs_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem" title="Link to this definition"></a></dt>
+<dd><p>Object for interacting with the ET Engine VFS API</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.session">
+<span class="sig-name descname"><span class="pre">session</span></span><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.session" title="Link to this definition"></a></dt>
+<dd><p>authenticated session</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Session</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.url">
+<span class="sig-name descname"><span class="pre">url</span></span><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.url" title="Link to this definition"></a></dt>
+<dd><p>VFS API endpoint</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>string</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vfs_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.__init__" title="Link to this definition"></a></dt>
+<dd><p>Creates a new object connected to the VFS</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>vfs_id</strong> (<em>string</em>) – id associated with the VFS of interest</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.file_exists">
+<span class="sig-name descname"><span class="pre">file_exists</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem.file_exists"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.file_exists" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.upload">
+<span class="sig-name descname"><span class="pre">upload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remote_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8388608</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7200</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem.upload"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.upload" title="Link to this definition"></a></dt>
+<dd><p>Performs a multipart upload to s3</p>
+<p>Steps:
+1. Check the file’s size and determine the number of parts needed
+2. Prepare the multipart upload with a POST request to Engine
+3. Upload the parts with asynchronous POST requests to s3 with the presigned urls
+4. Complete the multipart upload with another POST request to Engine with query string param ?complete=true</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.download">
+<span class="sig-name descname"><span class="pre">download</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remote_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem.download"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.download" title="Link to this definition"></a></dt>
+<dd><p>Downloads a copy of a VFS file to the local machine</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>remote_file</strong> (<em>string</em>) – path to the remote copy of the file inside the VFS</p></li>
+<li><p><strong>local_file</strong> (<em>string</em>) – path to the destination of the downloaded file</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.mkdir">
+<span class="sig-name descname"><span class="pre">mkdir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem.mkdir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.mkdir" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="et_engine.vfs.VirtualFileSystem.list">
+<span class="sig-name descname"><span class="pre">list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#VirtualFileSystem.list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.VirtualFileSystem.list" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.request_multipart_upload">
+<span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">request_multipart_upload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remote_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_parts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_size_bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#request_multipart_upload"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.request_multipart_upload" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.upload_part">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">upload_part</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">part_number</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">presigned_url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">session</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#upload_part"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.upload_part" title="Link to this definition"></a></dt>
+<dd><p>Uploads one part in a multipart upload</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="et_engine.vfs.upload_parts_in_parallel">
+<em class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">et_engine.vfs.</span></span><span class="sig-name descname"><span class="pre">upload_parts_in_parallel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">urls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/et_engine/vfs.html#upload_parts_in_parallel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#et_engine.vfs.upload_parts_in_parallel" title="Link to this definition"></a></dt>
+<dd><p>Sends upload HTTP requests asynchronously to speed up file transfer</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../vfs.html" class="btn btn-neutral float-left" title="VFS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../tools.html" class="btn btn-neutral float-right" title="Tools" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Alex Miltenberger, Tyler Hall.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

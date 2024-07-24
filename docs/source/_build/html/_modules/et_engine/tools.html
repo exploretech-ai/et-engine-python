@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>et_engine.tools &mdash; EngineAPI (Python) 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EngineAPI (Python)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+<p class="caption" role="heading">
+    <span class="caption-text">Navigation</span>
+</p>
+<ul>
+    <li class="toctree-l1"><a class="reference internal" href="../../index.html">EngineAPI (Python) Documentation</a></li>
+    <li class="toctree-l1"><a class="reference external" href="https://docs.exploretech.ai/">Main Documentation Home</a></li>
+</ul>
+
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../vfs.html">VFS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tasks.html">Tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Config</a></li>
+</ul>
+
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EngineAPI (Python)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">et_engine.tools</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for et_engine.tools</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">.tasks</span> <span class="kn">import</span> <span class="n">Task</span>
+<span class="kn">import</span> <span class="nn">asyncio</span><span class="o">,</span> <span class="nn">aiohttp</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">API_ENDPOINT</span>
+
+
+<div class="viewcode-block" id="MaxRetriesExceededError">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.MaxRetriesExceededError">[docs]</a>
+<span class="k">class</span> <span class="nc">MaxRetriesExceededError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="connect">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.connect">[docs]</a>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">tool_name</span><span class="p">):</span>
+    <span class="c1"># Make API call to GET vfs?name={vfs_name}</span>
+    <span class="c1">#     - NOTE: Use ToolID to call vfs/{vfsID} to build, etc.</span>
+    <span class="c1"># Create vfs object by preparing the API endpoint</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">API_ENDPOINT</span> <span class="o">+</span> <span class="s2">&quot;tools&quot;</span><span class="p">,</span> 
+        <span class="c1"># params={&#39;name&#39;:tool_name},</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]}</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">status</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+        <span class="n">tool_list</span> <span class="o">=</span> <span class="n">status</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tool_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">tool_name</span><span class="p">:</span>
+                <span class="n">tool_id</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">Tool</span><span class="p">(</span><span class="n">tool_id</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Tool does not exist&quot;</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">status</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">403</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Access to tool &quot;</span><span class="si">{</span><span class="n">tool_name</span><span class="si">}</span><span class="s1">&quot; is forbidden&#39;</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">status</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">401</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Authorization failed&#39;</span><span class="p">)</span>
+    
+    <span class="k">elif</span> <span class="n">status</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">500</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Something went wrong - check your API key&#39;</span><span class="p">)</span>
+    
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Tool &quot;</span><span class="si">{</span><span class="n">tool_name</span><span class="si">}</span><span class="s1">&quot; could not be accessed&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="delete">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.delete">[docs]</a>
+<span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>	
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;deletes the specified VFS	</span>
+<span class="sd">        </span>
+<span class="sd">    Parameters	</span>
+<span class="sd">    ----------	</span>
+<span class="sd">    name : string	</span>
+<span class="sd">        Name of the VFS to delete	</span>
+<span class="sd">    &quot;&quot;&quot;</span>	
+    <span class="n">status</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>	
+        <span class="n">API_ENDPOINT</span> <span class="o">+</span> <span class="s2">&quot;tools&quot;</span><span class="p">,</span> 
+        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span><span class="n">name</span><span class="p">},</span>	
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]}</span>	
+    <span class="p">)</span>	
+
+    <span class="k">if</span> <span class="n">status</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">status</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Delete failed&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.create">[docs]</a>
+<span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">):</span>	
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a new Tool	</span>
+<span class="sd">        </span>
+<span class="sd">    Parameters	</span>
+<span class="sd">    ----------	</span>
+<span class="sd">    name : string	</span>
+<span class="sd">        Name of the tool	</span>
+<span class="sd">    description : string	</span>
+<span class="sd">        Plain text description of the tool	</span>
+<span class="sd">    Returns	</span>
+<span class="sd">    -------	</span>
+<span class="sd">    Tool	</span>
+<span class="sd">        A Tool object connected to the newly-created tool	</span>
+<span class="sd">    Raises	</span>
+<span class="sd">    ------	</span>
+<span class="sd">    Warnings	</span>
+<span class="sd">    --------	</span>
+<span class="sd">    The API works, but the method does not yet return a connected &quot;Tool&quot; object	</span>
+<span class="sd">    &quot;&quot;&quot;</span>	
+
+    <span class="c1"># API Request	</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>	
+        <span class="n">API_ENDPOINT</span> <span class="o">+</span> <span class="s2">&quot;tools&quot;</span><span class="p">,</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span>	
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>	
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span>	
+        <span class="p">}),</span> 	
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]}</span>	
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">status</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">status</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Create failed&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="parse_kwargs">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.parse_kwargs">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_kwargs</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;hardware&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;hardware&#39;</span><span class="p">],</span> <span class="n">Hardware</span><span class="p">)</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;hardware&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;hardware&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+        
+
+<div class="viewcode-block" id="Tool">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool">[docs]</a>
+<span class="k">class</span> <span class="nc">Tool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for interacting with a Tool</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    session : Session</span>
+<span class="sd">        authenticated session</span>
+<span class="sd">    url : string</span>
+<span class="sd">        VFS API endpoint</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="Tool.__init__">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tool_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a new tool object from an existing tool ID</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tool_id : string</span>
+<span class="sd">            id associated with the tool of interest</span>
+<span class="sd">        client : Client</span>
+<span class="sd">            base authenticated client containing the active session</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tool_id</span> <span class="o">=</span> <span class="n">tool_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">API_ENDPOINT</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;tools/</span><span class="si">{</span><span class="n">tool_id</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Makes the object callable like a function</span>
+<span class="sd">        </span>
+<span class="sd">        Keyword arguments are passed to the Tool as environment variables</span>
+<span class="sd">        If *hardware* keyword is provided, then we will create a hardware spec JSON and send it to the tools/execute endpoint so </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>  
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">parse_kwargs</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]})</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Task</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="c1"># n_tries = 0</span>
+        <span class="c1"># while n_tries &lt; 5:</span>
+        <span class="c1">#     try:</span>
+        <span class="c1">#         task = asyncio.run(self.execute(**kwargs))</span>
+        <span class="c1">#         print(f&#39;Successfully launched task {task.id}&#39;)</span>
+        <span class="c1">#         return task</span>
+            
+        <span class="c1">#     except Exception as e:</span>
+        <span class="c1">#         n_tries += 1</span>
+        <span class="c1">#         print(f&#39;Failed attempts: {n_tries}. Waiting 1 minute and trying again...&#39;)</span>
+        <span class="c1">#         time.sleep(60)</span>
+
+        <span class="c1"># raise MaxRetriesExceededError(f&#39;failed to execute {n_tries} times&#39;)</span>
+
+
+<div class="viewcode-block" id="Tool.execute">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool.execute">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="c1"># async def make_request():</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">parse_kwargs</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]})</span> <span class="k">as</span> <span class="n">status</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">status</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">Task</span><span class="p">(</span><span class="k">await</span> <span class="n">status</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="k">await</span> <span class="n">status</span><span class="o">.</span><span class="n">text</span><span class="p">())</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="c1"># return None</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Execute failed&#39;</span><span class="p">)</span></div>
+
+            
+                
+
+<div class="viewcode-block" id="Tool.execute_one">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool.execute_one">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">execute_one</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">parse_kwargs</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">n_tries</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">n_tries</span> <span class="o">&lt;</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]})</span> <span class="k">as</span> <span class="n">status</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">status</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">Task</span><span class="p">(</span><span class="k">await</span> <span class="n">status</span><span class="o">.</span><span class="n">json</span><span class="p">())</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># print(&quot;Task failed:&quot;, status, n_tries)</span>
+                    <span class="n">n_tries</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+                
+
+<div class="viewcode-block" id="Tool.parallel">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool.parallel">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">parallel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwarg_list</span><span class="p">):</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="n">tasks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">kwargs</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">kwarg_list</span><span class="p">):</span>
+                <span class="n">task</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execute_one</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+                <span class="n">tasks</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">asyncio</span><span class="o">.</span><span class="n">as_completed</span><span class="p">(</span><span class="n">tasks</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">tasks</span><span class="p">)):</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">await</span> <span class="n">t</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+
+<div class="viewcode-block" id="Tool.monte_carlo">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool.monte_carlo">[docs]</a>
+    <span class="k">def</span> <span class="nf">monte_carlo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">kwarg_list</span><span class="p">):</span>
+        <span class="n">task_list</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parallel</span><span class="p">(</span><span class="n">kwarg_list</span><span class="p">))</span> 
+        <span class="n">n_fails</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">task_list</span><span class="p">:</span>                
+            <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">n_fails</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">task_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Successfully launched </span><span class="si">{</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">n_fails</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">kwarg_list</span><span class="p">))</span><span class="o">*</span><span class="mi">100</span><span class="si">}</span><span class="s1">% of tasks (</span><span class="si">{</span><span class="n">n_fails</span><span class="si">}</span><span class="s1"> failed).&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">task_list</span></div>
+
+
+        
+<div class="viewcode-block" id="Tool.push">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Tool.push">[docs]</a>
+    <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">folder</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the tool code</span>
+<span class="sd">        </span>
+<span class="sd">        The tool folder must contain:</span>
+<span class="sd">            1. a Dockerfile</span>
+<span class="sd">            2. a buildspec.yml file</span>
+
+<span class="sd">        When pushed, the folder will be zipped and sent to the ET Engine. There, the tool will be built and run in a container.</span>
+
+<span class="sd">        Inside the API, we are:</span>
+<span class="sd">            1. Triggering codebuild</span>
+<span class="sd">            2. Codebuild is combined with the pre-installations and clean-up commands, and built inside Engine </span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        folder : string</span>
+<span class="sd">            Path to a folder containing the tool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># ZIP folder</span>
+        <span class="n">zip_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder</span><span class="si">}</span><span class="s2">.zip&quot;</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">make_archive</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s1">&#39;zip&#39;</span><span class="p">,</span> <span class="n">folder</span><span class="p">)</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> 
+            <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Authorization&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ET_ENGINE_API_KEY&quot;</span><span class="p">]}</span>
+        <span class="p">)</span>
+        <span class="n">presigned_post</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">zip_file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">zip_file</span><span class="p">,</span> <span class="n">f</span><span class="p">)}</span>
+            <span class="n">upload_response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+                <span class="n">presigned_post</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">],</span> 
+                <span class="n">data</span><span class="o">=</span><span class="n">presigned_post</span><span class="p">[</span><span class="s1">&#39;fields&#39;</span><span class="p">],</span> 
+                <span class="n">files</span><span class="o">=</span><span class="n">files</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">upload_response</span></div>
+</div>
+
+    
+
+<div class="viewcode-block" id="Hardware">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Hardware">[docs]</a>
+<span class="k">class</span> <span class="nc">Hardware</span><span class="p">:</span>
+<div class="viewcode-block" id="Hardware.__init__">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Hardware.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filesystems</span><span class="o">=</span><span class="p">[],</span> <span class="n">memory</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">cpu</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">gpu</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a hardware configuration object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filesystems</span> <span class="o">=</span> <span class="n">filesystems</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="o">=</span> <span class="n">memory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cpu</span> <span class="o">=</span> <span class="n">cpu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gpu</span> <span class="o">=</span> <span class="n">gpu</span></div>
+
+
+<div class="viewcode-block" id="Hardware.to_dict">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Hardware.to_dict">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;filesystems&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">filesystems</span><span class="p">,</span>
+            <span class="s1">&#39;memory&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">,</span>
+            <span class="s1">&#39;cpu&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cpu</span><span class="p">,</span>
+            <span class="s1">&#39;gpu&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gpu</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Hardware.to_json">
+<a class="viewcode-back" href="../../generated/et_engine.tools.html#et_engine.tools.Hardware.to_json">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Converts the class instance to a json string that can be passed to The Engine</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">)</span></div>
+</div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Alex Miltenberger, Tyler Hall.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
