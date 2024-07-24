@@ -1,8 +1,8 @@
-Tasks
+Jobs
 =====
 
 .. autosummary::
    :toctree: generated
    :recursive:
 
-   et_engine.tasks
+   et_engine.jobs
