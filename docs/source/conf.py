@@ -48,5 +48,7 @@ html_static_path = ['_static']
 
 
 html_context = {
-    'main_doc_url': 'https://docs.exploretech.ai/'
+    'main_doc_url': 'https://docs.exploretech.ai/',
+    'et_engine_api_url' : 'https://docs.exploretech.ai/et-engine-api/index.html',
+    'et_engine_url' : 'https://docs.exploretech.ai/et-engine/index.html',
 }
