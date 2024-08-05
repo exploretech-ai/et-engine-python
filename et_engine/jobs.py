@@ -1,5 +1,5 @@
 import requests
-import json
+from tqdm import tqdm
 import os
 import time
 from .config import API_ENDPOINT
@@ -116,6 +116,23 @@ class Batch:
             return response.json()
         else:
             raise Exception("error fetching status: " + response.text)
+        
+    def wait(self, sleep_time=60):
+
+        status = self.status()
+        n_jobs = status['n_jobs']
+
+        with tqdm(total=n_jobs) as pbar:
+            completed = 0
+            while completed < n_jobs:
+                time.sleep(sleep_time)
+
+                status = self.status()
+                completed = status['submitted_jobs']['SUCCEEDED'] + status['submitted_jobs']['FAILED']
+                
+                pbar.update(completed)
+                
+
 
 
 class Job:

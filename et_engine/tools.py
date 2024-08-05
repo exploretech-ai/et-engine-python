@@ -3,7 +3,7 @@ import requests
 import json
 import os
 from .jobs import Batch
-from .config import API_ENDPOINT, MultipartUpload
+from .config import API_ENDPOINT, MultipartUpload, MIN_CHUNK_SIZE_BYTES
 
 
 class MaxRetriesExceededError(Exception):
@@ -192,7 +192,7 @@ class Tool:
             raise Exception(response.text)
               
         
-    def push(self, tar_gz_file):
+    def push(self, tar_gz_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
         """Update the tool code
         
         Before pushing the tool, you must build, save, and gzip a docker image on your computer. To do this, run the following commands.
@@ -209,12 +209,14 @@ class Tool:
         ----------
         tar_gz_file : string
             Path to the `.tar.gz` file containing the image
+        chunk_zie : int
+            Size of the file chunks to be uploaded in bytes, default = 8192 (8MB) (optional)
         """
 
         if not tar_gz_file.endswith(".tar.gz"):
             raise Exception("File must have .tar.gz")
         
-        tool_contents = MultipartUpload(tar_gz_file, self.url, method="PUT")
+        tool_contents = MultipartUpload(tar_gz_file, self.url, method="PUT", chunk_size=chunk_size)
         tool_contents.request_upload()
         tool_contents.upload()
         tool_contents.complete_upload()
