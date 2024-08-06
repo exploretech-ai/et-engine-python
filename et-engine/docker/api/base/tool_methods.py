@@ -89,6 +89,22 @@ def create_tool():
           ]
        }
 
+    ** Argument Types **
+
+    +--------+-------------+
+    | Type   | Renders As  |
+    +========+=============+
+    | string | text box    |
+    +--------+-------------+
+    | int    | text box    |
+    +--------+-------------+
+    | float  | text box    |
+    +--------+-------------+
+    | bool   | check box   |
+    +--------+-------------+
+    | file   | file dialog |
+    +--------+-------------+
+
     :raises: May raise exceptions related to database operations or service availability.
     """
 
