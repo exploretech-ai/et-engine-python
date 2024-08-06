@@ -11,6 +11,7 @@ import asyncio, aiohttp, aiofiles
 from tqdm import tqdm
 import time
 
+
 class PayloadTooLargeError(Exception):
     pass
 
@@ -108,7 +109,7 @@ class MultipartUpload:
             chunk = await file.read(self.chunk_size)
             async with session.put(presigned_url, data=chunk) as status:
                 if not status.ok:
-                    raise Exception(f"Error uploading part: {status}")
+                    raise Exception(f"Error uploading part: {status.reason}, {status}")
                 
                 return {"ETag": status.headers["ETag"], "PartNumber": part_number}
             
