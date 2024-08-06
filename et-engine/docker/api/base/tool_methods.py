@@ -17,7 +17,27 @@ tools = Blueprint('tools', __name__)
 
 @tools.route('/tools', methods=['GET'])
 def list_tools():
+    """
+    Lists available tools for the user
 
+    :reqheader Authorization: API key or Bearer token for user authentication
+
+    **Response Syntax**:
+    NOTE: the JSON below is actually returned as a 2D list not a list of maps
+
+    .. sourcecode:: json
+
+       [
+         {
+           "name": "string",
+           "toolId": "string",
+           "isOwned": "true" | "false"
+         }
+       ]
+
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
 
