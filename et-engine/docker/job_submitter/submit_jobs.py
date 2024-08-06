@@ -57,7 +57,7 @@ def create_job_definition(batch_client, hardware):
                     'name': volume_name,
                     'efsVolumeConfiguration': {
                         "fileSystemId": file_system_id,
-                        "rootDirectory": "/",
+                        # "rootDirectory": "/",
                         "transitEncryption": "ENABLED",
                         "authorizationConfig": {
                             "accessPointId": access_point_id,
