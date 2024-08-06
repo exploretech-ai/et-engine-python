@@ -161,6 +161,10 @@ cython_debug/
 
 *.out
 *.DS_STORE
+*.code-workspace
+*.vscode
+
+*.csv
 
 # Custom Ignores
 *.code-workspace
