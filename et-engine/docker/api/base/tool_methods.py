@@ -64,6 +64,33 @@ def list_tools():
     
 @tools.route('/tools', methods=['POST'])
 def create_tool():
+    """
+    Creates a new tool (NOTE ARGS ARE NOT IMPLEMENTED YET)
+
+    :reqheader Authorization: API key or Bearer token for user authentication
+
+    **Request Syntax**:
+
+    .. sourcecode:: json
+
+       {
+          "name": "string",
+          "description": "string",
+          "args": [
+            {
+              "name": "string",
+              "config": {
+                "type": "string",
+                "required": "true" | "false",
+                "description": "string",
+                "default": value
+              }
+            } 
+          ]
+       }
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
 
     context = json.loads(request.environ['context'])
     user_id = context['user_id']
@@ -136,6 +163,35 @@ def create_tool():
 
 @tools.route('/tools/<tool_id>', methods=['GET'])
 def describe_tool(tool_id):
+    """
+    Describes the tool
+
+    
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :status 200: Success. Returns a list of batch id's and associated properties.
+    :status 500: Unknown error occurred during processing.
+
+    **Request Syntax**:
+
+    {
+      "ready": "true" | "false",
+      "buildStatus": "string",
+      "args": [
+        {
+          "name": "string",
+          "config": {
+            "type": "string",
+            "required": "true" | "false",
+            "description": "string",
+            "default": value
+          }
+        } 
+      ]
+
+    ** NOTE **
+    Arguments are not yet implemented
+
+    """
 
     try:
         tool_is_ready = utils.check_ecr(tool_id)
@@ -261,9 +317,7 @@ def execute_tool(tool_id):
 @tools.route('/tools/<tool_id>', methods=['PUT'])
 def push_tool_multipart(tool_id):
     """
-    Returns attributes for batch
-
-    The user is identified by the 'user_id' in the request context.
+    Updates the tool code
 
     :reqheader Authorization: API key or Bearer token for user authentication
     :status 200: Success. Returns a list of batch id's and associated properties.
@@ -404,6 +458,36 @@ def push_tool_multipart(tool_id):
         except Exception as e:
             LOGGER.exception(e)
             return Response("Error generating presigned url", status=500)
+
+
+@tools.route('/tools/<tool_id>', methods=['PATCH'])
+def update_args(tool_id):
+    """
+    Updates the tool arguments (NOT YET IMPLEMENTED)
+
+    :reqheader Authorization: API key or Bearer token for user authentication
+    :status 200: Success. Returns a list of batch id's and associated properties.
+    :status 500: Unknown error occurred during processing.
+
+    **Request Syntax**:
+
+    .. sourcecode:: json
+
+       [
+         {
+           "name": "string",
+           "config": {
+             "type": "string",
+             "required": "true" | "false",
+             "description": "string",
+             "default": value
+           }
+         } 
+       ]
+
+    :raises: May raise exceptions related to database operations or service availability.
+    """
+    pass
 
 
 @tools.route('/tools/<tool_id>', methods=['DELETE'])
