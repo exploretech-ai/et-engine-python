@@ -1,7 +1,7 @@
-import shutil
 import requests
 import json
 import os
+import time
 from .jobs import Batch
 from .config import API_ENDPOINT, MultipartUpload, MIN_CHUNK_SIZE_BYTES
 
@@ -192,7 +192,19 @@ class Tool:
             raise Exception(response.text)
               
         
-    def push(self, tar_gz_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
+    def status(self):
+        response = requests.get(
+            self.url,
+            headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
+        )
+        if response.ok:
+            description = response.json()
+            return description
+        else:
+            raise Exception("error fetching status: " + response.text)
+        
+
+    def push(self, tar_gz_file, chunk_size=MIN_CHUNK_SIZE_BYTES, wait=False, sleep_time=60):
         """Update the tool code
         
         Before pushing the tool, you must build, save, and gzip a docker image on your computer. To do this, run the following commands.
@@ -220,7 +232,15 @@ class Tool:
         tool_contents.request_upload()
         tool_contents.upload()
         tool_contents.complete_upload()
-    
+
+        if wait:
+            ready = False
+            while not ready:
+                time.sleep(sleep_time)
+                status = self.status()
+                if status["buildStatus"] != "IN_PROGRESS" and status["ready"] == "true":
+                    ready = True
+                
 
 class Hardware:
     def __init__(self, filesystems=[], memory=512, cpu=1):
