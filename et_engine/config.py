@@ -99,21 +99,26 @@ class MultipartUpload:
             raise Exception(f"Error completing upload: {complete}, {complete.reason}, {complete.text}")
 
         
-    async def upload_part(self, part_number, presigned_url, session):
+    async def upload_part(self, part_number, presigned_url, session, max_retries=5):
         """
         Uploads one part in a multipart upload
         """
+        num_tries = 0
         starting_byte = (part_number - 1) * self.chunk_size
         async with aiofiles.open(self.local_file, mode='rb') as file:
             await file.seek(starting_byte)
             chunk = await file.read(self.chunk_size)
-            async with session.put(presigned_url, data=chunk) as status:
-                if not status.ok:
-                    xml_response = await status.text()
-                    raise Exception(f"Error uploading part: {xml_response}, {status}")
-                
-                return {"ETag": status.headers["ETag"], "PartNumber": part_number}
-            
+
+            while num_tries < max_retries:
+                async with session.put(presigned_url, data=chunk) as status:
+                    if status.ok:
+                        return {"ETag": status.headers["ETag"], "PartNumber": part_number}
+                    else:
+                        xml_response = await status.text()
+                        num_tries += 1
+
+            raise Exception(f"Error uploading part: {xml_response}, {status}")
+                    
         
     async def upload_parts_in_parallel(self):
         """
