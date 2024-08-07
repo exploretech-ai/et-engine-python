@@ -238,7 +238,7 @@ class Tool:
             while not ready:
                 time.sleep(sleep_time)
                 status = self.status()
-                if status["buildStatus"] != "IN_PROGRESS" and status["ready"] == "true":
+                if status["buildStatus"] != "IN_PROGRESS":
                     ready = True
                 
 
