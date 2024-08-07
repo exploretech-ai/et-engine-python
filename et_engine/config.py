@@ -29,7 +29,7 @@ class MultipartUploadPresignedUrls:
 
 class MultipartUpload:
 
-    def __init__(self, local_file, endpoint_url, chunk_size=MIN_CHUNK_SIZE_BYTES, timeout=7200, method="POST"):
+    def __init__(self, local_file, endpoint_url, chunk_size=MIN_CHUNK_SIZE_BYTES, timeout=7200, connections=100, method="POST"):
         self.local_file = local_file
         self.url = endpoint_url
         self.method = method
@@ -39,6 +39,7 @@ class MultipartUpload:
         self.chunk_size = chunk_size
 
         self.timeout = timeout
+        self.connections = connections
 
         self.presigned_urls = None
         self.uploaded_parts = None
@@ -128,8 +129,10 @@ class MultipartUpload:
         if self.presigned_urls is None:
             raise Exception("Upload not yet requested")
 
+        connector = aiohttp.TCPConnector(limit=self.connections)
         client_timeout = aiohttp.ClientTimeout(total=self.timeout)
-        async with aiohttp.ClientSession(timeout=client_timeout) as session:
+
+        async with aiohttp.ClientSession(timeout=client_timeout, connector=connector) as session:
             upload_part_tasks = set()
             for part_number, presigned_url in self.presigned_urls.urls: 
                 task = asyncio.create_task(
