@@ -109,7 +109,8 @@ class MultipartUpload:
             chunk = await file.read(self.chunk_size)
             async with session.put(presigned_url, data=chunk) as status:
                 if not status.ok:
-                    raise Exception(f"Error uploading part: {status.text}, {status}")
+                    xml_response = await status.text()
+                    raise Exception(f"Error uploading part: {xml_response}, {status}")
                 
                 return {"ETag": status.headers["ETag"], "PartNumber": part_number}
             
