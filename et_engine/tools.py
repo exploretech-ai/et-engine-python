@@ -204,7 +204,7 @@ class Tool:
             raise Exception("error fetching status: " + response.text)
         
 
-    def push(self, tar_gz_file, chunk_size=MIN_CHUNK_SIZE_BYTES, wait=False, sleep_time=60):
+    def push(self, tar_gz_file, chunk_size=MIN_CHUNK_SIZE_BYTES, connections=100, wait=False, sleep_time=60):
         """Update the tool code
         
         Before pushing the tool, you must build, save, and gzip a docker image on your computer. To do this, run the following commands.
@@ -228,7 +228,7 @@ class Tool:
         if not tar_gz_file.endswith(".tar.gz"):
             raise Exception("File must have .tar.gz")
         
-        tool_contents = MultipartUpload(tar_gz_file, self.url, method="PUT", chunk_size=chunk_size)
+        tool_contents = MultipartUpload(tar_gz_file, self.url, method="PUT", chunk_size=chunk_size, connections=connections)
         tool_contents.request_upload()
         tool_contents.upload()
         tool_contents.complete_upload()
