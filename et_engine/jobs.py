@@ -123,7 +123,9 @@ class Batch:
         n_jobs = status['n_jobs']
 
         with tqdm(total=n_jobs) as pbar:
-            completed = 0
+            status = self.status()
+            completed = status['submitted_jobs']['SUCCEEDED'] + status['submitted_jobs']['FAILED']
+                
             while completed < n_jobs:
                 time.sleep(sleep_time)
 
