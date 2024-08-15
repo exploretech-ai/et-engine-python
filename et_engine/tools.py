@@ -317,6 +317,8 @@ class Logger:
 
 
 class Argument:
+    """Tool-side argument handling
+    """
 
     def __init__(self, name, type=str, description="", required=False, default=None):
         self.name = name
@@ -342,6 +344,8 @@ class Argument:
 
 
 class ArgParser:
+    """Tool-side argument parser
+    """
 
     arguments = []
 
