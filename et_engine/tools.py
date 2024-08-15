@@ -2,6 +2,8 @@ import requests
 import json
 import os
 import time
+import logging
+import sys
 from .jobs import Batch
 from .config import API_ENDPOINT, MultipartUpload, MIN_CHUNK_SIZE_BYTES
 
@@ -266,4 +268,49 @@ class Hardware:
         """
         
         return json.dumps(self.to_dict())
+
+
+class Logger:
+    """Utility for tool-side logging    
+    """
+
+    def __init__(self, log_file, level = logging.INFO):
+
+        
+        if 'log' in os.environ:
+            if os.environ['log'].lower() == 'debug':
+                level = logging.DEBUG
+            elif os.environ['log'].lower() == 'info':
+                level = logging.INFO
+            elif os.environ['log'].lower() == 'warning':
+                level = logging.WARNING
+            elif os.environ['log'].lower() == 'error':
+                level = logging.ERROR
+            elif os.environ['log'].lower() == 'critical':
+                level = logging.CRITICAL
+            else:
+                level = logging.INFO          
+
+        self.logger = logging.getLogger(__name__)
+        log_handler = logging.FileHandler(
+            filename=log_file,
+            encoding='utf-8'
+        )
+        logging.basicConfig(handlers=[log_handler], level=level,
+                            format='%(asctime)s %(message)s',
+                            datefmt='%Y-%m-%d %I:%M:%S %p')
+
+        # create a handler to pipe all uncaught exceptions to log file
+        # https://betterstack.com/community/questions/how-to-log-uncaught-exceptions-in-python/
+        def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
+            self.logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+        sys.excepthook = handle_unhandled_exception
+        logging.captureWarnings(True)
+
+    def info(self, *args, **kwargs):
+        return self.logger.info(*args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        return self.logger.debug(*args, **kwargs)
 
