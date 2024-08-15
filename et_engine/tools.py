@@ -314,3 +314,39 @@ class Logger:
     def debug(self, *args, **kwargs):
         return self.logger.debug(*args, **kwargs)
 
+
+
+class Argument:
+
+    def __init__(self, name, type=str, description="", required=False, default=None):
+        self.name = name
+        self.type = type
+        self.description = description
+        self.required = required
+        self.default = default
+
+    @property
+    def value(self):
+        if self.required:
+            try:
+                arg_value = os.environ[self.name]
+            except KeyError as e:
+                raise Exception(f"Required argument '{self.name}' not found")
+        else:
+            arg_value = os.environ.get(self.name, default=self.default)
+
+        if arg_value is not None:
+            arg_value = self.type(arg_value)
+
+        return arg_value
+
+
+class ArgParser:
+
+    arguments = []
+
+    def add_argument(self, name, type=str, description="", required=False, default=None):
+        arg = Argument(name, type=type, description=description, required=required, default=default)
+        self.arguments.append(arg)
+        self.__setattr__(arg.name, arg.value)
+
