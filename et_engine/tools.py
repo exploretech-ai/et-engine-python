@@ -271,32 +271,44 @@ class Hardware:
 
 
 class Logger:
-    """Utility for tool-side logging    
+    """
+    Utility for tool-side logging. The determination of whether to log, where to log, and what
+    logging level to use must be made within the tool.
     """
 
-    def __init__(self, log_file, level = logging.INFO):
+    def __init__(self, log_file, level='info'):
+        """
+        Parameters
+        ----------
+        log_file : str
+            File name for logging. (If a file name with path is provided, remember that this is
+            on whatever virtual file system may be set up and mounted with the docker container
+            running the tool. Also, note that certain tools are already set up to write these
+            log files to specific places in the virtual file system.)
+        level : str, optional
+            Specified logging level. May be 'debug', 'info', 'warning', 'error', or 'critical'.
+            Default 'info'. If `level` is not specified as one of these, then defaults to 'info'.
+        """
 
-        
-        if 'log' in os.environ:
-            if os.environ['log'].lower() == 'debug':
-                level = logging.DEBUG
-            elif os.environ['log'].lower() == 'info':
-                level = logging.INFO
-            elif os.environ['log'].lower() == 'warning':
-                level = logging.WARNING
-            elif os.environ['log'].lower() == 'error':
-                level = logging.ERROR
-            elif os.environ['log'].lower() == 'critical':
-                level = logging.CRITICAL
-            else:
-                level = logging.INFO          
+        if level.lower() == 'debug':
+            logging_level = logging.DEBUG
+        elif level.lower() == 'info':
+            logging_level = logging.INFO
+        elif level.lower() == 'warning':
+            logging_level = logging.WARNING
+        elif level.lower() == 'error':
+            logging_level = logging.ERROR
+        elif level.lower() == 'critical':
+            logging_level = logging.CRITICAL
+        else:
+            logging_level = logging.INFO
 
         self.logger = logging.getLogger(__name__)
         log_handler = logging.FileHandler(
             filename=log_file,
             encoding='utf-8'
         )
-        logging.basicConfig(handlers=[log_handler], level=level,
+        logging.basicConfig(handlers=[log_handler], level=logging_level,
                             format='%(asctime)s %(message)s',
                             datefmt='%Y-%m-%d %I:%M:%S %p')
 
@@ -304,16 +316,23 @@ class Logger:
         # https://betterstack.com/community/questions/how-to-log-uncaught-exceptions-in-python/
         def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
             self.logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
-
         sys.excepthook = handle_unhandled_exception
+
+        # ensure that warnings are also logged
         logging.captureWarnings(True)
+
+        # since the python logger appends to existing log file, use this to separate out
+        #  subsequent tool runs... makes debugging based on the log file a little easier
+        self.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        self.info('================================================================================')
+        self.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        self.info(f'Requested logging at level {level}; logging at level {self.logger.level}')
 
     def info(self, *args, **kwargs):
         return self.logger.info(*args, **kwargs)
 
     def debug(self, *args, **kwargs):
         return self.logger.debug(*args, **kwargs)
-
 
 
 class Argument:
