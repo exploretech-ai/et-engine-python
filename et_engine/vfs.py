@@ -37,7 +37,7 @@ def create(name):
 
     # API Request	
     status = requests.post(	
-        API_ENDPOINT + "/vfs",
+        API_ENDPOINT + "/filesystems",
         data=json.dumps({	
             "name": name
         }), 	
@@ -53,37 +53,37 @@ def create(name):
 
 def list_all():
     status = requests.get(
-        API_ENDPOINT + "/vfs", 
+        API_ENDPOINT + "/filesystems", 
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}
     )
     if status.ok:
-        vfs_list = status.json()
-        return vfs_list
+        filesystem_list = status.json()
+        return filesystem_list
     else:
-        raise Exception("unknown error occurred while listing VFS")
+        raise Exception("unknown error occurred while listing filesystems")
 
 
-def connect(vfs_name):
+def connect(filesystem_name):
 
-    vfs_list = list_all()
+    filesystem_list = list_all()
 
-    for row in vfs_list:
-        if row[0] == vfs_name:
-            return VirtualFileSystem(row[1])
+    for row in filesystem_list:
+        if row[0] == filesystem_name:
+            return Filesystem(row[1])
     
-    raise NameError(f'Filesystem "{vfs_name}" does not exist')
+    raise NameError(f'Filesystem "{filesystem_name}" does not exist')
 
 
 def delete(name):	
-    """deletes the specified VFS	
+    """deletes the specified filesystem	
         
     Parameters	
     ----------	
     name : string	
-        Name of the VFS to delete	
+        Name of the filesystem to delete	
     """	
     status = requests.delete(	
-        API_ENDPOINT + "/vfs", 
+        API_ENDPOINT + "/filesystems", 
         params={'name':name},	
         headers={"Authorization": os.environ["ET_ENGINE_API_KEY"]}	
     )	
@@ -94,28 +94,28 @@ def delete(name):
         raise Exception('Delete failed')
         
 
-class VirtualFileSystem:
-    """Object for interacting with the ET Engine VFS API
+class Filesystem:
+    """Object for interacting with the ET Engine filesystem API
     
     Attributes
     ----------
     session : Session
         authenticated session
     url : string
-        VFS API endpoint
+        filesystem API endpoint
     """
 
 
-    def __init__(self, vfs_id):
-        """Creates a new object connected to the VFS
+    def __init__(self, filesystem_id):
+        """Creates a new object connected to the filesystem
         
         Parameters
         ----------
-        vfs_id : string
-            id associated with the VFS of interest
+        filesystem_id : string
+            id associated with the filesystems of interest
         """
-        self.id = vfs_id
-        self.url = API_ENDPOINT + f"/vfs/{vfs_id}"
+        self.id = filesystem_id
+        self.url = API_ENDPOINT + f"/filesystems/{filesystem_id}"
 
 
     def file_exists(self):
@@ -141,12 +141,12 @@ class VirtualFileSystem:
 
     
     def download(self, remote_file, local_file, chunk_size=MIN_CHUNK_SIZE_BYTES):
-        """Downloads a copy of a VFS file to the local machine
+        """Downloads a copy of a filesystem file to the local machine
 
         Parameters
         ----------
         remote_file : string
-            path to the remote copy of the file inside the VFS
+            path to the remote copy of the file inside the filesystem
         local_file : string
             path to the destination of the downloaded file
         

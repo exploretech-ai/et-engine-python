@@ -176,7 +176,7 @@ class DirectMultipartUpload:
 
         if response.ok:
             upload_details = response.json()
-            self.upload_id = upload_details['upload_id']
+            self.upload_id = upload_details['uploadId']
 
     
     def upload(self):
@@ -190,7 +190,7 @@ class DirectMultipartUpload:
         response = requests.post(
             self.url,
             data=json.dumps({
-                'upload_id': self.upload_id,
+                'uploadId': self.upload_id,
                 'complete': True
             }),
             headers={
@@ -317,7 +317,7 @@ class DirectMultipartDownload:
 
     async def download_part(self, starting_byte, session):
         """
-        Uploads one part in a multipart upload
+        Downloads one part in a multipart upload
         """
 
         destination = f"{self.local_file}.{self.download_id}"
