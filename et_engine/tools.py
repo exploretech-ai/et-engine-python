@@ -276,7 +276,7 @@ class Logger:
     logging level to use must be made within the tool.
     """
 
-    def __init__(self, log_file, level='info'):
+    def __init__(self, log_file, level='info', append=True):
         """
         Parameters
         ----------
@@ -288,6 +288,9 @@ class Logger:
         level : str, optional
             Specified logging level. May be 'debug', 'info', 'warning', 'error', or 'critical'.
             Default 'info'. If `level` is not specified as one of these, then defaults to 'info'.
+        append : boolean, optional
+            Controls behavior if `log_file` already exists. If True (default), appends logging
+            information to existing file. If False, overwrites existing file.
         """
 
         if level.lower() == 'debug':
@@ -303,12 +306,17 @@ class Logger:
         else:
             logging_level = logging.INFO
 
+        if append:
+            filemode = 'a'
+        else:
+            filemode = 'w'
+
         self.logger = logging.getLogger(__name__)
         log_handler = logging.FileHandler(
             filename=log_file,
             encoding='utf-8'
         )
-        logging.basicConfig(handlers=[log_handler], level=logging_level,
+        logging.basicConfig(handlers=[log_handler], level=logging_level, filemode=filemode,
                             format='%(asctime)s %(message)s',
                             datefmt='%Y-%m-%d %I:%M:%S %p')
 
@@ -321,11 +329,6 @@ class Logger:
         # ensure that warnings are also logged
         logging.captureWarnings(True)
 
-        # since the python logger appends to existing log file, use this to separate out
-        #  subsequent tool runs... makes debugging based on the log file a little easier
-        self.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        self.info('================================================================================')
-        self.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         self.info(f'Requested logging at level {level}; logging at level {self.logger.level}')
 
     def info(self, *args, **kwargs):
