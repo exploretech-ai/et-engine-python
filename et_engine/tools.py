@@ -314,22 +314,24 @@ class Logger:
         self.logger = logging.getLogger(__name__)
         log_handler = logging.FileHandler(
             filename=log_file,
-            encoding='utf-8'
+            encoding='utf-8',
+            mode=filemode
         )
-        logging.basicConfig(handlers=[log_handler], level=logging_level, filemode=filemode,
+        logging.basicConfig(handlers=[log_handler], level=logging_level,
                             format='%(asctime)s %(message)s',
                             datefmt='%Y-%m-%d %I:%M:%S %p')
 
         # create a handler to pipe all uncaught exceptions to log file
         # https://betterstack.com/community/questions/how-to-log-uncaught-exceptions-in-python/
         def handle_unhandled_exception(exc_type, exc_value, exc_traceback):
-            self.logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+            self.logger.critical("UNHANDLED EXCEPTION", exc_info=(exc_type, exc_value, exc_traceback))
         sys.excepthook = handle_unhandled_exception
 
         # ensure that warnings are also logged
         logging.captureWarnings(True)
 
-        self.info(f'Requested logging at level {level}; logging at level {self.logger.level}')
+        self.info(f'Requested logging at level {level}; '
+                  f'logging at level {logging.getLevelName(self.logger.getEffectiveLevel())}')
 
     def info(self, *args, **kwargs):
         return self.logger.info(*args, **kwargs)
