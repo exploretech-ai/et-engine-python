@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "et_engine"
+authors = [
+    { name = "Exploration Technologies, Inc.", email = "info@exploretech.ai" },
+]
+description = "The official Python SDK for the ET Engine"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11.9"
+keywords = ["api", "exploretech"]
+dynamic = ["version"]
+dependencies = [
+  "requests",
+  "aiohttp",
+  "aiofiles",
+  "tqdm",
+  "et_engine_core"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
