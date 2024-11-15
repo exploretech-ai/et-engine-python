@@ -50,7 +50,8 @@ class APIClient:
             data=json.dumps(data)
         )
         response.raise_for_status()
-        return response.json()
+        if response.text:
+           return response.json()
     
 
     def authorized_request(self, method: str, path: str, headers: dict = {}, params: dict = {}, data: dict = {}) -> dict:
