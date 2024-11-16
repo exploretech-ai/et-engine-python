@@ -100,6 +100,12 @@ class Tool(etc.Tool):
         return self.client.get()
     
 
+    def delete(self) -> None:
+        """Deletes the tool [NOTE: This action cannot be un-done!]
+        """
+        return self.client.delete()
+    
+
     @staticmethod
     def from_json(base_url: str, tool_json: dict) -> Self:
         """Convert a JSON object to an interactive Tool.
