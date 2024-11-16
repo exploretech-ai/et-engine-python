@@ -100,8 +100,13 @@ class Filesystem(etc.Filesystem):
         Returns:
             Self: A Filesystem object.
         """
-        
-        return Filesystem(base_url, **filesystem_json)
+        base_filesystem = etc.Filesystem.from_json(filesystem_json)
+        new_filesystem = Filesystem(
+            base_url,
+            filesystem_id=base_filesystem.filesystem_id, 
+            filesystem_name=base_filesystem.filesystem_name
+        )
+        return new_filesystem
     
 
 class FilesystemsClient(clients.APIClient):
