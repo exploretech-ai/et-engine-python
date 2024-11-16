@@ -91,7 +91,15 @@ class Batch(etc.Batch):
         Returns:
             Self: A Batch object.
         """
-        return Batch(base_url, **batch_json)
+        base_batch = etc.Batch.from_json(batch_json)
+        new_batch = Batch(
+            base_url, 
+            batch_id=base_batch.batch_id, 
+            batch_tool=base_batch.batch_tool, 
+            n_jobs=base_batch.n_jobs, 
+            batch_hardware=base_batch.batch_hardware
+        )
+        return new_batch
 
 
 class BatchesClient(clients.APIClient):
