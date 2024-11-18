@@ -116,6 +116,26 @@ class BatchesClient(clients.APIClient):
         super().__init__(f"{base_url}/batches")
         self.base_url = base_url
 
+
+    def connect(self, batch_id: str) -> Batch:
+        """Connect to a specific Batch
+
+        Args:
+            batch_id (str): unique ID of the batch
+
+        Raises:
+            Exception: No batch with the specified ID
+
+        Returns:
+            Batch: A new Batch client.
+        """
+        batches_list = self.list_batches()
+        for b in batches_list:
+            if b.batch_id == batch_id:
+                return b
+        raise Exception("Batch does not exist")
+
+
     
     def list_batches(self) -> list[Batch]:
         """Lists all the available batches.
