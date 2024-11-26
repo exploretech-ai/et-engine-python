@@ -18,7 +18,7 @@ dependencies = [
   "aiohttp",
   "aiofiles",
   "tqdm",
-  "et_engine_core"
+  "et_engine_core>=0.0.1"
 ]
 
 [tool.setuptools.packages.find]
