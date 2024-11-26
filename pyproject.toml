@@ -12,7 +12,7 @@ readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.11.9"
 keywords = ["api", "exploretech"]
-dynamic = ["version"]
+version = "0.0.1"
 dependencies = [
   "requests",
   "aiohttp",
